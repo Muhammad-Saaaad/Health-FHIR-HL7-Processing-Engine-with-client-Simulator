@@ -5,7 +5,7 @@ import model
 
 from database import engine, get_db
 from model import Doctor
-from schemas import fetchDoctors
+import schemas
 
 app = FastAPI(title="EHR Service", version="1.0.0")
 model.base.metadata.create_all(bind=engine)
@@ -14,22 +14,21 @@ model.base.metadata.create_all(bind=engine)
 def health_check():
     return {"status": "EHR Service is running"}
 
-@app.get("/doctors", response_model=list[fetchDoctors], status_code=status.HTTP_200_OK)
+@app.get("/doctors", response_model=list[schemas.fetchDoctors], status_code=status.HTTP_200_OK)
 def all_doctors(db :session = Depends(get_db)):
     try:
         all_docs = db.query(Doctor).all()
 
         if all_docs == []:
-            return JSONResponse(status_code=status.HTTP_204_NO_CONTENT, content=all_docs)
+            return JSONResponse(status_code=status.HTTP_200_OK, content=all_docs)
         return all_docs
     
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
 
 
-@app.post("/doctors", response_model=fetchDoctors, status_code=status.HTTP_201_CREATED)
-def create_doctor(doctor: fetchDoctors, db :session = Depends(get_db)):
-    doctor = fetchDoctors(**doctor.model_dump())
+@app.post("/doctors", response_model=schemas.addDoctor, status_code=status.HTTP_201_CREATED)
+def create_doctor(doctor: schemas.addDoctor, db :session = Depends(get_db)):
     new_doctor = Doctor(
         name = doctor.name,
         email = doctor.email,
