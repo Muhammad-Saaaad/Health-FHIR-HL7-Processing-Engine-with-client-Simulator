@@ -1,4 +1,4 @@
-from fastapi import FastAPI, status, Depends
+from fastapi import FastAPI, status, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import session
 import model
@@ -16,12 +16,16 @@ def health_check():
 
 @app.get("/doctors", response_model=list[fetchDoctors], status_code=status.HTTP_200_OK)
 def all_doctors(db :session = Depends(get_db)):
-    all_docs = db.query(Doctor).all()
+    try:
+        all_docs = db.query(Doctor).all()
 
-    if all_docs == []:
-        return JSONResponse(status_code=status.HTTP_204_NO_CONTENT, content=all_docs)
+        if all_docs == []:
+            return JSONResponse(status_code=status.HTTP_204_NO_CONTENT, content=all_docs)
+        return all_docs
+    
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
 
-    return all_docs
 
 @app.post("/doctors", response_model=fetchDoctors, status_code=status.HTTP_201_CREATED)
 def create_doctor(doctor: fetchDoctors, db :session = Depends(get_db)):

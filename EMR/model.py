@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, DateTime
+from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 
 base = declarative_base()
@@ -16,3 +17,54 @@ class Doctor(base):
     date_join = Column(DateTime, nullable=True)
     about = Column(String(255), nullable=True)
     phone_no = Column(String(20), nullable=True)
+
+    notifications = relationship("Notification", back_populates="doctor")
+
+class Notification(base):
+    __tablename__ = 'notification'
+
+    notification_id = Column(Integer, primary_key=True, index=True)
+
+    doctor_id = Column(Integer, ForeignKey('doctor.doctor_id'), nullable=False)
+    title = Column(String(100), nullable=False)
+    message = Column(String(255), nullable=False)
+    is_read = Column(Boolean, default=False)
+
+    doctor = relationship("Doctor", back_populates="notifications")
+
+class Patient(base):
+    __tablename__ = 'patient'
+
+    patient_id = Column(Integer, primary_key= True, index= True)
+
+    cnic = Column(String(15), nullable= False, unique= True)
+    name = Column(String(100), nullable= False)
+    phone_no = Column(String(100), nullable= True)
+    gender = Column(String(10), nullable= False)
+    date_of_birth = Column(DateTime, nullable= True)
+    address = Column(String(255), nullable= True)
+
+
+# class VisitingNotes(base):
+#     __tablename__ = 'visiting_notes'
+
+#     note_id = Column(Integer, primary_key=True, index=True)
+
+#     patient_id = Column(Integer, nullable=False)
+#     doctor_id = Column(Integer, ForeignKey('doctor.doctor_id'), nullable=False)
+#     notes = Column(String(1000), nullable=False)
+#     visit_date = Column(DateTime, nullable=False)
+
+#     doctor = relationship("Doctor")
+
+
+# to apply migrations
+
+## alembic init alembic
+## go to alembic/env.py
+## set database path into alembic.ini
+## import model and set target_metadata = model.base.metadata
+
+## if you apply anychnages to model.py
+## alembic revision --autogenerate -m "your message"
+## alembic upgrade head

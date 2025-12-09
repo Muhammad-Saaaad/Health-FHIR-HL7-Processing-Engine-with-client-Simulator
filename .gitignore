@@ -1,3 +1,4 @@
 .vscode
-health-env
+health-venv
 .env
+__pycache__
