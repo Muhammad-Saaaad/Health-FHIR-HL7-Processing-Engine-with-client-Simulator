@@ -44,18 +44,23 @@ class Patient(base):
     date_of_birth = Column(DateTime, nullable= True)
     address = Column(String(255), nullable= True)
 
+class VisitingNotes(base):
+    __tablename__ = 'visiting_notes'
 
-# class VisitingNotes(base):
-#     __tablename__ = 'visiting_notes'
+    note_id = Column(Integer, primary_key=True, index=True)
 
-#     note_id = Column(Integer, primary_key=True, index=True)
+    patient_id = Column(Integer, nullable=False)
+    doctor_id = Column(Integer, ForeignKey('doctor.doctor_id'), nullable=False)
 
-#     patient_id = Column(Integer, nullable=False)
-#     doctor_id = Column(Integer, ForeignKey('doctor.doctor_id'), nullable=False)
-#     notes = Column(String(1000), nullable=False)
-#     visit_date = Column(DateTime, nullable=False)
+    visit_date = Column(DateTime, nullable=False)
+    note_title = Column(String(1000), nullable=True)
+    patient_complaint = Column(String(255), nullable=True)
+    dignosis = Column(String(255), nullable=True)
+    note_details = Column(String(1000), nullable=True)
 
-#     doctor = relationship("Doctor")
+
+
+    doctor = relationship("Doctor")
 
 
 # to apply migrations
