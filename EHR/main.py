@@ -7,12 +7,12 @@ from database import engine, get_db
 from model import Doctor
 from schemas import fetchDoctors
 
-app = FastAPI(title="EMR Service", version="1.0.0")
+app = FastAPI(title="EHR Service", version="1.0.0")
 model.base.metadata.create_all(bind=engine)
 
 @app.get("/")
 def health_check():
-    return {"status": "EMR Service is running"}
+    return {"status": "EHR Service is running"}
 
 @app.get("/doctors", response_model=list[fetchDoctors], status_code=status.HTTP_200_OK)
 def all_doctors(db :session = Depends(get_db)):

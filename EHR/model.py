@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, DateTime
+from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, DateTime, Float
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -19,6 +19,7 @@ class Doctor(base):
     phone_no = Column(String(20), nullable=True)
 
     notifications = relationship("Notification", back_populates="doctor")
+    visiting_notes = relationship("VisitingNotes", back_populates="doctor")
 
 class Notification(base):
     __tablename__ = 'notification'
@@ -44,13 +45,27 @@ class Patient(base):
     date_of_birth = Column(DateTime, nullable= True)
     address = Column(String(255), nullable= True)
 
+    visiting_notes = relationship("VisitingNotes", back_populates="patient")
+
+class Bill(base):
+    __tablename__ = 'bill'
+
+    bill_id = Column(Integer, primary_key=True, index=True)
+
+    insurance_amount = Column(Float, nullable=False)
+    bill_status = Column(Boolean, default=False)
+    bill_date = Column(DateTime, nullable=False)
+
+    visiting_notes = relationship("VisitingNotes", back_populates="bill")
+
 class VisitingNotes(base):
     __tablename__ = 'visiting_notes'
 
     note_id = Column(Integer, primary_key=True, index=True)
 
-    patient_id = Column(Integer, nullable=False)
+    patient_id = Column(Integer,ForeignKey('patient.patient_id'), nullable=False)
     doctor_id = Column(Integer, ForeignKey('doctor.doctor_id'), nullable=False)
+    bill_id = Column(Integer, ForeignKey('bill.bill_id'), nullable=False)
 
     visit_date = Column(DateTime, nullable=False)
     note_title = Column(String(1000), nullable=True)
@@ -58,9 +73,9 @@ class VisitingNotes(base):
     dignosis = Column(String(255), nullable=True)
     note_details = Column(String(1000), nullable=True)
 
-
-
-    doctor = relationship("Doctor")
+    doctor = relationship("Doctor", back_populates="visiting_notes")
+    patient = relationship("Patient", back_populates="visiting_notes")
+    bill = relationship("Bill", back_populates="visiting_notes")
 
 
 # to apply migrations
