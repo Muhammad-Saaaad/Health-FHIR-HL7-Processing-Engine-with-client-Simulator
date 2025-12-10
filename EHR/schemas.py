@@ -2,25 +2,31 @@ from datetime import datetime
 from pydantic import BaseModel, EmailStr
 
 
-class addDoctor(BaseModel):
+class SignUp(BaseModel):
     name: str
     email: EmailStr
     password: str
-    specialization: str
-    phone_no: str
-    date_join: datetime
-    about: str
+    date_join: str
 
     model_config = {"from_attributes": True}
 
-class fetchDoctors(BaseModel):
-    doctor_id : int
-    name: str
-    email: EmailStr
-    password: str
-    specialization: str
-    phone_no: str
-    date_join: datetime
-    about: str
+class get_patient(BaseModel):
+    patient_id : int
+    cnic : str
+    name : str
+    phone_no : str | None
+    gender : str
+    date_of_birth: datetime | None
+    address : str | None
+
+    model_config = {"from_attributes": True}
+
+class post_patient(BaseModel):
+    cnic : str
+    name : str
+    phone_no : str | None
+    gender : str
+    date_of_birth: datetime | None
+    address : str | None
 
     model_config = {"from_attributes": True}

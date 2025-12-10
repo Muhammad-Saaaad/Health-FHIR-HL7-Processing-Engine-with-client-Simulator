@@ -1,47 +1,56 @@
+from datetime import datetime
+
 from fastapi import FastAPI, status, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import session
 import model
 
 from database import engine, get_db
-from model import Doctor
+from model import Doctor, Patient, VisitingNotes, Notification, Bill
 import schemas
 
-app = FastAPI(title="EHR Service", version="1.0.0")
+app = FastAPI(title="EHR System", version="1.0.0")
 model.base.metadata.create_all(bind=engine)
 
 @app.get("/")
 def health_check():
-    return {"status": "EHR Service is running"}
+    return {"status": "EHR System is running"}
 
-@app.get("/doctors", response_model=list[schemas.fetchDoctors], status_code=status.HTTP_200_OK)
-def all_doctors(db :session = Depends(get_db)):
-    try:
-        all_docs = db.query(Doctor).all()
-
-        if all_docs == []:
-            return JSONResponse(status_code=status.HTTP_200_OK, content=all_docs)
-        return all_docs
-    
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
-
-
-@app.post("/doctors", response_model=schemas.addDoctor, status_code=status.HTTP_201_CREATED)
-def create_doctor(doctor: schemas.addDoctor, db :session = Depends(get_db)):
+@app.post("/SignUp", status_code=status.HTTP_201_CREATED)
+def create_doctor(doctor: schemas.SignUp, db :session = Depends(get_db)):
     new_doctor = Doctor(
         name = doctor.name,
         email = doctor.email,
         password = doctor.password,
-        specialization = doctor.specialization,
-        phone_no = doctor.phone_no,
-        date_join = doctor.date_join,
-        about = doctor.about
+        date_join = doctor.date_join
     )
     db.add(new_doctor)
     db.commit()
     db.refresh(new_doctor)
-    return new_doctor
+    return JSONResponse(content={"data inserted sucessfully"})
+
+@app.get("/patients", response_model=list[schemas.get_patient], status_code=status.HTTP_200_OK)
+def get_patient(db: session = Depends(get_db)):
+    try:
+        all_patients = db.query(Patient).all()
+        return all_patients
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+    
+@app.post("/patients", response_model=schemas.post_patient, status_code=status.HTTP_200_OK)
+def post_patient(patient: schemas.post_patient ,db: session = Depends(get_db)):
+    new_patient = Patient(
+        cnic = patient.cnic,
+        name = patient.name,
+        phone_no = patient.phone_no,
+        gender = patient.gender,
+        date_of_birth = patient.date_of_birth,
+        address = patient.address
+    )
+    db.add(new_patient)
+    db.commit()
+    db.refresh(new_patient)
+    return JSONResponse(content={"data inserted sucessfully"})
 
 if __name__ == "__main__":
     import uvicorn
