@@ -4,7 +4,7 @@ from sqlalchemy.orm import session
 
 import model
 from database import get_db
-import schemas
+from Doctor import schemas
 
 router = APIRouter(tags=['Doctor'])
 

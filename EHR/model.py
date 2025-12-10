@@ -4,9 +4,9 @@ from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, DateTime, F
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 
-base = declarative_base()
+Base = declarative_base()
 
-class Doctor(base):
+class Doctor(Base):
     __tablename__ = 'doctor'
 
     doctor_id = Column(Integer, primary_key=True, index=True)
@@ -23,7 +23,7 @@ class Doctor(base):
     notifications = relationship("Notification", back_populates="doctor")
     visiting_notes = relationship("VisitingNotes", back_populates="doctor")
 
-class Notification(base):
+class Notification(Base):
     __tablename__ = 'notification'
 
     notification_id = Column(Integer, primary_key=True, index=True)
@@ -35,7 +35,7 @@ class Notification(base):
 
     doctor = relationship("Doctor", back_populates="notifications")
 
-class Patient(base):
+class Patient(Base):
     __tablename__ = 'patient'
 
     patient_id = Column(Integer, primary_key= True, index= True)
@@ -49,7 +49,7 @@ class Patient(base):
 
     visiting_notes = relationship("VisitingNotes", back_populates="patient")
 
-class Bill(base):
+class Bill(Base):
     __tablename__ = 'bill'
 
     bill_id = Column(Integer, primary_key=True, index=True)
@@ -60,7 +60,7 @@ class Bill(base):
 
     visiting_notes = relationship("VisitingNotes", back_populates="bill")
 
-class VisitingNotes(base):
+class VisitingNotes(Base):
     __tablename__ = 'visiting_notes'
 
     note_id = Column(Integer, primary_key=True, index=True)
@@ -82,7 +82,7 @@ class VisitingNotes(base):
     report = relationship("LabReport", back_populates="visiting_notes")
 
 
-class LabReport(base):
+class LabReport(Base):
     __tablename__ = "lab_report"
 
     report_id = Column(Integer, primary_key=True, index=True)
@@ -100,6 +100,7 @@ class LabReport(base):
 ## set database path into alembic.ini
 ## import model and set target_metadata = model.base.metadata
 
-## if you apply anychnages to model.py
-## alembic revision --autogenerate -m "your message"
 ## alembic upgrade head
+## if you apply anychnages to model.py
+## alembic upgrade head
+## alembic revision --autogenerate -m "your message"
