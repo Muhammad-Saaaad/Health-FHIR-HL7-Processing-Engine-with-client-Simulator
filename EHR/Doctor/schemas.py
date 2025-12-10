@@ -1,19 +1,6 @@
 from datetime import datetime
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 
-
-class SignUp(BaseModel):
-    name: str
-    email: EmailStr
-    password: str
-
-    model_config = {"from_attributes": True}
-
-class Login(BaseModel):
-    email: EmailStr
-    password: str
-
-    model_config = {"from_attributes": True}
 
 class get_patient(BaseModel):
     patient_id : int
@@ -35,3 +22,14 @@ class post_patient(BaseModel):
     address : str | None
 
     model_config = {"from_attributes": True}
+
+class VisitNote(BaseModel):
+    patient_id : int
+    doctor_id : int
+    bill_id : int | None
+
+    visit_date : datetime
+    note_title : str
+    patient_complaint : str
+    dignosis : str
+    note_details : str

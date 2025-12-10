@@ -32,3 +32,18 @@ def post_patient(patient: schemas.post_patient ,db: session = Depends(get_db)):
     db.refresh(new_patient)
     return JSONResponse(content={"message": "data inserted sucessfully"})
 
+@router.post("/visit-note-add", response_model=schemas.post_patient, status_code=status.HTTP_200_OK)
+def post_patient(patient: schemas.post_patient ,db: session = Depends(get_db)):
+    new_patient = model.Patient(
+        cnic = patient.cnic,
+        name = patient.name,
+        phone_no = patient.phone_no,
+        gender = patient.gender,
+        date_of_birth = patient.date_of_birth,
+        address = patient.address
+    )
+    db.add(new_patient)
+    db.commit()
+    db.refresh(new_patient)
+    return JSONResponse(content={"message": "data inserted sucessfully"})
+

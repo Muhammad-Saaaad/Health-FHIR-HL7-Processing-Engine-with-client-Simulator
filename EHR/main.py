@@ -1,13 +1,7 @@
-from datetime import datetime, timezone
-
 from fastapi import FastAPI, status, Depends, HTTPException
-from fastapi.responses import JSONResponse
-from sqlalchemy.orm import session
 import model
 
-from database import engine, get_db
-from model import Doctor, Patient, VisitingNotes, Notification, Bill
-import schemas
+from database import engine
 from Authentication import authentication
 from Doctor import doctor
 

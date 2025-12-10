@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, DateTime, Float
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
@@ -65,7 +67,8 @@ class VisitingNotes(base):
 
     patient_id = Column(Integer,ForeignKey('patient.patient_id'), nullable=False)
     doctor_id = Column(Integer, ForeignKey('doctor.doctor_id'), nullable=False)
-    bill_id = Column(Integer, ForeignKey('bill.bill_id'), nullable=False)
+    bill_id = Column(Integer, ForeignKey('bill.bill_id'), nullable=True)
+    report_id = Column(Integer, ForeignKey('lab_report.report_id'), nullable=True)
 
     visit_date = Column(DateTime, nullable=False)
     note_title = Column(String(1000), nullable=True)
@@ -76,7 +79,19 @@ class VisitingNotes(base):
     doctor = relationship("Doctor", back_populates="visiting_notes")
     patient = relationship("Patient", back_populates="visiting_notes")
     bill = relationship("Bill", back_populates="visiting_notes")
+    report = relationship("LabReport", back_populates="visiting_notes")
 
+
+class LabReport(base):
+    __tablename__ = "lab_report"
+
+    report_id = Column(Integer, primary_key=True, index=True)
+
+    lab_name = Column(String(100), nullable=False)
+    test_name = Column(String(100), nullable=False)
+    test_date = Column(DateTime, default=datetime.now(timezone.utc))
+
+    visiting_notes = relationship("VisitingNotes", back_populates="report")
 
 # to apply migrations
 
