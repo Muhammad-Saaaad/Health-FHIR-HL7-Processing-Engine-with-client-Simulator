@@ -1,7 +1,6 @@
 from datetime import datetime
 from pydantic import BaseModel
 
-
 class get_patient(BaseModel):
     patient_id : int
     cnic : str
@@ -26,10 +25,11 @@ class post_patient(BaseModel):
 class VisitNote(BaseModel):
     patient_id : int
     doctor_id : int
-    bill_id : int | None
 
-    visit_date : datetime
     note_title : str
     patient_complaint : str
     dignosis : str
     note_details : str
+    bill_amount : float
+    
+    model_config = {"from_attributes": True}

@@ -68,7 +68,6 @@ class VisitingNotes(Base):
     patient_id = Column(Integer,ForeignKey('patient.patient_id'), nullable=False)
     doctor_id = Column(Integer, ForeignKey('doctor.doctor_id'), nullable=False)
     bill_id = Column(Integer, ForeignKey('bill.bill_id'), nullable=True)
-    report_id = Column(Integer, ForeignKey('lab_report.report_id'), nullable=True)
 
     visit_date = Column(DateTime, nullable=False)
     note_title = Column(String(1000), nullable=True)
@@ -86,6 +85,7 @@ class LabReport(Base):
     __tablename__ = "lab_report"
 
     report_id = Column(Integer, primary_key=True, index=True)
+    visit_id = Column(Integer, ForeignKey('visiting_notes.note_id'), nullable=False)
 
     lab_name = Column(String(100), nullable=False)
     test_name = Column(String(100), nullable=False)

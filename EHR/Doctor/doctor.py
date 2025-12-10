@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, status, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import session
@@ -17,33 +19,59 @@ def get_patient(db: session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
     
-@router.post("/patients", response_model=schemas.post_patient, status_code=status.HTTP_200_OK)
-def post_patient(patient: schemas.post_patient ,db: session = Depends(get_db)):
-    new_patient = model.Patient(
-        cnic = patient.cnic,
-        name = patient.name,
-        phone_no = patient.phone_no,
-        gender = patient.gender,
-        date_of_birth = patient.date_of_birth,
-        address = patient.address
-    )
-    db.add(new_patient)
-    db.commit()
-    db.refresh(new_patient)
-    return JSONResponse(content={"message": "data inserted sucessfully"})
+@router.post("/patients", status_code=status.HTTP_201_CREATED)
+def add_patient(patient: schemas.post_patient ,db: session = Depends(get_db)):
+    try:
+        new_patient = model.Patient(
+            cnic = patient.cnic,
+            name = patient.name,
+            phone_no = patient.phone_no,
+            gender = patient.gender,
+            date_of_birth = patient.date_of_birth,
+            address = patient.address
+        )
+        db.add(new_patient)
+        db.commit()
+        db.refresh(new_patient)
+        return JSONResponse(content={"message": "data inserted sucessfully"})
+    except Exception as exp:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exp)
 
-@router.post("/visit-note-add", response_model=schemas.post_patient, status_code=status.HTTP_200_OK)
-def post_patient(patient: schemas.post_patient ,db: session = Depends(get_db)):
-    new_patient = model.Patient(
-        cnic = patient.cnic,
-        name = patient.name,
-        phone_no = patient.phone_no,
-        gender = patient.gender,
-        date_of_birth = patient.date_of_birth,
-        address = patient.address
-    )
-    db.add(new_patient)
-    db.commit()
-    db.refresh(new_patient)
-    return JSONResponse(content={"message": "data inserted sucessfully"})
+@router.post("/visit-note-add", status_code=status.HTTP_201_CREATED)
+def add_visit_note(visit_note: schemas.VisitNote ,db: session = Depends(get_db)):
+    try:
 
+        current_dt = datetime.now(timezone.utc)
+
+        new_bill = model.Bill(
+            insurace_amount = visit_note.bill_amount,
+            bill_status = False,
+            bill_date = current_dt
+        )
+
+        db.add(new_bill)
+        db.flush()
+
+        bill_id = new_bill.bill_id
+
+        new_visit_note = model.VisitingNotes(
+
+            patient_id = visit_note.patient_id,
+            doctor_id = visit_note.doctor_id,
+            bill_id = bill_id,
+
+            visit_date = current_dt,
+            note_title = visit_note.note_title,
+            patient_complaint = visit_note.patient_complaint,
+            dignosis = visit_note.dignosis, 
+            note_details = visit_note.note_details
+        )
+        db.add(new_visit_note)
+        db.commit()
+        db.refresh(new_visit_note)
+        return JSONResponse(content={"message": "data inserted sucessfully"})
+    except Exception as exp:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(exp)}")
+
+# @router.get("/visit-note", response_model=list[] ,status_code=status.HTTP_200_OK)
+# def visit_note

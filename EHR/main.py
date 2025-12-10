@@ -6,10 +6,12 @@ from Authentication import authentication
 from Doctor import doctor
 
 app = FastAPI(title="EHR System", version="1.0.0")
-model.base.metadata.create_all(bind=engine)
+model.Base.metadata.create_all(bind=engine)
 
 app.include_router(authentication.router)
 app.include_router(doctor.router)
+
+# set visit id into report id
 
 if __name__ == "__main__":
     import uvicorn
