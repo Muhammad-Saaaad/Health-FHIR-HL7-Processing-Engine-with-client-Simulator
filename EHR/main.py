@@ -1,4 +1,4 @@
-from fastapi import FastAPI, status, Depends, HTTPException
+from fastapi import FastAPI
 import model
 
 from database import engine
