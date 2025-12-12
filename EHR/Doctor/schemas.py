@@ -33,18 +33,3 @@ class VisitNote(BaseModel):
     bill_amount : float
     
     model_config = {"from_attributes": True}
-
-class ViewNote(BaseModel):
-    note_id : int
-
-    patient_id : int
-    doctor_id : int
-    bill_id : int | None
-
-    visit_date : datetime
-    note_title : str | None
-    patient_complaint : str | None
-    dignosis : str | None
-    note_details : str | None
-    
-    model_config = {"from_attributes": True}
