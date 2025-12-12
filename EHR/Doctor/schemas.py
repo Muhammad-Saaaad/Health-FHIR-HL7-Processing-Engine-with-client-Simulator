@@ -48,3 +48,11 @@ class ViewNote(BaseModel):
     note_details : str | None
     
     model_config = {"from_attributes": True}
+
+class LabReport(BaseModel):
+    report_id : int
+    visit_id : int
+
+    lab_name: str
+    test_name : str
+    test_date : datetime | None

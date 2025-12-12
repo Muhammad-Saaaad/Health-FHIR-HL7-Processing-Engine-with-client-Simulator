@@ -40,13 +40,9 @@ def add_patient(patient: schemas.post_patient ,db: session = Depends(get_db)):
 @router.post("/visit-note-add", status_code=status.HTTP_201_CREATED)
 def add_visit_note(visit_note: schemas.VisitNote ,db: session = Depends(get_db)):
     try:
-
-        current_dt = datetime.now(timezone.utc)
-
         new_bill = model.Bill(
             insurace_amount = visit_note.bill_amount,
             bill_status = False,
-            bill_date = current_dt
         )
 
         db.add(new_bill)
@@ -60,7 +56,6 @@ def add_visit_note(visit_note: schemas.VisitNote ,db: session = Depends(get_db))
             doctor_id = visit_note.doctor_id,
             bill_id = bill_id,
 
-            visit_date = current_dt,
             note_title = visit_note.note_title,
             patient_complaint = visit_note.patient_complaint,
             dignosis = visit_note.dignosis, 
@@ -68,7 +63,7 @@ def add_visit_note(visit_note: schemas.VisitNote ,db: session = Depends(get_db))
         )
         db.add(new_visit_note)
         db.commit()
-        db.refresh(new_visit_note)
+        db.refresh(new_visit_note) 
         return JSONResponse(content={"message": "data inserted sucessfully"})
     except Exception as exp:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(exp)}")
@@ -97,10 +92,22 @@ def visit_note(doc_id: int, pid: int, db: session = Depends(get_db)):
 def visit_note(note_id: int, db: session = Depends(get_db)):
     try:
         notes = db.query(model.VisitingNotes) \
-            .filter(model.VisitingNotes.note_id ==note_id).first()
+            .filter(model.VisitingNotes.note_id == note_id).first()
         if not notes:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Note id not found")
         return notes
     
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f'{str(e)}')
+    
+@router.get("/lab-reports-by-{note_id}", response_model=list[schemas.LabReport], status_code=status.HTTP_200_OK)
+def fetch_lab_report(note_id: int, db: session = Depends(get_db)):
+    try:
+        notes = db.query(model.LabReport) \
+            .filter(model.LabReport.visit_id == note_id).all()
+        if not notes:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND , detail="Note id not found or not lab reports for this note")
+        return notes
+
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f'{str(e)}')

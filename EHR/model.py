@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 
 from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, DateTime, Float
 from sqlalchemy.orm import relationship
@@ -16,7 +16,7 @@ class Doctor(Base):
     password = Column(String(200), nullable=False)
     specialization = Column(String(50), nullable=True) 
 
-    date_join = Column(DateTime, nullable=True)
+    date_join = Column(DateTime, default=datetime.now())
     about = Column(String(255), nullable=True)
     phone_no = Column(String(20), nullable=True)
 
@@ -56,7 +56,7 @@ class Bill(Base):
 
     insurance_amount = Column(Float, nullable=False)
     bill_status = Column(Boolean, default=False)
-    bill_date = Column(DateTime, nullable=False)
+    bill_date = Column(DateTime, default=datetime.now())
 
     visiting_notes = relationship("VisitingNotes", back_populates="bill")
 
@@ -69,7 +69,7 @@ class VisitingNotes(Base):
     doctor_id = Column(Integer, ForeignKey('doctor.doctor_id'), nullable=False)
     bill_id = Column(Integer, ForeignKey('bill.bill_id'), nullable=True)
 
-    visit_date = Column(DateTime, nullable=False)
+    visit_date = Column(DateTime, default=datetime.now())
     note_title = Column(String(1000), nullable=True)
     patient_complaint = Column(String(255), nullable=True)
     dignosis = Column(String(255), nullable=True)
@@ -89,7 +89,7 @@ class LabReport(Base):
 
     lab_name = Column(String(100), nullable=False)
     test_name = Column(String(100), nullable=False)
-    test_date = Column(DateTime, default=datetime.now(timezone.utc))
+    test_date = Column(DateTime, default=datetime.now())
 
     visiting_notes = relationship("VisitingNotes", back_populates="report")
 
