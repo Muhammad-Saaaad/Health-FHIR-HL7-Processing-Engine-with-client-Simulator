@@ -73,5 +73,34 @@ def add_visit_note(visit_note: schemas.VisitNote ,db: session = Depends(get_db))
     except Exception as exp:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(exp)}")
 
-# @router.get("/visit-note", response_model=list[] ,status_code=status.HTTP_200_OK)
-# def visit_note
+@router.get("/all-visit-notes{doc_id}/{pid}", response_model=list[schemas.ViewNote] ,status_code=status.HTTP_200_OK)
+def visit_note(doc_id: int, pid: int, db: session = Depends(get_db)):
+    try:
+
+        is_patient = db.query(model.Patient).filter(model.Patient.patient_id == pid).first()
+
+        if not is_patient:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="patient does not exists")
+        
+        is_doc = db.query(model.Doctor).filter(model.Doctor.doctor_id == doc_id).first()
+        if not is_doc:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Doctor does not exists")
+
+        notes = db.query(model.VisitingNotes) \
+            .filter(model.VisitingNotes.doctor_id ==doc_id, model.VisitingNotes.patient_id == pid).all()
+        return notes
+    
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f'{str(e)}')
+
+@router.get("/visit-note{note_id}", response_model=schemas.ViewNote ,status_code=status.HTTP_200_OK)
+def visit_note(note_id: int, db: session = Depends(get_db)):
+    try:
+        notes = db.query(model.VisitingNotes) \
+            .filter(model.VisitingNotes.note_id ==note_id).first()
+        if not notes:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Note id not found")
+        return notes
+    
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f'{str(e)}')
