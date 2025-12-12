@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy import Column, String, Integer, ForeignKey, Boolean, DateTime, Float
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
@@ -12,7 +14,7 @@ class User(base):
     user_name = Column(String(50), nullable=False)
     email = Column(String(50), nullable=False)
     password = Column(String(100), nullable=False)
-    created_at = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, default=datetime.now())
 
     test_result = relationship("LabResult", back_populates="user")
 
@@ -28,7 +30,7 @@ class Patient(base):
     gender = Column(String(10), nullable=False)
     phone = Column(String(20), nullable=True)
     dignosis = Column(String(50), nullable=True)
-    created_at = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, default=datetime.now())
 
     test_bill = relationship("LabTestBilling", back_populates="patient")
     test_req = relationship("LabTestRequest", back_populates="patient")
@@ -40,7 +42,7 @@ class LabTestRequest(base):
     patient_id = Column(Integer, ForeignKey("patient.pid"), nullable=False) # every test req will have a patient assign to it
 
     test_name = Column(String(50), nullable=False)
-    status = Column(Boolean, nullable=False) # checking if the test request is accepted or rejected
+    status = Column(String(10), nullable=False, default='Pending') # checking if the test request is accepted or rejected
     decline_reason = Column(String(100), nullable=True) # reason will be here not in test_bill
     locked_by = Column(Integer, ForeignKey('users.user_id'), nullable=True)
     locked_at = Column(DateTime, nullable=True)
@@ -57,7 +59,7 @@ class LabTestBilling(base):
     test_req_id = Column(Integer, ForeignKey("test_request.test_req_id"), nullable=False)
 
     bill_amount = Column(Float, nullable=False)
-    payment_status = Column(Boolean, nullable=False)
+    payment_status = Column(String(10), nullable=False)
     create_at = Column(DateTime, nullable=False)
     updated_at = Column(DateTime, nullable=False)
 
