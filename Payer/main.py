@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from fastapi import FastAPI, Depends, HTTPException, status
 from sqlalchemy.orm import session
 
@@ -122,29 +124,44 @@ def get_policy(policy_id : int , db: session = Depends(get_db)):
 
 @app.post("/submit_claim", response_model=schemas.PatientClaimDisplay, status_code=status.HTTP_201_CREATED, tags=["Claims"])
 def submit_claim(request: schemas.PatientClaimCreate, db: session = Depends(get_db)):
+    
     policy = db.query(models.InsurancePolicy).filter(models.InsurancePolicy.policy_id == request.policy_id).first()
     if not policy:
         raise HTTPException(status_code=404, detail="Policy ID not found")
+    
+    patient = db.query(models.Patient).filter(models.Patient.p_id == request.patient_id).first()
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient ID not found")
 
     new_claim = models.PatientClaim(
-        claim_id=request.claim_id,
         policy_id=request.policy_id,
+        patient_id = request.patient_id,
         service_name=request.service_name,
         bill_amount=request.bill_amount,
-        provider_phone_no=request.provider_phone_no,
-        item_status=request.item_status
+        provider_phone_no=request.provider_phone_no
     )
     db.add(new_claim)
     db.commit()
     db.refresh(new_claim)
     return new_claim
 
-@app.get("/get_all_claims", response_model=list[schemas.PatientClaimDisplay], status_code=status.HTTP_200_OK, tags=["Claims"])
-def get_all_claims(db: session = Depends(get_db)):
-    return db.query(models.PatientClaim).all()
+@app.get("/get_all_claims", response_model=list[schemas.AllClaims], status_code=status.HTTP_200_OK, tags=["Claims"])
+def get_all_pending_claims(db: session = Depends(get_db)):
+    all_claims = db.query(models.PatientClaim).filter(models.PatientClaim.claim_status == 'Pending').all()
+    claims =[ 
+        {
+            "claim_id" : claim.claim_id,
+            "name": claim.patient.name,
+            "phone_no": claim.patient.phone_no,
+            "created_at": claim.created_at
+        }
+        for claim in all_claims # called list comprehension. cleaner way
+    ]
+
+    return claims
 
 @app.get("/get_single_claim{claim_id}", response_model=schemas.PatientClaimDisplay, status_code=status.HTTP_200_OK, tags=["Claims"])
-def get_all_claims(claim_id : int, db: session = Depends(get_db)):
+def get_single_claims(claim_id : int, db: session = Depends(get_db)):
     claim =  db.query(models.PatientClaim).filter(models.PatientClaim.claim_id == claim_id).first()
 
     if not claim:
@@ -166,6 +183,51 @@ def claim_status(claim_id : int, claim_status: str, db: session = Depends(get_db
     db.refresh(claim)
 
     return {"message": f"status set to {claim_status}"}
+
+@app.put("/lock_claim{claim_id}/by{user_id}", status_code=status.HTTP_202_ACCEPTED, tags=['Claims'])
+def claim_lock(claim_id : int, user_id: int, db: session = Depends(get_db)):
+
+    claim = db.query(models.PatientClaim).filter(models.PatientClaim.claim_id == claim_id).first()
+    if not claim:
+        raise HTTPException(status_code=404, detail="claim id not found")
+    
+    user = db.query(models.SystemUser).filter(models.SystemUser.user_id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="user id not found")
+    
+    if claim.locked_by_user_id != None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="claim already locked")
+    
+    claim.locked_by_user_id = user_id
+    claim.locked_at = datetime.now()
+
+    db.commit()
+    db.refresh(claim)
+
+    return {"message": f"claim locked by {user.user_name}"}
+
+@app.put("/unlock_claim{claim_id}/by{user_id}", status_code=status.HTTP_202_ACCEPTED, tags=['Claims'])
+def claim_unlock(claim_id : int, user_id: int, db: session = Depends(get_db)):
+
+    claim = db.query(models.PatientClaim).filter(models.PatientClaim.claim_id == claim_id).first()
+    if not claim:
+        raise HTTPException(status_code=404, detail="claim id not found")
+    
+    
+    user = db.query(models.SystemUser).filter(models.SystemUser.user_id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="user id not found")
+    
+    if claim.locked_by_user_id == None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="claim already unlocked")
+    
+    claim.locked_by_user_id = None
+    claim.locked_at = None
+
+    db.commit()
+    db.refresh(claim)
+
+    return {"message": f"claim locked by {user.user_name}"}
 
 if __name__ == "__main__":
     import uvicorn

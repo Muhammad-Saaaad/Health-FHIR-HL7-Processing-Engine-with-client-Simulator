@@ -15,7 +15,7 @@ class SystemUser(Base):
     
     patients = relationship("Patient", back_populates="user")
     policies_managed = relationship("InsurancePolicy", back_populates="manager")
-
+    locked_claims = relationship("PatientClaim", back_populates="locked_by")
 
 class Patient(Base):
     __tablename__ = "Patient"
@@ -30,6 +30,7 @@ class Patient(Base):
 
     user = relationship("SystemUser", back_populates="patients")
     policies = relationship("InsurancePolicy", back_populates="patient")
+    claims = relationship("PatientClaim", back_populates="patient")
 
 
 class InsurancePolicy(Base):
@@ -60,9 +61,11 @@ class PatientClaim(Base):
     service_name = Column(String(100), nullable=False)
     bill_amount = Column(Numeric(10, 2), nullable=False)
     provider_phone_no = Column(String(20), nullable=True)
-    claim_status = Column(String(10), nullable=False)
+    claim_status = Column(String(10), nullable=False, default="Pending")
     created_at = Column(DateTime, default=datetime.now(), nullable=False)
     locked_by_user_id = Column(Integer, ForeignKey("SystemUser.user_id"), nullable=True)
     locked_at = Column(DateTime, nullable=True)
 
+    patient = relationship("Patient", back_populates="claims")
     policy = relationship("InsurancePolicy", back_populates="claims")
+    locked_by = relationship("SystemUser", back_populates="locked_claims")
