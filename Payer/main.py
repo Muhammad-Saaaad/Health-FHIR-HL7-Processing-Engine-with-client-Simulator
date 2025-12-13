@@ -47,7 +47,7 @@ def login_user(request: schemas.LoginRequest, db: session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Invalid Password")
 
     return {
-        "message": "Login Successful! ✅",
+        "message": "Login Successful",
         "user_id": user.user_id,
         "user_name": user.user_name
     }
@@ -55,6 +55,12 @@ def login_user(request: schemas.LoginRequest, db: session = Depends(get_db)):
 
 @app.post("/reg_patient", response_model=schemas.PatientDisplay, status_code=status.HTTP_201_CREATED, tags=["Patients"])
 def register_patient(request: schemas.PatientCreate, db: session = Depends(get_db)):
+
+    is_user = db.query(models.SystemUser).filter(models.SystemUser.user_id == request.user_id).first()
+
+    if not is_user:
+        raise HTTPException(status_code=404, detail="Invalid user id")
+
     new_patient = models.Patient(
         name=request.name,
         cnic=request.cnic,
@@ -81,10 +87,16 @@ def get_single_patient(p_id: int, db: session = Depends(get_db)):
 
 
 
-@app.post("/create_policy", status_code=status.HTTP_201_CREATED, tags=["Policies"])
+@app.post("/create_policy", status_code=status.HTTP_201_CREATED, tags=["Insurance_Policies"])
 def create_policy(request: schemas.PolicyCreate, db: session = Depends(get_db)):
+
     if not db.query(models.Patient).filter(models.Patient.p_id == request.p_id).first():
         raise HTTPException(status_code=404, detail="Patient ID not found")
+    
+    is_user = db.query(models.SystemUser).filter(models.SystemUser.user_id == request.u_id).first()
+
+    if not is_user:
+        raise HTTPException(status_code=404, detail="Invalid user id")
         
     new_policy = models.InsurancePolicy(
         p_id=request.p_id,
@@ -100,6 +112,13 @@ def create_policy(request: schemas.PolicyCreate, db: session = Depends(get_db)):
     db.refresh(new_policy)
     return new_policy
 
+@app.get("/single_policy{policy_id}", status_code=200, response_model=schemas.PolicyCreate, tags=["Insurance_Policies"])
+def get_policy(policy_id : int , db: session = Depends(get_db)):
+    policy =  db.query(models.InsurancePolicy).filter(models.InsurancePolicy.policy_id == policy_id).first()
+        
+    if not policy:    
+        raise HTTPException(status_code=404, detail="Insurance Policy ID not found")
+    return policy
 
 @app.post("/submit_claim", response_model=schemas.PatientClaimDisplay, status_code=status.HTTP_201_CREATED, tags=["Claims"])
 def submit_claim(request: schemas.PatientClaimCreate, db: session = Depends(get_db)):

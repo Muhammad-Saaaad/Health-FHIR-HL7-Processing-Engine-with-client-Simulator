@@ -53,6 +53,11 @@ class PatientClaimCreate(BaseModel):
     provider_phone_no: str | None =  None
     item_status: str
 
+class all_claims(BaseModel):
+    name: str
+    phone_no: str | None
+    created_at: date
+
 class PatientClaimDisplay(BaseModel):
     claim_id: int
     service_name: str

@@ -54,7 +54,9 @@ class PatientClaim(Base):
     __tablename__ = "Patient_Claim"
 
     claim_id = Column(Integer, primary_key=True, index=True) 
-    policy_id = Column(Integer, ForeignKey("Insurance_Policy.policy_id")) 
+    policy_id = Column(Integer, ForeignKey("Insurance_Policy.policy_id"), nullable=False) 
+    patient_id = Column(Integer, ForeignKey("Patient.p_id"), nullable=False)
+
     service_name = Column(String(100), nullable=False)
     bill_amount = Column(Numeric(10, 2), nullable=False)
     provider_phone_no = Column(String(20), nullable=True)
