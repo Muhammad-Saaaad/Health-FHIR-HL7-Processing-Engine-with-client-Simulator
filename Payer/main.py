@@ -62,6 +62,10 @@ def register_patient(request: schemas.PatientCreate, db: session = Depends(get_d
 
     if not is_user:
         raise HTTPException(status_code=404, detail="Invalid user id")
+    
+    if db.query(models.Patient).filter(models.Patient.cnic == request.cnic).first():
+        raise HTTPException(status_code=409, detail="Patient already exists")
+
 
     new_patient = models.Patient(
         name=request.name,
