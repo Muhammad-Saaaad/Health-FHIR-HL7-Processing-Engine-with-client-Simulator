@@ -1,5 +1,5 @@
 from fastapi import FastAPI, status, HTTPException, Depends
-from sqlalchemy.orm import session
+from sqlalchemy.orm import Session
 
 from database import engine, get_db
 import model
@@ -9,7 +9,7 @@ app = FastAPI()
 model.base.metadata.create_all(bind=engine)
 
 @app.post("/SignUp", status_code=status.HTTP_201_CREATED)
-def SignUp(user: SignUp, db: session = Depends(get_db)):
+def SignUp(user: SignUp, db: Session = Depends(get_db)):
 
     if db.query(model.User).filter(model.User.email == user.email).first():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="email already exists")
@@ -21,7 +21,7 @@ def SignUp(user: SignUp, db: session = Depends(get_db)):
     return db_user
 
 @app.post("/Login", status_code=status.HTTP_200_OK)
-def login(request: Login, db: session = Depends(get_db)):
+def login(request: Login, db: Session = Depends(get_db)):
     user = db.query(model.User).filter(model.User.email == request.email).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="email not exists")
@@ -33,7 +33,7 @@ def login(request: Login, db: session = Depends(get_db)):
 
 # Register Patient
 @app.post("/reg_patients", response_model=Patient, status_code=status.HTTP_201_CREATED)
-def register_patient(patient: Patient, db: session = Depends(get_db)):
+def register_patient(patient: Patient, db: Session = Depends(get_db)):
 
     if db.query(model.Patient).filter(model.Patient.cnic == patient.cnic).first():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="cnic already exists")
@@ -46,13 +46,13 @@ def register_patient(patient: Patient, db: session = Depends(get_db)):
 
 # API 3: Get Patient List
 @app.get("/get_patients", response_model=list[Patient])
-def get_all_patients(db: session = Depends(get_db)):
+def get_all_patients(db: Session = Depends(get_db)):
     patients = db.query(model.Patient).all()
     return patients
 
 # API 4: Get Patient Detail
 @app.get("/patients/{pid}", response_model=Patient)
-def get_patient_detail(pid: int, db: session = Depends(get_db)):
+def get_patient_detail(pid: int, db: Session = Depends(get_db)):
     patient = db.get(model.Patient, pid)
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found")
@@ -64,7 +64,8 @@ def get_patient_detail(pid: int, db: session = Depends(get_db)):
 
 # API 5: Create Test Order
 @app.post("/test_requests", response_model=TestRequestOut, status_code=status.HTTP_201_CREATED)
-def create_test_request(request: TestRequestCreate, db: session = Depends(get_db)):
+def create_test_request(request: TestRequestCreate, db: Session = Depends(get_db)):
+    
     if not db.get(model.Patient, request.patient_id):
         raise HTTPException(status_code=404, detail="Patient ID not found")
         
@@ -74,15 +75,21 @@ def create_test_request(request: TestRequestCreate, db: session = Depends(get_db
     db.refresh(db_request)
     return db_request
 
-# API 6: Get Pending Tests
-@app.get("/requests/pending", response_model=list[TestRequestOut])
-def get_pending_requests(db: session = Depends(get_db)):
-    pending_requests = db.query(model.LabTestRequest).where(model.LabTestRequest.status == "Pending").all()
-    return pending_requests
+@app.get("/requests/pending", response_model=list[TestRequestOut], tags=["Test Requests"])
+def get_pending_requests(db: Session = Depends(get_db)):
+    return db.query(model.LabTestRequest).filter(model.LabTestRequest.status == "Pending").all()
+
+# API 6: Get Active Tests with payment status paiid
+@app.get("/requests/accepted/payment/paid", response_model=list[TestRequestOut])
+def get_accepted_requests(db: Session = Depends(get_db)):
+    accepted_requests = db.query(model.LabTestRequest).join(model.LabTestBilling) \
+        .filter(model.LabTestRequest.status == "Accepted", model.LabTestBilling.payment_status == "Paid").all()
+
+    return accepted_requests
 
 # API 7: Update Status (Accept/Decline/Complete)
 @app.put("/requests/{req_id}/status", response_model=TestRequestOut)
-def update_request_status(req_id: int, status_update: TestRequestStatusUpdate, db: session = Depends(get_db)):
+def update_request_status(req_id: int, status_update: TestRequestStatusUpdate, db: Session = Depends(get_db)):
     updated_request = db.query(model.LabTestRequest).filter(model.LabTestRequest.test_req_id == req_id).first()
     
     if not updated_request:
@@ -97,7 +104,7 @@ def update_request_status(req_id: int, status_update: TestRequestStatusUpdate, d
 
 # API 8: Lock Request
 @app.put("/requests/{req_id}/lock", response_model=TestRequestOut)
-def lock_test_request(req_id: int, user_id: int, db: session = Depends(get_db)):
+def lock_test_request(req_id: int, user_id: int, db: Session = Depends(get_db)):
     
     current_request = db.get(model.LabTestRequest, req_id)
     if current_request and current_request.locked_by and current_request.locked_by != user_id:
@@ -116,7 +123,7 @@ def lock_test_request(req_id: int, user_id: int, db: session = Depends(get_db)):
     return updated_request
 
 @app.put("/requests/{req_id}/unlock", response_model=TestRequestOut)
-def unlock_test_request(req_id: int, user_id: int, db: session = Depends(get_db)):
+def unlock_test_request(req_id: int, user_id: int, db: Session = Depends(get_db)):
 
     current_request = db.get(model.LabTestRequest, req_id)
     if current_request and current_request.locked_by and current_request.locked_by != user_id:
