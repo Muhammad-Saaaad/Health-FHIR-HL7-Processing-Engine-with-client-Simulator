@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from fastapi import FastAPI, Depends, HTTPException, status
-from sqlalchemy.orm import session
+from sqlalchemy.orm import Session
 
 from database import engine, get_db
 import models
@@ -22,7 +22,7 @@ def home():
 
 
 @app.post("/signup", response_model=schemas.SystemUserDisplay, status_code=status.HTTP_201_CREATED, tags=["Users"])
-def signup_user(request: schemas.SystemUserCreate, db: session = Depends(get_db)):
+def signup_user(request: schemas.SystemUserCreate, db: Session = Depends(get_db)):
 
     existing_user = db.query(models.SystemUser).filter(models.SystemUser.email == request.email).first()
     if existing_user:
@@ -40,7 +40,7 @@ def signup_user(request: schemas.SystemUserCreate, db: session = Depends(get_db)
     return new_user
 
 @app.post("/login", status_code=status.HTTP_200_OK, tags=["Users"])
-def login_user(request: schemas.LoginRequest, db: session = Depends(get_db)):
+def login_user(request: schemas.LoginRequest, db: Session = Depends(get_db)):
     user = db.query(models.SystemUser).filter(models.SystemUser.email == request.email).first()
     if not user:
         raise HTTPException(status_code=404, detail="Invalid Email")
@@ -56,12 +56,16 @@ def login_user(request: schemas.LoginRequest, db: session = Depends(get_db)):
 
 
 @app.post("/reg_patient", response_model=schemas.PatientDisplay, status_code=status.HTTP_201_CREATED, tags=["Patients"])
-def register_patient(request: schemas.PatientCreate, db: session = Depends(get_db)):
+def register_patient(request: schemas.PatientCreate, db: Session = Depends(get_db)):
 
     is_user = db.query(models.SystemUser).filter(models.SystemUser.user_id == request.user_id).first()
 
     if not is_user:
         raise HTTPException(status_code=404, detail="Invalid user id")
+    
+    if db.query(models.Patient).filter(models.Patient.cnic == request.cnic).first():
+        raise HTTPException(status_code=409, detail="Patient already exists")
+
 
     new_patient = models.Patient(
         name=request.name,
@@ -77,11 +81,11 @@ def register_patient(request: schemas.PatientCreate, db: session = Depends(get_d
     return new_patient
 
 @app.get("/get_all_patients", response_model=list[schemas.PatientDisplay], status_code=status.HTTP_200_OK, tags=["Patients"])
-def get_all_patients(db: session = Depends(get_db)):
+def get_all_patients(db: Session = Depends(get_db)):
     return db.query(models.Patient).all()
 
 @app.get("/get_patient/{p_id}", response_model=schemas.PatientDisplay, status_code=status.HTTP_200_OK, tags=["Patients"])
-def get_single_patient(p_id: int, db: session = Depends(get_db)):
+def get_single_patient(p_id: int, db: Session = Depends(get_db)):
     patient = db.query(models.Patient).filter(models.Patient.p_id == p_id).first()
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found")
@@ -90,7 +94,7 @@ def get_single_patient(p_id: int, db: session = Depends(get_db)):
 
 
 @app.post("/create_policy", status_code=status.HTTP_201_CREATED, tags=["Insurance_Policies"])
-def create_policy(request: schemas.PolicyCreate, db: session = Depends(get_db)):
+def create_policy(request: schemas.PolicyCreate, db: Session = Depends(get_db)):
 
     if not db.query(models.Patient).filter(models.Patient.p_id == request.p_id).first():
         raise HTTPException(status_code=404, detail="Patient ID not found")
@@ -115,7 +119,7 @@ def create_policy(request: schemas.PolicyCreate, db: session = Depends(get_db)):
     return new_policy
 
 @app.get("/single_policy{policy_id}", status_code=200, response_model=schemas.PolicyCreate, tags=["Insurance_Policies"])
-def get_policy(policy_id : int , db: session = Depends(get_db)):
+def get_policy(policy_id : int , db: Session = Depends(get_db)):
     policy =  db.query(models.InsurancePolicy).filter(models.InsurancePolicy.policy_id == policy_id).first()
         
     if not policy:    
@@ -123,7 +127,7 @@ def get_policy(policy_id : int , db: session = Depends(get_db)):
     return policy
 
 @app.post("/submit_claim", response_model=schemas.PatientClaimDisplay, status_code=status.HTTP_201_CREATED, tags=["Claims"])
-def submit_claim(request: schemas.PatientClaimCreate, db: session = Depends(get_db)):
+def submit_claim(request: schemas.PatientClaimCreate, db: Session = Depends(get_db)):
     
     policy = db.query(models.InsurancePolicy).filter(models.InsurancePolicy.policy_id == request.policy_id).first()
     if not policy:
@@ -146,7 +150,7 @@ def submit_claim(request: schemas.PatientClaimCreate, db: session = Depends(get_
     return new_claim
 
 @app.get("/get_all_claims", response_model=list[schemas.AllClaims], status_code=status.HTTP_200_OK, tags=["Claims"])
-def get_all_pending_claims(db: session = Depends(get_db)):
+def get_all_pending_claims(db: Session = Depends(get_db)):
     all_claims = db.query(models.PatientClaim).filter(models.PatientClaim.claim_status == 'Pending').all()
     claims =[ 
         {
@@ -161,7 +165,7 @@ def get_all_pending_claims(db: session = Depends(get_db)):
     return claims
 
 @app.get("/get_single_claim{claim_id}", response_model=schemas.PatientClaimDisplay, status_code=status.HTTP_200_OK, tags=["Claims"])
-def get_single_claims(claim_id : int, db: session = Depends(get_db)):
+def get_single_claims(claim_id : int, db: Session = Depends(get_db)):
     claim =  db.query(models.PatientClaim).filter(models.PatientClaim.claim_id == claim_id).first()
 
     if not claim:
@@ -170,7 +174,7 @@ def get_single_claims(claim_id : int, db: session = Depends(get_db)):
     return claim
 
 @app.put("/change_claim_status{claim_id}/{claim_status}", status_code=status.HTTP_202_ACCEPTED, tags=['Claims'])
-def claim_status(claim_id : int, claim_status: str, db: session = Depends(get_db)):
+def claim_status(claim_id : int, claim_status: str, db: Session = Depends(get_db)):
 
     claim = db.query(models.PatientClaim).filter(models.PatientClaim.claim_id == claim_id).first()
 
@@ -185,7 +189,7 @@ def claim_status(claim_id : int, claim_status: str, db: session = Depends(get_db
     return {"message": f"status set to {claim_status}"}
 
 @app.put("/lock_claim{claim_id}/by{user_id}", status_code=status.HTTP_202_ACCEPTED, tags=['Claims'])
-def claim_lock(claim_id : int, user_id: int, db: session = Depends(get_db)):
+def claim_lock(claim_id : int, user_id: int, db: Session = Depends(get_db)):
 
     claim = db.query(models.PatientClaim).filter(models.PatientClaim.claim_id == claim_id).first()
     if not claim:
@@ -195,8 +199,8 @@ def claim_lock(claim_id : int, user_id: int, db: session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=404, detail="user id not found")
     
-    if claim.locked_by_user_id != None:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="claim already locked")
+    if claim.locked_by_user_id != None and claim.locked_by_user_id != user_id:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="claim already locked")
     
     claim.locked_by_user_id = user_id
     claim.locked_at = datetime.now()
@@ -207,7 +211,7 @@ def claim_lock(claim_id : int, user_id: int, db: session = Depends(get_db)):
     return {"message": f"claim locked by {user.user_name}"}
 
 @app.put("/unlock_claim{claim_id}/by{user_id}", status_code=status.HTTP_202_ACCEPTED, tags=['Claims'])
-def claim_unlock(claim_id : int, user_id: int, db: session = Depends(get_db)):
+def claim_unlock(claim_id : int, user_id: int, db: Session = Depends(get_db)):
 
     claim = db.query(models.PatientClaim).filter(models.PatientClaim.claim_id == claim_id).first()
     if not claim:
@@ -219,7 +223,7 @@ def claim_unlock(claim_id : int, user_id: int, db: session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="user id not found")
     
     if claim.locked_by_user_id == None:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="claim already unlocked")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="claim already unlocked")
     
     claim.locked_by_user_id = None
     claim.locked_at = None
@@ -227,7 +231,7 @@ def claim_unlock(claim_id : int, user_id: int, db: session = Depends(get_db)):
     db.commit()
     db.refresh(claim)
 
-    return {"message": f"claim locked by {user.user_name}"}
+    return {"message": f"claim unlocked by {user.user_name}"}
 
 if __name__ == "__main__":
     import uvicorn
