@@ -1,6 +1,6 @@
 from fastapi import APIRouter, status, Depends, HTTPException
 from fastapi.responses import JSONResponse
-from sqlalchemy.orm import session
+from sqlalchemy.orm import Session
 
 import model
 from database import get_db
@@ -10,7 +10,7 @@ router = APIRouter(tags=['Authentication'])
 
 
 @router.post("/signup", status_code=status.HTTP_201_CREATED)
-def create_doctor(doctor: schemas.SignUp, db :session = Depends(get_db)):
+def create_doctor(doctor: schemas.SignUp, db :Session = Depends(get_db)):
     try:
         new_doctor = model.Doctor(
             name = doctor.name,
@@ -25,7 +25,7 @@ def create_doctor(doctor: schemas.SignUp, db :session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
 
 @router.post("/login",status_code=status.HTTP_200_OK)
-def login_doctor(doctor: schemas.Login, db :session = Depends(get_db)):
+def login_doctor(doctor: schemas.Login, db :Session = Depends(get_db)):
     try:
         is_valid_doc = db.query(model.Doctor).filter(
             model.Doctor.email == doctor.email).first()
@@ -41,7 +41,7 @@ def login_doctor(doctor: schemas.Login, db :session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
 
 @router.put("/change-phone-no{p_no}/id{doc_id}", status_code=status.HTTP_202_ACCEPTED)
-def alter_phone_no(p_no: str , doc_id: int, db :session = Depends(get_db)):
+def alter_phone_no(p_no: str , doc_id: int, db :Session = Depends(get_db)):
     try:
         doc = db.query(model.Doctor).filter(model.Doctor.doctor_id == doc_id).first()
 

@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, status, Depends, HTTPException
 from fastapi.responses import JSONResponse
-from sqlalchemy.orm import session
+from sqlalchemy.orm import Session
 
 import model
 from database import get_db
@@ -12,7 +12,7 @@ router = APIRouter(tags=['Doctor'])
 
 
 @router.get("/patients", response_model=list[schemas.get_patient], status_code=status.HTTP_200_OK)
-def get_patient(db: session = Depends(get_db)):
+def get_patient(db: Session = Depends(get_db)):
     try:
         all_patients = db.query(model.Patient).all()
         return all_patients
@@ -20,7 +20,7 @@ def get_patient(db: session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
     
 @router.post("/patients", status_code=status.HTTP_201_CREATED)
-def add_patient(patient: schemas.post_patient ,db: session = Depends(get_db)):
+def add_patient(patient: schemas.post_patient ,db: Session = Depends(get_db)):
     try:
         new_patient = model.Patient(
             cnic = patient.cnic,
@@ -38,7 +38,7 @@ def add_patient(patient: schemas.post_patient ,db: session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exp)
 
 @router.post("/visit-note-add", status_code=status.HTTP_201_CREATED)
-def add_visit_note(visit_note: schemas.VisitNote ,db: session = Depends(get_db)):
+def add_visit_note(visit_note: schemas.VisitNote ,db: Session = Depends(get_db)):
     try:
         new_bill = model.Bill(
             insurace_amount = visit_note.bill_amount,
@@ -69,7 +69,7 @@ def add_visit_note(visit_note: schemas.VisitNote ,db: session = Depends(get_db))
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(exp)}")
 
 @router.get("/all-visit-notes{doc_id}/{pid}", response_model=list[schemas.ViewNote] ,status_code=status.HTTP_200_OK)
-def visit_note(doc_id: int, pid: int, db: session = Depends(get_db)):
+def visit_note(doc_id: int, pid: int, db: Session = Depends(get_db)):
     try:
 
         is_patient = db.query(model.Patient).filter(model.Patient.patient_id == pid).first()
@@ -89,7 +89,7 @@ def visit_note(doc_id: int, pid: int, db: session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f'{str(e)}')
 
 @router.get("/visit-note{note_id}", response_model=schemas.ViewNote ,status_code=status.HTTP_200_OK)
-def visit_note(note_id: int, db: session = Depends(get_db)):
+def visit_note(note_id: int, db: Session = Depends(get_db)):
     try:
         notes = db.query(model.VisitingNotes) \
             .filter(model.VisitingNotes.note_id == note_id).first()
@@ -101,7 +101,7 @@ def visit_note(note_id: int, db: session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f'{str(e)}')
     
 @router.get("/lab-reports-by-{note_id}", response_model=list[schemas.LabReport], status_code=status.HTTP_200_OK)
-def fetch_lab_report(note_id: int, db: session = Depends(get_db)):
+def fetch_lab_report(note_id: int, db: Session = Depends(get_db)):
     try:
         notes = db.query(model.LabReport) \
             .filter(model.LabReport.visit_id == note_id).all()
