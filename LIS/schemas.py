@@ -1,7 +1,16 @@
-from pydantic import BaseModel, Field
-from datetime import datetime
+from pydantic import BaseModel, Field, EmailStr
+from datetime import datetime, date
 
-# --- Base Schema for Patient Input ---
+class SignUp(BaseModel):
+    user_name: str
+    email: EmailStr
+    password: str
+
+    model_config = {"from_attributes": True}
+class Login(BaseModel):
+    email: EmailStr
+    password: str
+
 class PatientBase(BaseModel):
     cnic: str = Field(..., max_length=20)
     fname: str = Field(..., max_length=25)
@@ -12,13 +21,16 @@ class PatientBase(BaseModel):
     dignosis: str | None
 
 # --- Schema for Patient Creation ---
-class PatientCreate(PatientBase):
-    pass
-
-# --- Schema for Patient Output (Response) ---
-class PatientOut(PatientBase):
+class Patient(PatientBase):
     pid: int
-    created_at: datetime
+    cnic : str
+    fname : str
+    lname : str | None
+    dob : datetime | date | None
+    gender : str
+    phone : str
+    dignosis : str
+    created_at : datetime | date | None
 
     model_config = {"from_attributes": True}
 
@@ -40,5 +52,4 @@ class TestRequestOut(TestRequestCreate):
     locked_by: int | None
     locked_at: datetime | None
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}

@@ -8,9 +8,36 @@ from schemas import *
 app = FastAPI()
 model.base.metadata.create_all(bind=engine)
 
+@app.post("/SignUp", status_code=status.HTTP_201_CREATED)
+def SignUp(user: SignUp, db: session = Depends(get_db)):
+
+    if db.query(model.User).filter(model.User.email == user.email).first():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="email already exists")
+
+    db_user = model.User(**user.model_dump())
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+@app.post("/Login", status_code=status.HTTP_200_OK)
+def login(request: Login, db: session = Depends(get_db)):
+    user = db.query(model.User).filter(model.User.email == request.email).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="email not exists")
+
+    if user.password != request.password:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="password not exists")
+    
+    return {"message": "Login sucessfull"}
+
 # Register Patient
-@app.post("/reg_patients", response_model=PatientOut, status_code=status.HTTP_201_CREATED)
-def register_patient(patient: PatientCreate, db: session = Depends(get_db)):
+@app.post("/reg_patients", response_model=Patient, status_code=status.HTTP_201_CREATED)
+def register_patient(patient: Patient, db: session = Depends(get_db)):
+
+    if db.query(model.Patient).filter(model.Patient.cnic == patient.cnic).first():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="cnic already exists")
+
     db_patient = model.Patient(**patient.model_dump())
     db.add(db_patient)
     db.commit()
@@ -18,13 +45,13 @@ def register_patient(patient: PatientCreate, db: session = Depends(get_db)):
     return db_patient
 
 # API 3: Get Patient List
-@app.get("/get_patients", response_model=list[PatientOut])
+@app.get("/get_patients", response_model=list[Patient])
 def get_all_patients(db: session = Depends(get_db)):
     patients = db.query(model.Patient).all()
     return patients
 
 # API 4: Get Patient Detail
-@app.get("/patients/{pid}", response_model=PatientOut)
+@app.get("/patients/{pid}", response_model=Patient)
 def get_patient_detail(pid: int, db: session = Depends(get_db)):
     patient = db.get(model.Patient, pid)
     if not patient:
@@ -36,7 +63,7 @@ def get_patient_detail(pid: int, db: session = Depends(get_db)):
 # =========================================================================
 
 # API 5: Create Test Order
-@app.post("/requests", response_model=TestRequestOut, status_code=status.HTTP_201_CREATED)
+@app.post("/test_requests", response_model=TestRequestOut, status_code=status.HTTP_201_CREATED)
 def create_test_request(request: TestRequestCreate, db: session = Depends(get_db)):
     if not db.get(model.Patient, request.patient_id):
         raise HTTPException(status_code=404, detail="Patient ID not found")
@@ -53,29 +80,44 @@ def get_pending_requests(db: session = Depends(get_db)):
     pending_requests = db.query(model.LabTestRequest).where(model.LabTestRequest.status == "Pending").all()
     return pending_requests
 
-# API 7: Update Status (Accept/Decline/Complete) # run when you recieve the response from payer via engine
-# @app.put("/requests/{req_id}/status", response_model=TestRequestOut)
-# def update_request_status(req_id: int, status_update: TestRequestStatusUpdate, db: session = Depends(get_db)):
+# API 7: Update Status (Accept/Decline/Complete)
+@app.put("/requests/{req_id}/status", response_model=TestRequestOut)
+def update_request_status(req_id: int, status_update: TestRequestStatusUpdate, db: session = Depends(get_db)):
+    updated_request = db.query(model.LabTestRequest).filter(model.LabTestRequest.test_req_id == req_id).first()
     
-#     db.execute(
-#         update(model.LabTestRequest)
-#         .where(model.LabTestRequest.test_req_id == req_id)
-#         .values(
-#             status=status_update.status,
-#             decline_reason=status_update.decline_reason,
-#         )
-#     )
-#     db.commit()
+    if not updated_request:
+        raise HTTPException(status_code=404, detail="Test Request not found")
     
-#     updated_request = db.get(model.LabTestRequest, req_id)
-#     if not updated_request:
-#         raise HTTPException(status_code=404, detail="Test Request not found")
-        
-#     return updated_request
+    updated_request.status == status_update.status
+    updated_request.decline_reason = status_update.decline_reason
+
+    db.commit()
+    db.refresh(updated_request)
+    return updated_request
 
 # API 8: Lock Request
 @app.put("/requests/{req_id}/lock", response_model=TestRequestOut)
 def lock_test_request(req_id: int, user_id: int, db: session = Depends(get_db)):
+    
+    current_request = db.get(model.LabTestRequest, req_id)
+    if current_request and current_request.locked_by and current_request.locked_by != user_id:
+        raise HTTPException(status_code=403, detail="Test is already locked by another technician.")
+        
+    current_request.locked_by = user_id
+    current_request.locked_at = datetime.now()
+
+    db.commit()
+    db.refresh(current_request)
+    
+    updated_request = db.get(model.LabTestRequest, req_id)
+    if not updated_request:
+        raise HTTPException(status_code=404, detail="Test Request not found")
+        
+    return updated_request
+
+@app.put("/requests/{req_id}/unlock", response_model=TestRequestOut)
+def unlock_test_request(req_id: int, user_id: int, db: session = Depends(get_db)):
+
     current_request = db.get(model.LabTestRequest, req_id)
     if current_request and current_request.locked_by and current_request.locked_by != user_id:
         raise HTTPException(status_code=403, detail="Test is already locked by another technician.")
@@ -84,11 +126,6 @@ def lock_test_request(req_id: int, user_id: int, db: session = Depends(get_db)):
     test_req.locked_by = user_id
     test_req.locked_at = datetime.now()
 
-    # .values(
-    #         locked_by=user_id,
-    #         locked_at=datetime.now(),
-    #     )
-    # )
     db.commit()
     db.refresh(test_req)
     
