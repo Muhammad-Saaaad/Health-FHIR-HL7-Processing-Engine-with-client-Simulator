@@ -195,8 +195,8 @@ def claim_lock(claim_id : int, user_id: int, db: session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=404, detail="user id not found")
     
-    if claim.locked_by_user_id != None:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="claim already locked")
+    if claim.locked_by_user_id != None and claim.locked_by_user_id != user_id:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="claim already locked")
     
     claim.locked_by_user_id = user_id
     claim.locked_at = datetime.now()
@@ -219,7 +219,7 @@ def claim_unlock(claim_id : int, user_id: int, db: session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="user id not found")
     
     if claim.locked_by_user_id == None:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="claim already unlocked")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="claim already unlocked")
     
     claim.locked_by_user_id = None
     claim.locked_at = None
@@ -227,7 +227,7 @@ def claim_unlock(claim_id : int, user_id: int, db: session = Depends(get_db)):
     db.commit()
     db.refresh(claim)
 
-    return {"message": f"claim locked by {user.user_name}"}
+    return {"message": f"claim unlocked by {user.user_name}"}
 
 if __name__ == "__main__":
     import uvicorn
