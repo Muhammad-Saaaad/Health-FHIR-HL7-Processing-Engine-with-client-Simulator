@@ -32,6 +32,9 @@ class VisitNote(BaseModel):
     note_details : str
     bill_amount : float
 
+    lab_name: str | None
+    test_names: list[str] | None
+
     model_config = {"from_attributes": True}
 
 class ViewNote(BaseModel):

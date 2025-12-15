@@ -53,6 +53,8 @@ def add_visit_note(visit_note: schemas.VisitNote ,db: Session = Depends(get_db))
         db.flush()
 
         bill_id = new_bill.bill_id
+        if not db.get(model.Bill, bill_id):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="bill not added due to internal issues")
 
         new_visit_note = model.VisitingNotes(
             patient_id = visit_note.patient_id,
@@ -65,8 +67,24 @@ def add_visit_note(visit_note: schemas.VisitNote ,db: Session = Depends(get_db))
             note_details = visit_note.note_details
         )
         db.add(new_visit_note)
-        
-        # as the new_visit_note is a object not a python data type
+        db.flush()
+
+        lab_models = []
+        for test in visit_note.test_names:
+            lab_models.append(
+                model.LabReport(
+                    visit_id = new_visit_note.note_id,
+                    lab_name = visit_note.lab_name,
+                    test_name = test
+                )
+            )
+
+        db.add_all(lab_models)
+
+        db.commit()
+        db.refresh(new_visit_note)
+
+         # as the new_visit_note is a object not a python data type
         # so httpx won't accept it
         payload = jsonable_encoder(new_visit_note)
         payload['destination'] = "LIS"

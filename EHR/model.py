@@ -89,7 +89,9 @@ class LabReport(Base):
 
     lab_name = Column(String(100), nullable=False)
     test_name = Column(String(100), nullable=False)
-    test_date = Column(DateTime, default=datetime.now())
+    test_status = Column(String(10), nullable=False, default="Pending")
+    created_at = Column(DateTime, default=datetime.now())
+    updated_at = Column(DateTime, default=datetime.now())
 
     visiting_notes = relationship("VisitingNotes", back_populates="report")
 
