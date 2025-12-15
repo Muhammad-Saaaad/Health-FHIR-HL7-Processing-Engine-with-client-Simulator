@@ -41,7 +41,7 @@ def add_patient(patient: schemas.post_patient ,db: Session = Depends(get_db)):
 def add_visit_note(visit_note: schemas.VisitNote ,db: Session = Depends(get_db)):
     try:
         new_bill = model.Bill(
-            insurace_amount = visit_note.bill_amount,
+            insurance_amount = visit_note.bill_amount,
             bill_status = False,
         )
 
@@ -49,6 +49,8 @@ def add_visit_note(visit_note: schemas.VisitNote ,db: Session = Depends(get_db))
         db.flush()
 
         bill_id = new_bill.bill_id
+        if not db.get(model.Bill, bill_id):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="bill not added due to internal issues")
 
         new_visit_note = model.VisitingNotes(
 
@@ -62,8 +64,22 @@ def add_visit_note(visit_note: schemas.VisitNote ,db: Session = Depends(get_db))
             note_details = visit_note.note_details
         )
         db.add(new_visit_note)
+        db.flush()
+
+        lab_models = []
+        for test in visit_note.test_names:
+            lab_models.append(
+                model.LabReport(
+                    visit_id = new_visit_note.note_id,
+                    lab_name = visit_note.lab_name,
+                    test_name = test
+                )
+            )
+
+        db.add_all(lab_models)
+
         db.commit()
-        db.refresh(new_visit_note) 
+        db.refresh(new_visit_note)
         return JSONResponse(content={"message": "data inserted sucessfully"})
     except Exception as exp:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(exp)}")
