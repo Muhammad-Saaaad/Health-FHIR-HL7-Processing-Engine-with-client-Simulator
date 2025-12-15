@@ -132,7 +132,7 @@ def visit_note(note_id: int, db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f'{str(e)}')
     
-@router.get("/lab-reports-by-{note_id}", response_model=list[schemas.LabReport], status_code=status.HTTP_200_OK)
+@router.get("/lab-reports-by-{note_id}", response_model=list[schemas.LabReport], status_code=status.HTTP_200_OK, tags=["Lab"])
 def fetch_lab_report(note_id: int, db: Session = Depends(get_db)):
     try:
         notes = db.query(model.LabReport) \

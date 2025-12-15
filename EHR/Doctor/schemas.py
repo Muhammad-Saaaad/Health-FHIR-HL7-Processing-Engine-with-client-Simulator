@@ -58,4 +58,6 @@ class LabReport(BaseModel):
 
     lab_name: str
     test_name : str
-    test_date : datetime | None
+    test_status: str
+    created_at : datetime | None
+    updated_at : datetime | None
