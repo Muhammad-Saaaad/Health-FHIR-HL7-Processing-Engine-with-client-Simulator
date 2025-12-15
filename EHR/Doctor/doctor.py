@@ -66,11 +66,12 @@ def add_visit_note(visit_note: schemas.VisitNote ,db: Session = Depends(get_db))
         )
         db.add(new_visit_note)
         
-        # as the new_visit_note is a object not a python dta type
+        # as the new_visit_note is a object not a python data type
         # so httpx won't accept it
         payload = jsonable_encoder(new_visit_note)
+        payload['destination'] = "LIS"
 
-        response = httpx.post("http://127.0.0.1:9000/fhir/push", json=payload)
+        response = httpx.post("http://127.0.0.1:9000/fhir/ehr/push", json=payload)
         if response.status_code == 200:
             db.commit()
             db.refresh(new_visit_note)

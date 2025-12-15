@@ -9,3 +9,44 @@
 2025-12-15 09:33:06,022 - INFO - Data recieved
 2025-12-15 09:33:06,648 - INFO - HTTP Request: POST http://127.0.0.1:8002/hl7/push "HTTP/1.1 200 OK"
 2025-12-15 09:33:06,649 - INFO - Data sent to lab
+2025-12-15 11:28:06,503 - INFO - Data recieved: payload {'patient_id': 2, 'doctor_id': 2, 'bill_id': 21, 'note_title': 'string', 'patient_complaint': 'string', 'dignosis': 'string', 'note_details': 'string', 'destination': 'LIS'}
+2025-12-15 11:51:37,959 - INFO - Data recieved: payload {'patient_id': 2, 'doctor_id': 2, 'bill_id': 22, 'note_title': 'string', 'patient_complaint': 'string', 'dignosis': 'string', 'note_details': 'string', 'destination': 'LIS'}
+2025-12-15 11:53:03,790 - INFO - Data recieved: payload {'patient_id': 2, 'doctor_id': 2, 'bill_id': 23, 'note_title': 'string', 'patient_complaint': 'string', 'dignosis': 'string', 'note_details': 'string', 'destination': 'LIS'}
+2025-12-15 11:54:40,280 - INFO - Data recieved: payload {'patient_id': 2, 'doctor_id': 2, 'bill_id': 24, 'note_title': 'string', 'patient_complaint': 'string', 'dignosis': 'string', 'note_details': 'string', 'destination': 'LIS'}
+2025-12-15 11:54:40,280 - DEBUG - url = LIS
+2025-12-15 11:55:30,906 - INFO - Data recieved: payload {'patient_id': 2, 'doctor_id': 2, 'bill_id': 25, 'note_title': 'string', 'patient_complaint': 'string', 'dignosis': 'string', 'note_details': 'string', 'destination': 'LIS'}
+2025-12-15 11:55:30,906 - DEBUG - url = http://127.0.0.1:8002/hl7/push
+2025-12-15 11:55:31,172 - DEBUG - connect_tcp.started host='127.0.0.1' port=8002 local_address=None timeout=5.0 socket_options=None
+2025-12-15 11:55:31,203 - DEBUG - connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x000002848D9E4B90>
+2025-12-15 11:55:31,203 - DEBUG - send_request_headers.started request=<Request [b'POST']>
+2025-12-15 11:55:31,204 - DEBUG - send_request_headers.complete
+2025-12-15 11:55:31,204 - DEBUG - send_request_body.started request=<Request [b'POST']>
+2025-12-15 11:55:31,204 - DEBUG - send_request_body.complete
+2025-12-15 11:55:31,204 - DEBUG - receive_response_headers.started request=<Request [b'POST']>
+2025-12-15 11:55:31,206 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Mon, 15 Dec 2025 06:55:30 GMT'), (b'server', b'uvicorn'), (b'content-length', b'27'), (b'content-type', b'application/json')])
+2025-12-15 11:55:31,206 - INFO - HTTP Request: POST http://127.0.0.1:8002/hl7/push "HTTP/1.1 200 OK"
+2025-12-15 11:55:31,206 - DEBUG - receive_response_body.started request=<Request [b'POST']>
+2025-12-15 11:55:31,206 - DEBUG - receive_response_body.complete
+2025-12-15 11:55:31,206 - DEBUG - response_closed.started
+2025-12-15 11:55:31,206 - DEBUG - response_closed.complete
+2025-12-15 11:55:31,206 - DEBUG - close.started
+2025-12-15 11:55:31,206 - DEBUG - close.complete
+2025-12-15 11:55:31,206 - INFO - data sent to destination LIS
+2025-12-15 12:19:17,865 - INFO - Data recieved: payload {'patient_id': 2, 'doctor_id': 2, 'bill_id': 26, 'note_title': 'string', 'patient_complaint': 'string', 'dignosis': 'string', 'note_details': 'string', 'destination': 'LIS'}
+2025-12-15 12:19:17,865 - DEBUG - url = http://127.0.0.1:8002/hl7/push
+2025-12-15 12:19:18,137 - DEBUG - connect_tcp.started host='127.0.0.1' port=8002 local_address=None timeout=5.0 socket_options=None
+2025-12-15 12:19:18,149 - DEBUG - connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x00000190E9867800>
+2025-12-15 12:19:18,149 - DEBUG - send_request_headers.started request=<Request [b'POST']>
+2025-12-15 12:19:18,149 - DEBUG - send_request_headers.complete
+2025-12-15 12:19:18,149 - DEBUG - send_request_body.started request=<Request [b'POST']>
+2025-12-15 12:19:18,150 - DEBUG - send_request_body.complete
+2025-12-15 12:19:18,150 - DEBUG - receive_response_headers.started request=<Request [b'POST']>
+2025-12-15 12:19:18,152 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Mon, 15 Dec 2025 07:19:17 GMT'), (b'server', b'uvicorn'), (b'content-length', b'27'), (b'content-type', b'application/json')])
+2025-12-15 12:19:18,152 - INFO - HTTP Request: POST http://127.0.0.1:8002/hl7/push "HTTP/1.1 200 OK"
+2025-12-15 12:19:18,152 - DEBUG - receive_response_body.started request=<Request [b'POST']>
+2025-12-15 12:19:18,153 - DEBUG - receive_response_body.complete
+2025-12-15 12:19:18,153 - DEBUG - response_closed.started
+2025-12-15 12:19:18,153 - DEBUG - response_closed.complete
+2025-12-15 12:19:18,153 - DEBUG - close.started
+2025-12-15 12:19:18,153 - DEBUG - close.complete
+2025-12-15 12:19:18,154 - INFO - data sent to destination LIS
