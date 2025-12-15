@@ -1,7 +1,7 @@
-from datetime import datetime, timezone
-
 from fastapi import APIRouter, status, Depends, HTTPException
+from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
+import httpx
 from sqlalchemy.orm import Session
 
 import model
@@ -22,6 +22,10 @@ def get_patient(db: Session = Depends(get_db)):
 @router.post("/patients", status_code=status.HTTP_201_CREATED)
 def add_patient(patient: schemas.post_patient ,db: Session = Depends(get_db)):
     try:
+
+        if db.query(model.Patient).filter(model.Patient.cnic == patient.cnic).first():
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"messsage":"cnic already exists"})
+
         new_patient = model.Patient(
             cnic = patient.cnic,
             name = patient.name,
@@ -35,13 +39,13 @@ def add_patient(patient: schemas.post_patient ,db: Session = Depends(get_db)):
         db.refresh(new_patient)
         return JSONResponse(content={"message": "data inserted sucessfully"})
     except Exception as exp:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exp)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(exp)}")
 
 @router.post("/visit-note-add", status_code=status.HTTP_201_CREATED)
 def add_visit_note(visit_note: schemas.VisitNote ,db: Session = Depends(get_db)):
     try:
         new_bill = model.Bill(
-            insurace_amount = visit_note.bill_amount,
+            insurance_amount = visit_note.bill_amount,
             bill_status = False,
         )
 
@@ -51,7 +55,6 @@ def add_visit_note(visit_note: schemas.VisitNote ,db: Session = Depends(get_db))
         bill_id = new_bill.bill_id
 
         new_visit_note = model.VisitingNotes(
-
             patient_id = visit_note.patient_id,
             doctor_id = visit_note.doctor_id,
             bill_id = bill_id,
@@ -62,9 +65,19 @@ def add_visit_note(visit_note: schemas.VisitNote ,db: Session = Depends(get_db))
             note_details = visit_note.note_details
         )
         db.add(new_visit_note)
-        db.commit()
-        db.refresh(new_visit_note) 
-        return JSONResponse(content={"message": "data inserted sucessfully"})
+        
+        # as the new_visit_note is a object not a python dta type
+        # so httpx won't accept it
+        payload = jsonable_encoder(new_visit_note)
+
+        response = httpx.post("http://127.0.0.1:9000/fhir/push", json=payload)
+        if response.status_code == 200:
+            db.commit()
+            db.refresh(new_visit_note)
+            return JSONResponse(content={"message": "data inserted sucessfully"})
+        else:
+            db.rollback()
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="payment not sent")
     except Exception as exp:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(exp)}")
 

@@ -1,0 +1,8 @@
+[
+    {
+        "ip": "127.0.0.1",
+        "port": 8001,
+        "db_connection_str": "abc",
+        "server_name": "EHR1"
+    }
+]

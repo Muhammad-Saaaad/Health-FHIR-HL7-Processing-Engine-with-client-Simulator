@@ -1,4 +1,4 @@
-from fastapi import FastAPI, status, HTTPException, Depends
+from fastapi import FastAPI, status, HTTPException, Depends, Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -35,7 +35,7 @@ def login(request: Login, db: Session = Depends(get_db)):
 @app.post("/reg_patients", response_model=Patient, status_code=status.HTTP_201_CREATED, tags=["patient"])
 def register_patient(patient: Patient, db: Session = Depends(get_db)):
 
-    if db.query(model.Patient).filter(model.Patient.cnic == patient.cnic).first():
+    if db.query(model.Patient).filter(model.Patient.cnic == patient.cnic).first(): 
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="cnic already exists")
 
     db_patient = model.Patient(**patient.model_dump())
@@ -190,9 +190,18 @@ def add_complete_result(r_in: CompleteTestResultCreate, db: Session = Depends(ge
     if not db.get(model.User, r_in.user_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User (Technician) ID not found.")
         
-    req = db.get(model.LabTestRequest, r_in.test_req_id)
+    req = db.get(model.LabTestRequest, r_in.test_req_id).first()
     if not req:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Test Request not found.")
+    
+    if req.status != "Accepted":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="test req is not accepted.")
+    
+    if db.query(model.LabTestBilling) \
+        .filter(model.LabTestBilling.test_req_id == r_in.test_req_id).first().payment_status != "Paid":
+
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="payment not paid.")
+
         
     if db.scalar(select(model.LabResult).where(model.LabResult.test_req_id == r_in.test_req_id)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Result already submitted for this request.")
@@ -224,6 +233,14 @@ def add_complete_result(r_in: CompleteTestResultCreate, db: Session = Depends(ge
 
     db.commit()
     return {"message": "result added"}
+
+@app.post("/hl7/push")
+async def hl7_push(req: Request):
+    response = await req.json()
+    print(response)
+
+    ## debug hl7 and do something or call some functions
+    return {"message":"data recieved"}
 
 if __name__ == "__main__":
     import uvicorn

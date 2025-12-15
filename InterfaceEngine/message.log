@@ -1,0 +1,11 @@
+2025-12-15 09:21:14,555 - INFO - Data recieved
+2025-12-15 09:27:32,308 - INFO - Data recieved
+2025-12-15 09:27:32,894 - INFO - HTTP Request: POST http://127.0.0.1:8002/hl7/push "HTTP/1.1 200 OK"
+2025-12-15 09:27:32,895 - INFO - Data sent to lab
+2025-12-15 09:28:40,873 - INFO - Data recieved
+2025-12-15 09:28:41,607 - INFO - HTTP Request: POST http://127.0.0.1:8002/hl7/push "HTTP/1.1 200 OK"
+2025-12-15 09:30:36,440 - INFO - Data recieved
+2025-12-15 09:30:37,199 - INFO - HTTP Request: POST http://127.0.0.1:8002/hl7/push "HTTP/1.1 200 OK"
+2025-12-15 09:33:06,022 - INFO - Data recieved
+2025-12-15 09:33:06,648 - INFO - HTTP Request: POST http://127.0.0.1:8002/hl7/push "HTTP/1.1 200 OK"
+2025-12-15 09:33:06,649 - INFO - Data sent to lab
