@@ -18,6 +18,8 @@ def create_doctor(doctor: schemas.SignUp, db :Session = Depends(get_db)):
             password = doctor.password
         )
         db.add(new_doctor)
+        # db.flush()
+
         db.commit()
         db.refresh(new_doctor)
         return JSONResponse(content={"message": "data inserted sucessfully"})

@@ -89,7 +89,7 @@ class LabReport(Base):
 
     lab_name = Column(String(100), nullable=False)
     test_name = Column(String(100), nullable=False)
-    test_status = Column(String(10), nullable=False, default="Pending")
+    test_status = Column(String(10), nullable=False, default="Pending") # Arrived, decline
     created_at = Column(DateTime, default=datetime.now())
     updated_at = Column(DateTime, default=datetime.now())
 
@@ -97,12 +97,13 @@ class LabReport(Base):
 
 # to apply migrations
 
-## alembic init alembic
+## alembic init migrations
 ## go to alembic/env.py
 ## set database path into alembic.ini
 ## import model and set target_metadata = model.base.metadata
 
 ## alembic upgrade head
 ## if you apply anychnages to model.py
-## alembic upgrade head
 ## alembic revision --autogenerate -m "your message"
+## alembic upgrade head
+## alembic downgrade -1

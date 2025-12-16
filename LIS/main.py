@@ -1,5 +1,4 @@
-from fastapi import FastAPI, status, HTTPException, Depends, Request
-from sqlalchemy import select
+from fastapi import FastAPI, status, HTTPException, Depends
 from sqlalchemy.orm import Session
 
 from database import engine, get_db
@@ -15,7 +14,7 @@ def SignUp(user: SignUp, db: Session = Depends(get_db)):
     if db.query(model.User).filter(model.User.email == user.email).first():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="email already exists")
 
-    db_user = model.User(**user.model_dump())
+    db_user = model.User(**user.model_dump()) # model_dump converts pydantic object into python dictionary
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
@@ -38,7 +37,7 @@ def register_patient(patient: Patient, db: Session = Depends(get_db)):
     if db.query(model.Patient).filter(model.Patient.cnic == patient.cnic).first(): 
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="cnic already exists")
 
-    db_patient = model.Patient(**patient.model_dump())
+    db_patient = model.Patient(**patient.model_dump()) # model_dump converts pydantic object into python dictionary
     db.add(db_patient)
     db.commit()
     db.refresh(db_patient)
@@ -153,7 +152,7 @@ def create_bill(b: BillingCreate, db: Session = Depends(get_db)):
     if not db.get(model.Patient, b.pid) or not db.get(model.LabTestRequest, b.test_req_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient or Test Request not found.")
 
-    if db.scalar(select(model.LabTestBilling).where(model.LabTestBilling.test_req_id == b.test_req_id)):
+    if db.query(model.LabTestBilling).filter(model.LabTestBilling.test_req_id == b.test_req_id).first():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A bill already exists for this test request.")
 
     bill = model.LabTestBilling(
@@ -203,7 +202,7 @@ def add_complete_result(r_in: CompleteTestResultCreate, db: Session = Depends(ge
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="payment not paid.")
 
         
-    if db.scalar(select(model.LabResult).where(model.LabResult.test_req_id == r_in.test_req_id)):
+    if db.query(model.LabResult).filter(model.LabResult.test_req_id == r_in.test_req_id).first():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Result already submitted for this request.")
 
     result = model.LabResult(
@@ -234,13 +233,6 @@ def add_complete_result(r_in: CompleteTestResultCreate, db: Session = Depends(ge
     db.commit()
     return {"message": "result added"}
 
-@app.post("/hl7/push")
-async def hl7_push(req: Request):
-    response = await req.json()
-    print(response)
-
-    ## debug hl7 and do something or call some functions
-    return {"message":"data recieved"}
 
 if __name__ == "__main__":
     import uvicorn

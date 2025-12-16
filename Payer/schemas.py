@@ -34,6 +34,20 @@ class PatientDisplay(BaseModel):
 
     model_config = {"from_attributes": True}
 
+class patient_policy(BaseModel):
+    policy_id: int
+    category_name: str
+    total_coverage: float
+    amount_used : float
+    description: str | None
+
+class PatientPolicyDetails(BaseModel):
+    p_id: int
+    name: str
+    cnic: str
+    date_of_birth: date | None
+
+    patient_policy : list[patient_policy]
 
 class PolicyCreate(BaseModel):
     p_id: int
@@ -55,8 +69,15 @@ class PatientClaimCreate(BaseModel):
 class AllClaims(BaseModel):
     claim_id: int
     name: str
+    service_name: str
     phone_no: str | None
     created_at: datetime | None
+
+class ClaimsPerPatient(BaseModel):
+    patient_id: int
+    all_claims: list[AllClaims]
+
+    model_config = {"from_attributes": True}
 
 class PatientClaimDisplay(BaseModel):
     claim_id: int

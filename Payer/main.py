@@ -84,13 +84,31 @@ def register_patient(request: schemas.PatientCreate, db: Session = Depends(get_d
 def get_all_patients(db: Session = Depends(get_db)):
     return db.query(models.Patient).all()
 
-@app.get("/get_patient/{p_id}", response_model=schemas.PatientDisplay, status_code=status.HTTP_200_OK, tags=["Patients"])
+@app.get("/get_patient/{p_id}", response_model=schemas.PatientPolicyDetails, status_code=status.HTTP_200_OK, tags=["Patients"])
 def get_single_patient(p_id: int, db: Session = Depends(get_db)):
     patient = db.query(models.Patient).filter(models.Patient.p_id == p_id).first()
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found")
-    return patient
+    
+    patient_policies = []
+    for policiy in patient.policies:
+        patient_policies.append({
+            "policy_id": policiy.policy_id,
+            "category_name": policiy.category_name,
+            "total_coverage": policiy.total_coverage,
+            "amount_used" : policiy.amount_used,
+            "description": policiy.description
+        })
+    output = {
+        "p_id" : patient.p_id,
+        "name" : patient.name,
+        "cnic" : patient.cnic,
+        "date_of_birth": patient.date_of_birth,
 
+        "patient_policy": patient_policies
+    }
+
+    return output
 
 
 @app.post("/create_policy", status_code=status.HTTP_201_CREATED, tags=["Insurance_Policies"])
@@ -126,6 +144,25 @@ def get_policy(policy_id : int , db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Insurance Policy ID not found")
     return policy
 
+@app.get("/all_patients_per_policy_category{policy_category}", status_code=200, tags=["Insurance_Policies"])
+def patients_per_policy_cat(policy_category : str, db: Session = Depends(get_db)):
+    data = db.query(models.Patient).join(models.InsurancePolicy).filter(
+        models.InsurancePolicy.category_name == policy_category).all()
+
+    output = []
+    for d in data:
+        output.append({
+            "p_id": d.p_id,
+            "name": d.name,
+            "cnic": d.cnic,
+            "date_of_birth": d.date_of_birth,
+            "policy_catrgory": policy_category
+        })
+    
+    print(output)
+
+    return output
+
 @app.post("/submit_claim", response_model=schemas.PatientClaimDisplay, status_code=status.HTTP_201_CREATED, tags=["Claims"])
 def submit_claim(request: schemas.PatientClaimCreate, db: Session = Depends(get_db)):
     
@@ -156,6 +193,7 @@ def get_all_pending_claims(db: Session = Depends(get_db)):
         {
             "claim_id" : claim.claim_id,
             "name": claim.patient.name,
+            "service_name": claim.service_name,
             "phone_no": claim.patient.phone_no,
             "created_at": claim.created_at
         }
@@ -163,6 +201,23 @@ def get_all_pending_claims(db: Session = Depends(get_db)):
     ]
 
     return claims
+
+@app.get("/claims_per_patient{pid}", response_model=schemas.ClaimsPerPatient, status_code=200, tags=["Claims"])
+def claims_per_patient(pid : int , db: Session = Depends(get_db)):
+    data = db.query(models.PatientClaim).filter(models.PatientClaim.patient_id == pid).all()
+
+    output = [
+        {
+            "claim_id" : claim.claim_id,
+            "name": claim.patient.name,
+            "service_name": claim.service_name,
+            "phone_no": claim.patient.phone_no,
+            "created_at": claim.created_at
+        }
+        for claim in data 
+    ]
+    out_data = {"patient_id": pid, "all_claims": output}
+    return out_data
 
 @app.get("/get_single_claim{claim_id}", response_model=schemas.PatientClaimDisplay, status_code=status.HTTP_200_OK, tags=["Claims"])
 def get_single_claims(claim_id : int, db: Session = Depends(get_db)):

@@ -1,7 +1,6 @@
 from fastapi import APIRouter, status, Depends, HTTPException
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
-import httpx
 from sqlalchemy.orm import Session
 
 import model
@@ -83,21 +82,10 @@ def add_visit_note(visit_note: schemas.VisitNote ,db: Session = Depends(get_db))
 
         db.commit()
         db.refresh(new_visit_note)
-
-         # as the new_visit_note is a object not a python data type
-        # so httpx won't accept it
-        payload = jsonable_encoder(new_visit_note)
-        payload['destination'] = "LIS"
-
-        response = httpx.post("http://127.0.0.1:9000/fhir/ehr/push", json=payload)
-        if response.status_code == 200:
-            db.commit()
-            db.refresh(new_visit_note)
-            return JSONResponse(content={"message": "data inserted sucessfully"})
-        else:
-            db.rollback()
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="payment not sent")
+        return JSONResponse(content={"message": "data inserted sucessfully"})
+        
     except Exception as exp:
+        db.rollback()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(exp)}")
 
 @router.get("/all-visit-notes{doc_id}/{pid}", response_model=list[schemas.ViewNote] ,status_code=status.HTTP_200_OK)
