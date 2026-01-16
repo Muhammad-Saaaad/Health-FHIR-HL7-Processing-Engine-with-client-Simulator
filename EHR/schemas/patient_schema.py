@@ -3,8 +3,7 @@ from pydantic import BaseModel
 
 class get_patient(BaseModel):
     mpi : int
-    doctor_id: int
-    cnic : str
+    nic : str
     name : str
     phone_no : str | None
     gender : str
@@ -14,8 +13,7 @@ class get_patient(BaseModel):
     model_config = {"from_attributes": True}
 
 class post_patient(BaseModel):
-    doctor_id : int
-    cnic : str
+    nic : str
     name : str
     phone_no : str | None
     gender : str

@@ -24,7 +24,7 @@ def add_visit_note(visit_note: schema.VisitNote ,db: Session = Depends(get_db)):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="bill not added due to internal issues")
 
         new_visit_note = model.VisitingNotes(
-            patient_id = visit_note.patient_id,
+            mpi = visit_note.mpi,
             doctor_id = visit_note.doctor_id,
             bill_id = bill_id,
 
@@ -40,7 +40,7 @@ def add_visit_note(visit_note: schema.VisitNote ,db: Session = Depends(get_db)):
             
             lab_models = []
             for test in visit_note.test_names:
-                lab_models.routerend(
+                lab_models.append(
                     model.LabReport(
                         visit_id = new_visit_note.note_id,
                         lab_name = visit_note.lab_name,
@@ -62,7 +62,7 @@ def add_visit_note(visit_note: schema.VisitNote ,db: Session = Depends(get_db)):
 def visit_note(doc_id: int, pid: int, db: Session = Depends(get_db)):
     try:
 
-        is_patient = db.query(model.Patient).filter(model.Patient.patient_id == pid).first()
+        is_patient = db.query(model.Patient).filter(model.Patient.mpi == pid).first()
 
         if not is_patient:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="patient does not exists")
@@ -72,7 +72,7 @@ def visit_note(doc_id: int, pid: int, db: Session = Depends(get_db)):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Doctor does not exists")
 
         notes = db.query(model.VisitingNotes) \
-            .filter(model.VisitingNotes.doctor_id ==doc_id, model.VisitingNotes.patient_id == pid).all()
+            .filter(model.VisitingNotes.doctor_id ==doc_id, model.VisitingNotes.mpi == pid).all()
         return notes
     
     except Exception as e:

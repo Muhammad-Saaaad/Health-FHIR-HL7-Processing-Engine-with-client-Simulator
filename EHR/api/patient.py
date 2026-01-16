@@ -20,12 +20,11 @@ def get_patient(db: Session = Depends(get_db)):
 def add_patient(patient: schema.post_patient ,db: Session = Depends(get_db)):
     try:
 
-        if db.query(model.Patient).filter(model.Patient.cnic == patient.cnic).first():
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"messsage":"cnic already exists"})
+        if db.query(model.Patient).filter(model.Patient.nic == patient.nic).first():
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"messsage":"nic already exists"})
 
         new_patient = model.Patient(
-            doctor_id = patient.doctor_id,
-            cnic = patient.cnic,
+            nic = patient.nic,
             name = patient.name,
             phone_no = patient.phone_no,
             gender = patient.gender,

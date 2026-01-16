@@ -2,7 +2,7 @@ from datetime import datetime
 from pydantic import BaseModel
 
 class VisitNote(BaseModel):
-    patient_id : int
+    mpi : int
     doctor_id : int
 
     note_title : str
@@ -19,7 +19,7 @@ class VisitNote(BaseModel):
 class ViewNote(BaseModel):
     note_id : int
 
-    patient_id : int
+    mpi : int
     doctor_id : int
     bill_id : int | None
 
