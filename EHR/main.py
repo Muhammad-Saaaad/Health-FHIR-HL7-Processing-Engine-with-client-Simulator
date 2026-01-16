@@ -1,17 +1,21 @@
 from fastapi import FastAPI
-import model
+from sqlalchemy.exc import SAWarning
+import warnings
 
 from database import engine
-from Authentication import authentication
-from Doctor import doctor
+import model
+from api import authentication, lab, patient, visit_note, interface_engine
+
+warnings.filterwarnings("ignore", category=SAWarning)
 
 app = FastAPI(title="EHR System", version="1.0.0")
 model.Base.metadata.create_all(bind=engine)
 
 app.include_router(authentication.router)
-app.include_router(doctor.router)
-
-# set visit id into report id
+app.include_router(lab.router)
+app.include_router(patient.router)
+app.include_router(visit_note.router)
+app.include_router(interface_engine.router)
 
 if __name__ == "__main__":
     import uvicorn

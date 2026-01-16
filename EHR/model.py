@@ -14,39 +14,28 @@ class Doctor(Base):
     name = Column(String(100), nullable=False)
     email = Column(String(100), nullable=False, unique=True)
     password = Column(String(200), nullable=False)
-    specialization = Column(String(50), nullable=True) 
+    specialization = Column(String(50), nullable=True)
 
     date_join = Column(DateTime, default=datetime.now())
     about = Column(String(255), nullable=True)
     phone_no = Column(String(20), nullable=True)
 
-    notifications = relationship("Notification", back_populates="doctor")
     visiting_notes = relationship("VisitingNotes", back_populates="doctor")
-
-class Notification(Base):
-    __tablename__ = 'notification'
-
-    notification_id = Column(Integer, primary_key=True, index=True)
-
-    doctor_id = Column(Integer, ForeignKey('doctor.doctor_id'), nullable=False)
-    title = Column(String(100), nullable=False)
-    message = Column(String(255), nullable=False)
-    is_read = Column(Boolean, default=False)
-
-    doctor = relationship("Doctor", back_populates="notifications")
-
+    patient = relationship("Patient", back_populates="doctor")
+    
 class Patient(Base):
     __tablename__ = 'patient'
 
-    patient_id = Column(Integer, primary_key= True, index= True)
+    mpi = Column(Integer, primary_key= True, index= True)
+    doctor_id = Column(Integer, ForeignKey("doctor.doctor_id"))
 
-    cnic = Column(String(15), nullable= False, unique= True)
     name = Column(String(100), nullable= False)
     phone_no = Column(String(100), nullable= True)
     gender = Column(String(10), nullable= False)
     date_of_birth = Column(DateTime, nullable= True)
     address = Column(String(255), nullable= True)
 
+    doctor = relationship("Doctor", back_populates="patient")
     visiting_notes = relationship("VisitingNotes", back_populates="patient")
 
 class Bill(Base):
@@ -55,7 +44,7 @@ class Bill(Base):
     bill_id = Column(Integer, primary_key=True, index=True)
 
     insurance_amount = Column(Float, nullable=False)
-    bill_status = Column(Boolean, default=False)
+    bill_status = Column(Boolean, default=False) # true or false
     bill_date = Column(DateTime, default=datetime.now())
 
     visiting_notes = relationship("VisitingNotes", back_populates="bill")
@@ -65,7 +54,7 @@ class VisitingNotes(Base):
 
     note_id = Column(Integer, primary_key=True, index=True)
 
-    patient_id = Column(Integer,ForeignKey('patient.patient_id'), nullable=False)
+    mpi = Column(Integer,ForeignKey('patient.mpi'), nullable=False)
     doctor_id = Column(Integer, ForeignKey('doctor.doctor_id'), nullable=False)
     bill_id = Column(Integer, ForeignKey('bill.bill_id'), nullable=True)
 
@@ -81,7 +70,8 @@ class VisitingNotes(Base):
     report = relationship("LabReport", back_populates="visiting_notes")
 
 
-class LabReport(Base):
+class LabReport(Base): 
+    # add the lab results column here as well (description, bill amount, amount_status(paid or not paid) )
     __tablename__ = "lab_report"
 
     report_id = Column(Integer, primary_key=True, index=True)

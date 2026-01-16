@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Column, String, Integer, ForeignKey, Boolean, DateTime, Float
+from sqlalchemy import Column, String, Integer, ForeignKey, DateTime, Float
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -21,9 +21,8 @@ class User(base):
 class Patient(base):
     __tablename__ = "patient"
 
-    pid = Column(Integer, primary_key=True, index=True)
+    mpi = Column(Integer, primary_key=True, index=True, nullable=False)
 
-    cnic = Column(String(20), nullable=False)
     fname = Column(String(25), nullable=False)
     lname = Column(String(50), nullable=True)
     dob = Column(DateTime, nullable=True)
@@ -39,11 +38,11 @@ class LabTestRequest(base):
     __tablename__ = "test_request"
 
     test_req_id = Column(Integer, primary_key=True, index=True)
-    patient_id = Column(Integer, ForeignKey("patient.pid"), nullable=False) # every test req will have a patient assign to it
+    mpi = Column(Integer, ForeignKey("patient.mpi"), nullable=False) # every test req will have a patient assign to it
 
     test_name = Column(String(50), nullable=False)
-    status = Column(String(10), nullable=False, default='Pending') # checking if the test request is accepted or rejected
-    decline_reason = Column(String(100), nullable=True) # reason will be here not in test_bill
+    status = Column(String(10), nullable=False, default='Pending') #pending or accepted or rejected
+    decline_reason = Column(String(100), nullable=True)
     locked_by = Column(Integer, ForeignKey('users.user_id'), nullable=True)
     locked_at = Column(DateTime, nullable=True)
 
@@ -55,11 +54,11 @@ class LabTestBilling(base):
     __tablename__ = "test_billing"
 
     bill_id = Column(Integer, primary_key=True, index=True)
-    pid = Column(Integer, ForeignKey("patient.pid"), nullable=False)
+    mpi = Column(Integer, ForeignKey("patient.mpi"), nullable=False)
     test_req_id = Column(Integer, ForeignKey("test_request.test_req_id"), nullable=False)
 
     bill_amount = Column(Float, nullable=False)
-    payment_status = Column(String(10), nullable=False)
+    payment_status = Column(String(10), nullable=False)# pending, accepted, rejected
     create_at = Column(DateTime, nullable=False)
     updated_at = Column(DateTime, nullable=False)
 
