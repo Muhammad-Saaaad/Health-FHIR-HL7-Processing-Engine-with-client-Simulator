@@ -29,6 +29,7 @@ class Patient(Base):
     mpi = Column(Integer, primary_key= True, index= True)
     doctor_id = Column(Integer, ForeignKey("doctor.doctor_id"))
 
+    nic = Column(String(15), unique=True, nullable= False)
     name = Column(String(100), nullable= False)
     phone_no = Column(String(100), nullable= True)
     gender = Column(String(10), nullable= False)

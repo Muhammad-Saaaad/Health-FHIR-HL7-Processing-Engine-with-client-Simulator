@@ -5,5 +5,5 @@
 * MPI(Master Patient Index) should be use in everytable.
 
 # Removed
-* primary key pid from lab and health insurace
+* primary key pid from EHR, lab, and health insurace
 * cnic from all databases

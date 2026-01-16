@@ -1,9 +1,8 @@
 from datetime import datetime
 from pydantic import BaseModel
 
-
 class get_patient(BaseModel):
-    patient_id : int
+    mpi : int
     doctor_id: int
     cnic : str
     name : str
