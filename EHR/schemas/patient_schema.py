@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date
 from pydantic import BaseModel
 
 class get_patient(BaseModel):
@@ -7,7 +7,7 @@ class get_patient(BaseModel):
     name : str
     phone_no : str | None
     gender : str
-    date_of_birth: datetime | None
+    date_of_birth: date | None
     address : str | None
 
     model_config = {"from_attributes": True}
@@ -17,7 +17,7 @@ class post_patient(BaseModel):
     name : str
     phone_no : str | None
     gender : str
-    date_of_birth: datetime | None
+    date_of_birth: date | None
     address : str | None
 
     model_config = {"from_attributes": True}

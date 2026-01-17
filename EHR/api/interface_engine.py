@@ -1,15 +1,13 @@
-from fastapi import APIRouter, Request, status
+import httpx
 
-router = APIRouter(tags=['engine'])
-
-@router.post("/hl7/push")
-async def hl7_push(req: Request):
-    response = await req.json()
-    print(response)
-    return {"message":"data recieved"}
-
-@router.post('/hl7/push', status_code=status.HTTP_200_OK)
-async def hl7_push(req: Request):
-    response = await req.json()
-    print(response)
-    return {"message": "sucessfully got the data"}
+async def engine_push(payload: dict):
+    try:
+        payload['destination'] = "LIS,Payer"
+        response = httpx.post("http://127.0.0.1:9000/", json=payload)
+        
+        if response.status_code == 200:
+            return True
+        return False
+        
+    except Exception as exp:
+        return str(exp)

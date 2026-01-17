@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, DateTime, Float
+from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, DateTime, Date, Float
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -21,19 +21,22 @@ class Doctor(Base):
     phone_no = Column(String(20), nullable=True)
 
     visiting_notes = relationship("VisitingNotes", back_populates="doctor")
+    patient = relationship("Patient", back_populates="doctor")
     
 class Patient(Base):
     __tablename__ = 'patient'
 
     mpi = Column(Integer, primary_key= True, index= True)
+    doctor_id = Column(Integer, ForeignKey("doctor.doctor_id"))
 
     nic = Column(String(15), unique=True, nullable= False)
     name = Column(String(100), nullable= False)
     phone_no = Column(String(100), nullable= True)
     gender = Column(String(10), nullable= False)
-    date_of_birth = Column(DateTime, nullable= True)
+    date_of_birth = Column(Date, nullable= True)
     address = Column(String(255), nullable= True)
 
+    doctor = relationship("Doctor", back_populates="patient")
     visiting_notes = relationship("VisitingNotes", back_populates="patient")
 
 class Bill(Base):
