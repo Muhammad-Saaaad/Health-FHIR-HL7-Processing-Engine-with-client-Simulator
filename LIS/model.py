@@ -21,14 +21,12 @@ class User(base):
 class Patient(base):
     __tablename__ = "patient"
 
-    mpi = Column(Integer, primary_key=True, index=True, nullable=False)
+    mpi = Column(Integer, primary_key=True, index=True, autoincrement=False)
 
     fname = Column(String(25), nullable=False)
     lname = Column(String(50), nullable=True)
     dob = Column(DateTime, nullable=True)
     gender = Column(String(10), nullable=False)
-    phone = Column(String(20), nullable=True)
-    dignosis = Column(String(50), nullable=True)
     created_at = Column(DateTime, default=datetime.now())
 
     test_bill = relationship("LabTestBilling", back_populates="patient")

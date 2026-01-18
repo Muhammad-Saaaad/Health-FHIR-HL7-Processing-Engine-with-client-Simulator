@@ -2,6 +2,7 @@ from fastapi import FastAPI, status
 
 from database import engine
 import models
+from api import auth, claims, engine_service, patient, policy
 
 app = FastAPI(title="Hospital Insurance System")
 models.Base.metadata.create_all(bind=engine)
@@ -9,6 +10,12 @@ models.Base.metadata.create_all(bind=engine)
 @app.get("/", status_code=status.HTTP_200_OK)
 def home():
     return {"message": "Final System is Live! 🚀 Go to /docs"}
+
+app.include_router(auth.router)
+app.include_router(patient.router)
+app.include_router(engine_service.router)
+app.include_router(policy.router)
+app.include_router(claims.router)
 
 if __name__ == "__main__":
     import uvicorn

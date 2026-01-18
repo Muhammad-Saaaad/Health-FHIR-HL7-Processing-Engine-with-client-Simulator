@@ -2,7 +2,7 @@ from fastapi import FastAPI
 
 from database import engine
 import model
-from api import auth, patient ,lab, billing
+from api import auth, patient ,lab, billing, engine_service
 
 app = FastAPI()
 model.base.metadata.create_all(bind=engine)  
@@ -10,6 +10,7 @@ app.include_router(auth.router)
 app.include_router(patient.router)
 app.include_router(lab.router)
 app.include_router(billing.router)
+app.include_router(engine_service.router)
 
 if __name__ == "__main__":
     import uvicorn

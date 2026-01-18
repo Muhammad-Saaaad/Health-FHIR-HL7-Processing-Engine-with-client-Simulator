@@ -12,12 +12,10 @@ class PatientBase(BaseModel):
 
 # --- Schema for Patient Creation ---
 class Patient(BaseModel):
-    cnic : str
+    mpi : int
     fname : str
     lname : str | None
     dob : datetime | date | None
     gender : str
-    phone : str
-    dignosis : str
 
     model_config = {"from_attributes": True}

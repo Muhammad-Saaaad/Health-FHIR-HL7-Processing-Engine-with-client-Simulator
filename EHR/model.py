@@ -21,13 +21,11 @@ class Doctor(Base):
     phone_no = Column(String(20), nullable=True)
 
     visiting_notes = relationship("VisitingNotes", back_populates="doctor")
-    patient = relationship("Patient", back_populates="doctor")
     
 class Patient(Base):
     __tablename__ = 'patient'
 
     mpi = Column(Integer, primary_key= True, index= True)
-    doctor_id = Column(Integer, ForeignKey("doctor.doctor_id"))
 
     nic = Column(String(15), unique=True, nullable= False)
     name = Column(String(100), nullable= False)
@@ -36,7 +34,6 @@ class Patient(Base):
     date_of_birth = Column(Date, nullable= True)
     address = Column(String(255), nullable= True)
 
-    doctor = relationship("Doctor", back_populates="patient")
     visiting_notes = relationship("VisitingNotes", back_populates="patient")
 
 class Bill(Base):

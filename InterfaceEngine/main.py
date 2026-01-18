@@ -86,7 +86,7 @@ def add_server(req: Request, server: Server):
         json.dump(servers, f, indent=4)
     
     destinations.append({
-        server.server_name: f"http://{server.ip}:{server.port}/hl7/push"
+        server.server_name: f"http://{server.ip}:{server.port}/push"
     })
 
     with open(req.app.state.destination_path, "w") as f:
@@ -94,36 +94,87 @@ def add_server(req: Request, server: Server):
     
     return {"message": "server added sucessfully"}
 
-@app.post("/fhir/ehr/push")
+@app.post("/fhir/push", status_code=status.HTTP_200_OK)
 async def recieve_fhir_message(req : Request):
-    fhir_payload = await req.json()
-    logging.info(f"Data recieved: payload {fhir_payload}")
-    Ehr_channel_queue.put(fhir_payload)
+    """
+        Recieve data from any Health Care System, and send it to other systems.
+    """
+    try:
 
-    return {"message": "EHR Message queued"}
+        fhir_payload = await req.json()
+        logging.info(f"Data recieved: payload {fhir_payload}")
+        if fhir_payload['source'] == "ehr":
+            global Ehr_channel_queue
+            Ehr_channel_queue.put(fhir_payload)
+        
+        elif fhir_payload['source'] == 'LIS': 
+            global Lis_channel_queue
+            Lis_channel_queue.put(fhir_payload)
 
-@app.post("/fhir/lis/push")
-async def recieve_fhir_message(req : Request):
-    fhir_payload = await req.json()
-    logging.info(f"Data recieved: payload {fhir_payload}")
-    Lis_channel_queue.put(fhir_payload)
+        elif fhir_payload['source'] == 'Payer': 
+            global Payer_channel_queue
+            Payer_channel_queue.put(fhir_payload)
+        
+        endpoints = []
 
-    return {"message": "EHR Message queued"}
+        with open(req.app.state.destination_path, 'r') as f:
+            destination_urls = json.load(f)
+            for url in destination_urls:
+                for destination in fhir_payload['destination']:
+                    
+                    if destination in url:
+                        endpoints.append({destination: url[destination]})
+        
+        for endpoint in endpoints:
+            destination = list(endpoint.keys())[0]
+            endpoint = list(endpoint.values())[0]
+            response = await send_payload(payload=fhir_payload, destination=destination ,endpoint=endpoint)
+            if response.status_code == 200:
+                logging.info(response)
+                
+            else:
+                logging.error(response)
+                raise HTTPException({"message", response.content}, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        return {"message": "Sucessfull"}
+    except Exception as exp:
+        logging.error(f"Error occured: {str(exp)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Internal server error {str(exp)}")
 
-@app.post("/fhir/payer/push")
-async def recieve_fhir_message(req : Request):
-    
-    fhir_payload = await req.json()
-    logging.info(f"Data recieved: payload {fhir_payload}")
-    Payer_channel_queue.put(fhir_payload)
+async def send_payload(payload: dict, destination: str, endpoint: dict):
+    try:
+        async with httpx.AsyncClient() as client:
+            endpoint = endpoint+"/register/patient/"
+            response = await client.post(endpoint, json=payload)
+            logging.info(f"Response Recieved {response} \nfrom "+destination)
+            return response
+    except Exception as exp:
+        return str(exp)
 
-    return {"message": "EHR Message queued"}
+
+@app.post("/test/request")
+async def send_test_message(req: Request):
+    try:
+        global Ehr_channel_queue
+
+        data = {"patient_id": 2, "doctor_id": 2,}
+        response = await req.app.state.http_client.post("http://127.0.0.1:9000/fhir/push", json=data)
+
+        if response.status_code == 200:
+            return {"message": "successfull"}
+            # return {"message": "successfull", "data": Ehr_channel_queue.get()}
+        else:
+            return {"message": "unsuccessfull"}
+    except Exception as exp:
+        logging.error(f"Error occured: {str(exp)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 def channel_worker(channel, channel_name):
 
     """_summary_
         Here the Channel stays open, and a single channel is then use to route 1 system to multiple different systems.
     """
+    # global Ehr_channel_queue
     while True:
         with open(r'E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\InterfaceEngine\destinations.json', 'r') as f:
             destination_urls = json.load(f)
@@ -153,21 +204,21 @@ def channel_worker(channel, channel_name):
 
 # Daemon =Ture means the thread will run in the background
 # this is how iguana behaves
-threading.Thread(
-    target=channel_worker,
-    args=(Ehr_channel_queue, "EHR_Channel"),
-    daemon=True
-).start()
-threading.Thread(
-    target=channel_worker,
-    args=(Payer_channel_queue, "Payer_Channel"),
-    daemon=True
-).start()
-threading.Thread(
-    target=channel_worker,
-    args=(Lis_channel_queue, "LIS_Channel"),
-    daemon=True
-).start()
+# threading.Thread(
+#     target=channel_worker,
+#     args=(Ehr_channel_queue, "EHR_Channel"),
+#     daemon=True
+# ).start()
+# threading.Thread(
+#     target=channel_worker,
+#     args=(Payer_channel_queue, "Payer_Channel"),
+#     daemon=True
+# ).start()
+# threading.Thread(
+#     target=channel_worker,
+#     args=(Lis_channel_queue, "LIS_Channel"),
+#     daemon=True
+# ).start()
 
 
 if "__main__" == __name__:

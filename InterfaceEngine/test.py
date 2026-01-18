@@ -34,3 +34,35 @@
 # response = httpx.post("http://127.0.0.1:9000/fhir/push", json=new_visit_note)
 # print(response)
 
+# from queue import Queue
+
+# Ehr_channel_queue = Queue()
+# Ehr_channel_queue.put({"patient_id": 1, "doctor_id": 1, "note_title": "Checkup"})
+# Ehr_channel_queue.put({"patient_id": 1})
+# print(Ehr_channel_queue.get())
+# print(Ehr_channel_queue.get())
+
+# import json
+
+# urls = [
+#     {
+#         "EHR": "http://127.0.0.1:8001/push"
+#     },
+#     {
+#         "LIS": "http://127.0.0.1:8002/push"
+#     },
+#     {
+#         "Payer": "http://127.0.0.1:8003/push"
+#     }
+# ]
+
+# for url in urls:
+#     if "EHR" in url:
+#         print(url['EHR'])
+#     else:
+#         print('unsuccessfully done')
+
+# print(type(urls[0]))
+
+d = {"lis": "127.0.1-231"}
+print(list(d.values())[0])

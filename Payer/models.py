@@ -11,9 +11,7 @@ class SystemUser(Base):
     email = Column(String(100), unique=True, index=True)
     password = Column(String(255), nullable=False)
     created_at = Column(DateTime, default=datetime.now(), nullable=False)
-
     
-    patients = relationship("Patient", back_populates="user")
     policies_managed = relationship("InsurancePolicy", back_populates="manager")
     locked_claims = relationship("PatientClaim", back_populates="locked_by")
 
@@ -23,12 +21,10 @@ class Patient(Base):
     mpi = Column(Integer, primary_key=True, index=True, nullable=False)
     
     name = Column(String(100), nullable=False)
-    phone_no = Column(String(20))
+    # phone_no = Column(String(20))
     gender = Column(String(10), nullable=False)
     date_of_birth = Column(Date, nullable=False)
-    user_id = Column(Integer, ForeignKey("SystemUser.user_id"), nullable=False)
 
-    user = relationship("SystemUser", back_populates="patients")
     policies = relationship("InsurancePolicy", back_populates="patient")
     claims = relationship("PatientClaim", back_populates="patient")
 
@@ -38,6 +34,7 @@ class InsurancePolicy(Base):
 
     policy_id = Column(Integer, primary_key=True, index=True) 
     mpi = Column(Integer, ForeignKey("Patient.mpi"), nullable=False)
+    
     u_id = Column(Integer, ForeignKey("SystemUser.user_id"), nullable=False)
     category_name = Column(String(50), nullable=False)
     total_coverage = Column(Numeric(10, 2), nullable=False)

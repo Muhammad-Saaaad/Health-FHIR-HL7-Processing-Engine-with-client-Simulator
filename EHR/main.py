@@ -8,7 +8,8 @@ from api import (
     authentication, 
     lab, 
     patient, 
-    visit_note, 
+    visit_note,
+    engine_service
 )
 
 warnings.filterwarnings("ignore", category=SAWarning)
@@ -19,6 +20,7 @@ app.include_router(authentication.router)
 app.include_router(lab.router)
 app.include_router(patient.router)
 app.include_router(visit_note.router)
+# app.include_router(engine_service.router)
 
 if __name__ == "__main__":
     import uvicorn

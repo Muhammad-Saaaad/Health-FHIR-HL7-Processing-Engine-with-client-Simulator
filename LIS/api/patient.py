@@ -7,25 +7,23 @@ from schemas.patient_schema import Patient
 
 router = APIRouter(tags=["patient"])
 
-@router.post("/reg_patients", response_model=Patient, status_code=status.HTTP_201_CREATED, tags=["patient"])
-def register_patient(patient: Patient, db: Session = Depends(get_db)):
+# remove this
+# @router.post("/reg_patients", response_model=Patient, status_code=status.HTTP_201_CREATED, tags=["patient"])
+# def register_patient(patient: Patient, db: Session = Depends(get_db)):
 
-    if db.query(model.Patient).filter(model.Patient.cnic == patient.cnic).first(): 
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="cnic already exists")
+#     if db.query(model.Patient).filter(model.Patient.cnic == patient.cnic).first(): 
+#         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="cnic already exists")
 
-    db_patient = model.Patient( 
-        cnic = patient.cnic,
-        fname = patient.fname,
-        lname = patient.lname,
-        dob = patient.dob,
-        gender = patient.gender,
-        phone = patient.phone,
-        dignosis = patient.dignosis
-    )
-    db.add(db_patient)
-    db.commit()
-    db.refresh(db_patient)
-    return db_patient
+#     db_patient = model.Patient(
+#         fname = patient.fname,
+#         lname = patient.lname,
+#         dob = patient.dob,
+#         gender = patient.gender
+#     )
+#     db.add(db_patient)
+#     db.commit()
+#     db.refresh(db_patient)
+#     return db_patient
 
 #################################################################
 
