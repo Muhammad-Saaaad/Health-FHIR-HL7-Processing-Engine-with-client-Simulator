@@ -1,0 +1,48 @@
+2026-02-03 22:29:48,968 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-03 22:39:38,214 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-03 22:52:54,474 - INFO - Mapped field mpi to path identifier[0].value
+2026-02-03 22:52:54,474 - INFO - Mapped field family name to path name[0].family[0]
+2026-02-03 22:52:54,474 - INFO - Mapped field given name to path name[0].given
+2026-02-03 22:52:54,474 - INFO - Mapped field gender to path gender
+2026-02-03 22:52:54,475 - INFO - Mapped field birth date to path birthDate
+2026-02-03 22:52:54,475 - INFO - Mapped field phone number to path telecom[0].value
+2026-02-03 23:16:46,174 - INFO - Mapped field address to path address[0].text
+2026-02-03 23:39:07,065 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-04 10:09:41,305 - INFO - Mapped field mpi to path identifier[0].value
+2026-02-04 10:09:41,308 - INFO - Mapped field family name to path name[0].family[0]
+2026-02-04 10:09:41,308 - INFO - Mapped field given name to path name[0].given
+2026-02-04 10:09:41,308 - INFO - Mapped field gender to path gender
+2026-02-04 10:09:41,308 - INFO - Mapped field birth date to path birthDate
+2026-02-04 10:09:41,308 - INFO - Mapped field address to path address[0].text
+2026-02-04 10:09:41,308 - INFO - Mapped field phone number to path telecom[0].value
+2026-02-04 10:48:01,989 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-04 10:56:14,554 - WARNING - No canonical mapping found for path PID-1, skipping.
+2026-02-04 10:56:14,564 - INFO - Mapped field mpi to path PID-3
+2026-02-04 10:56:14,564 - INFO - Mapped field family name to path PID-5.1
+2026-02-04 10:56:14,564 - INFO - Mapped field given name to path PID-5.2
+2026-02-04 10:56:14,564 - INFO - Mapped field birth date to path PID-7
+2026-02-04 10:56:14,564 - INFO - Mapped field gender to path PID-8
+2026-02-04 10:57:57,692 - WARNING - No canonical mapping found for path PID-1, skipping.
+2026-02-04 10:57:57,692 - INFO - Mapped field mpi to path PID-3
+2026-02-04 10:57:57,692 - INFO - Mapped field family name to path PID-5.1
+2026-02-04 10:57:57,692 - INFO - Mapped field given name to path PID-5.2
+2026-02-04 10:57:57,692 - INFO - Mapped field birth date to path PID-7
+2026-02-04 10:57:57,692 - INFO - Mapped field gender to path PID-8
+2026-02-04 10:58:14,998 - WARNING - No canonical mapping found for path PID-1, skipping.
+2026-02-04 10:58:14,998 - INFO - Mapped field mpi to path PID-3
+2026-02-04 10:58:14,998 - INFO - Mapped field family name to path PID-5.1
+2026-02-04 10:58:14,998 - INFO - Mapped field given name to path PID-5.2
+2026-02-04 10:58:14,998 - INFO - Mapped field birth date to path PID-7
+2026-02-04 10:58:14,998 - INFO - Mapped field gender to path PID-8
+2026-02-04 10:59:07,674 - WARNING - No canonical mapping found for path PID-1, skipping.
+2026-02-04 10:59:07,674 - INFO - Mapped field mpi to path PID-3
+2026-02-04 10:59:07,674 - INFO - Mapped field family name to path PID-5.1
+2026-02-04 10:59:07,674 - INFO - Mapped field given name to path PID-5.2
+2026-02-04 10:59:07,674 - INFO - Mapped field birth date to path PID-7
+2026-02-04 10:59:07,674 - INFO - Mapped field gender to path PID-8
+2026-02-04 11:00:10,314 - WARNING - No canonical mapping found for path PID-1, skipping.
+2026-02-04 11:00:10,314 - INFO - Mapped field mpi to path PID-3
+2026-02-04 11:00:10,314 - INFO - Mapped field family name to path PID-5.1
+2026-02-04 11:00:10,314 - INFO - Mapped field given name to path PID-5.2
+2026-02-04 11:00:10,314 - INFO - Mapped field birth date to path PID-7
+2026-02-04 11:00:10,314 - INFO - Mapped field gender to path PID-8

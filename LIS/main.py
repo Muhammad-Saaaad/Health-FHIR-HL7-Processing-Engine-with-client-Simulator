@@ -12,6 +12,10 @@ app.include_router(lab.router)
 app.include_router(billing.router)
 app.include_router(engine_service.router)
 
+@app.get("/health")
+def check_health():
+    return {"message": "sucessfull"}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(

@@ -20,7 +20,7 @@ def get_patient(db: Session = Depends(get_db)):
 @router.post("/patients", status_code=status.HTTP_201_CREATED)
 async def add_patient(patient: schema.post_patient ,db: Session = Depends(get_db)):
     try:
-
+        # select top 1 from patient where nic = patient.nic
         if db.query(model.Patient).filter(model.Patient.nic == patient.nic).first():
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"messsage":"nic already exists"})
 
@@ -34,7 +34,7 @@ async def add_patient(patient: schema.post_patient ,db: Session = Depends(get_db
         )
         db.add(new_patient)
         db.flush()
-
+    
         engine_data = {
             "mpi": new_patient.mpi,
             "name": new_patient.name,
@@ -42,12 +42,11 @@ async def add_patient(patient: schema.post_patient ,db: Session = Depends(get_db
             "date_of_birth": str(patient.date_of_birth)
         }
 
-        response = await engine_service.register_engine(engine_data)
+        response = engine_service.register_engine(engine_data)
         
         if response:
             db.commit()
-            db.refresh(new_patient)
-            return JSONResponse(content={"message": "data inserted sucessfully"})
+            return {"message": "data inserted sucessfully"}
         
         db.rollback()
         return JSONResponse({"message": f"Error {response}"}, status_code=status.HTTP_400_BAD_REQUEST)

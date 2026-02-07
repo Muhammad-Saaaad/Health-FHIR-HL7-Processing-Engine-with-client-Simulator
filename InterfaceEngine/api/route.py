@@ -1,0 +1,250 @@
+from fastapi import APIRouter, status, HTTPException, Depends
+from sqlalchemy.orm import Session
+
+from schemas.route import GetRoute, AddRoute
+import models
+from database import get_db
+
+router = APIRouter(tags=["Route"])
+
+@router.get("/all-routes", status_code=status.HTTP_200_OK, response_model=list[GetRoute])
+def all_routes(db: Session = Depends(get_db)):
+    try:
+        routes = db.query(models.Route).all()
+        return routes
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
+
+@router.get("/mapping_rules/{route_id}", status_code=status.HTTP_200_OK)
+def get_rules(route_id: int, db: Session = Depends(get_db)):
+    try:
+
+        if not db.get(models.Route, route_id):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Route id {route_id} does not exists")
+
+        mapping_rules = db.query(models.MappingRule).filter(models.MappingRule.route_id == route_id).all()
+        mapping_data = []
+        split_data = []
+        concat_data = []
+
+        for rule in mapping_rules: # this rule is from the database hence it can only be access via . not like this: ['']
+            if rule.transform_type == 'copy' or rule.transform_type == 'map':
+                mapping = {
+                    "src_field" : {
+                        "endpoint_filed_id": rule.src_field_id,
+                        "resource": rule.src_field.resource,
+                        "path": rule.src_field.path,
+                        "name": rule.src_field.name
+                    },
+                    "dest_field" : {
+                        "endpoint_filed_id": rule.dest_field_id,
+                        "resource": rule.dest_field.resource,
+                        "path": rule.dest_field.path,
+                        "name": rule.dest_field.name
+                    },
+                    'mapping_rule_id': rule.mapping_rule_id,
+                    'transform_type': rule.transform_type,
+                    'config': rule.config
+                }
+                mapping_data.append(mapping)
+
+            elif rule.transform_type == 'split':
+
+                # here we check if the src_field_id already exists or not, if does then append the data
+                #  with destination. If not then add a new data in the list
+                exists = False 
+                for data in split_data: # if the split_data is empty then then stil the below if will execute
+                    if data['src_field']['endpoint_filed_id'] == rule.src_field_id:
+                        data['dest_field'].append(
+                            {
+                                "endpoint_filed_id": rule.dest_field_id,
+                                "resource": rule.dest_field.resource,
+                                "path": rule.dest_field.path,
+                                "name": rule.dest_field.name
+                            }
+                        )
+                        exists = True
+                        break
+                
+                if exists == False: 
+                    # if the src_field existed then we append data into its own place else we make a new data
+                    split_data.append(
+                        {
+                            "src_field" : {
+                                "endpoint_filed_id": rule.src_field_id,
+                                "resource": rule.src_field.resource,
+                                "path": rule.src_field.path,
+                                "name": rule.src_field.name
+                            },
+                            "dest_field" : [
+                                {
+                                    "endpoint_filed_id": rule.dest_field_id,
+                                    "resource": rule.dest_field.resource,
+                                    "path": rule.dest_field.path,
+                                    "name": rule.dest_field.name
+                                }
+                            ],
+                            'mapping_rule_id': rule.mapping_rule_id,
+                            'transform_type': rule.transform_type,
+                            'config': rule.config
+                        },
+                    )
+            
+            elif rule.transform_type == 'concat':
+
+                exists = False 
+                for data in concat_data: # if the split_data is empty then then stil the below if will execute
+                    if data['dest_field']['endpoint_filed_id'] == rule.dest_field_id:
+                        data['src_field'].append(
+                            {
+                                "endpoint_filed_id": rule.src_field_id,
+                                "resource": rule.src_field.resource,
+                                "path": rule.src_field.path,
+                                "name": rule.src_field.name
+                            }
+                        )
+                        exists = True
+                        break
+                
+                if exists == False: 
+                    # if the src_field existed then we append data into its own place else we make a new data
+                    concat_data.append(
+                        {
+                            "src_field" : [
+                                {
+                                    "endpoint_filed_id": rule.src_field_id,
+                                    "resource": rule.src_field.resource,
+                                    "path": rule.src_field.path,
+                                    "name": rule.src_field.name
+                                }
+                            ],
+                            "dest_field" :{
+                                    "endpoint_filed_id": rule.dest_field_id,
+                                    "resource": rule.dest_field.resource,
+                                    "path": rule.dest_field.path,
+                                    "name": rule.dest_field.name
+                            },
+                            'mapping_rule_id': rule.mapping_rule_id,
+                            'transform_type': rule.transform_type,
+                            'config': rule.config
+                        },
+                    )
+
+        mapping_data.extend(split_data)
+        mapping_data.extend(concat_data)
+        return mapping_data
+
+    except Exception as exp:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
+
+
+@router.get("/endpoint_field_path/{endpoint_id}", status_code=status.HTTP_200_OK)
+def endpoint_field_paths(endpoint_id: int, db:Session = Depends(get_db)):
+    try:    
+
+        if not db.get(models.Endpoints, endpoint_id):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"endpoint id {endpoint_id} does not exists")
+
+        data = db.query(models.EndpointFileds).filter(models.EndpointFileds.endpoint_id == endpoint_id).all()
+        return data
+
+    except Exception as exp:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
+
+@router.post("/add-route", status_code=status.HTTP_201_CREATED)
+def add_route(data: AddRoute, db: Session = Depends(get_db)):
+    try:
+        print("Enter")
+        if db.query(models.Route).filter(models.Route.name == data.name).first():
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Route name already exists")
+        
+        if db.query(models.Route).filter(models.Route.src_endpoint_id == data.src_endpoint_id, 
+                                         models.Route.dest_endpoint_id == data.des_endpoint_id).first():
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="This same route with different name already exists")
+        
+        if not db.get(models.Server, data.src_server_id):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="src server id not found")
+        
+        if not db.get(models.Server, data.des_server_id):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="dest server id not found")
+                
+        if not db.get(models.Endpoints, data.src_endpoint_id):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="src endpoint id not found")
+        
+        if not db.get(models.Endpoints, data.des_endpoint_id):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="dest endpoint id not found")
+        
+        route = models.Route(
+            name = data.name,
+            src_server_id = data.src_server_id,
+            src_endpoint_id = data.src_endpoint_id,
+            dest_server_id = data.des_server_id,
+            dest_endpoint_id = data.des_endpoint_id,
+            msg_type = data.msg_type
+        )
+
+        db.add(route)
+        db.flush()
+        db.refresh(route)
+        print(data.rules)
+        for rule in data.rules['mappings']:
+            if len(rule['src_paths']) > 1 and len(rule['dest_paths']) > 1:
+                db.rollback()
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="cannot give 2 src and destination in a single rule")
+            
+            rules = []
+            if rule['transform'] == 'concat':
+                for src_path in rule['src_paths']:
+                    rules.append(models.MappingRule(
+                        route_id = route.route_id,
+                        src_field_id = src_path,
+                        dest_field_id = rule['dest_paths'][0],
+                        transform_type = rule['transform'],
+                        config = rule['config']
+                    ))
+                
+            elif rule['transform'] == 'split':
+                for dest_path in rule['dest_paths']:
+                    rules.append(models.MappingRule(
+                        route_id = route.route_id,
+                        src_field_id = rule['src_paths'][0],
+                        dest_field_id = dest_path,
+                        transform_type = rule['transform'],
+                        config = rule['config']
+                    ))
+
+            elif rule['transform'] == 'copy' or rule['transform'] == 'map':
+                rules.append(models.MappingRule(
+                        route_id = route.route_id,
+                        src_field_id = rule['src_paths'][0],
+                        dest_field_id = rule['dest_paths'][0],
+                        transform_type = rule['transform'],
+                        config = rule['config']
+                    ))
+            
+            else:
+                db.rollback()
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='transform type not valid')
+
+            db.add_all(rules)
+            db.commit()
+        return {"message": "Sucessfully done"}
+
+    except Exception as exp:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
+    
+# "mappings": [ # suppose this data is also comming from the frontend when adding route.
+#     {
+#       # "src_paths": ["name[0].given", "name[0].family"],
+#       # "dest_paths": ["PID-5"],
+
+#       "src_paths": [12, 11],
+#       "dest_paths": [1],
+#       "transform": "concat",
+#       "config": {
+#         "delimiter": " "
+#       }
+#     },
+#     {},
+#   ]

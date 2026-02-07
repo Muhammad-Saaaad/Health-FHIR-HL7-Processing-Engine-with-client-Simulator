@@ -41,7 +41,7 @@ class Bill(Base):
 
     bill_id = Column(Integer, primary_key=True, index=True)
 
-    insurance_amount = Column(Float, nullable=False)
+    insurance_amount = Column(Float, nullable=False) # service amount, lab amount(1000+2000 = 3000))
     bill_status = Column(Boolean, default=False) # true or false
     bill_date = Column(DateTime, default=datetime.now())
 
@@ -91,7 +91,7 @@ class LabReport(Base):
 ## import model and set target_metadata = model.base.metadata
 
 ## alembic upgrade head
-## if you apply anychnages to model.py
+## if you apply any chnages to model.py
 ## alembic revision --autogenerate -m "your message"
 ## alembic upgrade head
 ## alembic downgrade -1
