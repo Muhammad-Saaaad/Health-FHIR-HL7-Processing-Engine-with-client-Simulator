@@ -46,3 +46,25 @@
 2026-02-04 11:00:10,314 - INFO - Mapped field given name to path PID-5.2
 2026-02-04 11:00:10,314 - INFO - Mapped field birth date to path PID-7
 2026-02-04 11:00:10,314 - INFO - Mapped field gender to path PID-8
+2026-02-07 23:22:29,912 - INFO - worker start for route 5
+2026-02-07 23:22:34,337 - ERROR - AsyncClient.post() missing 1 required positional argument: 'self' 
+This came when sending data to url: http://127.0.0.1:8002/hl7/add-patient
+2026-02-07 23:24:37,860 - INFO - worker start for route 5
+2026-02-07 23:25:07,522 - INFO - worker start for route 5
+2026-02-07 23:28:53,005 - ERROR - AsyncClient.post() missing 1 required positional argument: 'self' 
+This came when sending data to url: http://127.0.0.1:8002/hl7/add-patient
+2026-02-07 23:28:55,935 - ERROR - AsyncClient.post() missing 1 required positional argument: 'self' 
+This came when sending data to url: http://127.0.0.1:8002/hl7/add-patient
+2026-02-07 23:28:57,266 - ERROR - AsyncClient.post() missing 1 required positional argument: 'self' 
+This came when sending data to url: http://127.0.0.1:8002/hl7/add-patient
+2026-02-07 23:28:58,693 - ERROR - AsyncClient.post() missing 1 required positional argument: 'self' 
+This came when sending data to url: http://127.0.0.1:8002/hl7/add-patient
+2026-02-07 23:30:24,162 - INFO - worker start for route 5
+2026-02-07 23:30:45,124 - INFO - worker start for route 5
+2026-02-07 23:30:50,131 - INFO - worker start for route 5
+2026-02-07 23:31:08,623 - ERROR - All connection attempts failed 
+This came when sending data to url: http://127.0.0.1:8002/hl7/add-patient
+2026-02-07 23:33:22,439 - INFO - HTTP Request: POST http://127.0.0.1:8002/hl7/add-patient "HTTP/1.1 307 Temporary Redirect"
+2026-02-07 23:33:22,447 - ERROR - data was not send to url: {dest_endpoint_url}
+2026-02-07 23:35:33,135 - INFO - HTTP Request: POST http://127.0.0.1:8002/hl7/add-patient "HTTP/1.1 200 OK"
+2026-02-07 23:35:33,144 - INFO - Sucessfully Send to url: {dest_endpoint_url}

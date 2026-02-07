@@ -227,7 +227,7 @@ def add_route(data: AddRoute, db: Session = Depends(get_db)):
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='transform type not valid')
 
             db.add_all(rules)
-            db.commit()
+        db.commit() # this is added outside the loop so all the mapping_rules are added permentlly at the same time.
         return {"message": "Sucessfully done"}
 
     except Exception as exp:
