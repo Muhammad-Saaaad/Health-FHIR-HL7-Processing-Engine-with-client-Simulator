@@ -1215,3 +1215,165 @@ task: <Task cancelling name='Task-4' coro=<server_health() running at E:\project
 2026-02-10 17:44:50,162 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
 2026-02-10 17:45:03,626 - INFO - Route_manager received Cancellation signal
 2026-02-10 17:45:03,626 - INFO - Route Manger shutting down
+2026-02-10 17:50:39,979 - INFO - worker start for route 7
+2026-02-10 17:50:40,636 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 17:50:40,653 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 17:50:55,862 - INFO - Route_manager received Cancellation signal
+2026-02-10 17:50:55,865 - INFO - Route Manger shutting down
+2026-02-10 17:56:11,548 - INFO - worker start for route 7
+2026-02-10 17:56:12,822 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 17:56:12,845 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 17:56:16,927 - INFO - Route_manager received Cancellation signal
+2026-02-10 17:56:16,927 - INFO - Route Manger shutting down
+2026-02-10 20:10:26,252 - INFO - worker start for route 7
+2026-02-10 20:10:26,660 - INFO - Worker Started for route 7
+2026-02-10 20:10:26,676 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:10:26,693 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:11:00,887 - INFO - HTTP Request: POST http://127.0.0.1:8002/get/new-patient "HTTP/1.1 200 OK"
+2026-02-10 20:11:00,889 - INFO - Sucessfully Send to url: {dest_endpoint_url}
+2026-02-10 20:11:29,058 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:11:29,091 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:12:31,399 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:12:31,413 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:13:33,754 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:13:33,760 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:14:16,696 - INFO - Route_manager received Cancellation signal
+2026-02-10 20:14:16,696 - INFO - Route Manger shutting down
+2026-02-10 20:14:18,496 - INFO - worker start for route 7
+2026-02-10 20:14:18,876 - INFO - Worker Started for route 7
+2026-02-10 20:14:18,882 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:14:18,910 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:14:30,321 - INFO - Route_manager received Cancellation signal
+2026-02-10 20:14:30,321 - INFO - Route Manger shutting down
+2026-02-10 20:14:32,682 - INFO - worker start for route 7
+2026-02-10 20:14:33,100 - INFO - Worker Started for route 7
+2026-02-10 20:14:33,105 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:14:33,112 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:15:35,439 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:15:35,446 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:16:37,806 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:16:37,812 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:17:40,149 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:17:40,155 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:18:42,505 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:18:42,511 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:19:44,830 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:19:44,836 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:20:47,171 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:20:47,177 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:21:49,519 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:21:49,526 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:22:51,878 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:22:51,884 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:23:54,216 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:23:54,222 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:24:56,566 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:24:56,573 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:25:58,945 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:25:58,951 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:27:01,385 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:27:02,857 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:27:22,771 - INFO - HTTP Request: POST http://127.0.0.1:8002/get/new-patient "HTTP/1.1 500 Internal Server Error"
+2026-02-10 20:27:22,773 - ERROR - data was not send to url: {dest_endpoint_url}
+2026-02-10 20:27:56,359 - INFO - HTTP Request: POST http://127.0.0.1:8002/get/new-patient "HTTP/1.1 200 OK"
+2026-02-10 20:27:56,361 - INFO - Sucessfully Send to url: {dest_endpoint_url}
+2026-02-10 20:28:05,300 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:28:05,307 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:29:07,656 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:29:07,664 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:30:10,068 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:30:10,084 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:30:23,934 - INFO - HTTP Request: POST http://127.0.0.1:8002/get/new-patient "HTTP/1.1 200 OK"
+2026-02-10 20:30:23,935 - INFO - Sucessfully Send to url: {dest_endpoint_url}
+2026-02-10 20:31:12,428 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:31:12,434 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:31:22,039 - INFO - HTTP Request: POST http://127.0.0.1:8002/get/new-patient "HTTP/1.1 200 OK"
+2026-02-10 20:31:22,041 - INFO - Sucessfully Send to url: {dest_endpoint_url}
+2026-02-10 20:31:28,385 - INFO - HTTP Request: POST http://127.0.0.1:8002/get/new-patient "HTTP/1.1 200 OK"
+2026-02-10 20:31:28,387 - INFO - Sucessfully Send to url: {dest_endpoint_url}
+2026-02-10 20:32:14,800 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:32:14,806 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:32:19,383 - INFO - HTTP Request: POST http://127.0.0.1:8002/get/new-patient "HTTP/1.1 200 OK"
+2026-02-10 20:32:19,385 - INFO - Sucessfully Send to url: {dest_endpoint_url}
+2026-02-10 20:32:44,801 - INFO - HTTP Request: POST http://127.0.0.1:8002/get/new-patient "HTTP/1.1 200 OK"
+2026-02-10 20:32:44,803 - INFO - Sucessfully Send to url: {dest_endpoint_url}
+2026-02-10 20:33:17,146 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:33:17,153 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:34:19,549 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:34:19,555 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:35:21,899 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:35:21,907 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:36:24,231 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:36:24,237 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:37:26,592 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:37:26,599 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:38:28,985 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:38:28,993 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:38:32,851 - INFO - Route_manager received Cancellation signal
+2026-02-10 20:38:32,851 - INFO - Route Manger shutting down
+2026-02-10 20:38:34,623 - INFO - worker start for route 7
+2026-02-10 20:38:35,120 - INFO - Worker Started for route 7
+2026-02-10 20:38:35,126 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:38:35,132 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:38:35,880 - INFO - Route_manager received Cancellation signal
+2026-02-10 20:38:35,880 - INFO - Route Manger shutting down
+2026-02-10 20:39:36,192 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:39:36,198 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:40:38,527 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:40:38,533 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:41:40,871 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:41:40,878 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:42:43,231 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:42:43,238 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:43:45,575 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:43:45,581 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:44:47,947 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:44:47,954 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:45:50,327 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:45:50,335 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:46:54,226 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:46:54,243 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:47:57,972 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:47:58,001 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:49:00,354 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:49:00,360 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:50:02,984 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:50:02,991 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:51:05,413 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:51:05,420 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:52:07,765 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:52:07,771 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:53:10,112 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:53:10,118 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:54:12,466 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:54:12,475 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:55:14,812 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:55:14,819 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:56:17,184 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:56:17,191 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:57:19,536 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:57:19,542 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:58:21,901 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:58:21,908 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 20:59:24,294 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 20:59:24,299 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 21:00:26,668 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 21:00:26,675 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 21:01:29,026 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 21:01:29,033 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 21:02:31,370 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 21:02:31,377 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 21:03:33,748 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 21:03:33,754 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 21:04:36,157 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 21:04:36,164 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 21:05:54,607 - INFO - worker start for route 7
+2026-02-10 21:05:55,036 - INFO - Worker Started for route 7
+2026-02-10 21:05:55,048 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 21:05:55,055 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 21:06:01,150 - INFO - HTTP Request: POST http://127.0.0.1:8002/get/new-patient "HTTP/1.1 200 OK"
+2026-02-10 21:06:01,152 - INFO - Sucessfully Send to url: {dest_endpoint_url}
+2026-02-10 21:06:57,361 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 21:06:57,367 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-02-10 21:07:59,693 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-10 21:07:59,700 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"

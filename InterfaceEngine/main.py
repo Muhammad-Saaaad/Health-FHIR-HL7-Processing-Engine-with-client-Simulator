@@ -76,7 +76,6 @@ async def route_manager():
             task.cancel()
         # wait for all the workers to finish
         await asyncio.gather(*active_listners.values(), return_exceptions=True)
-        logging.info("All workers stopped")
 
 async def worker(route):
     try:
@@ -101,9 +100,7 @@ async def worker(route):
         dest_id_to_path = {f.endpoint_filed_id: f.path for f in dest_endpoint_fields}
         dest_path_to_resource = {f.path: f.resource for f in dest_endpoint_fields}
 
-        print(src_id_to_path)
-        print(dest_id_to_path)
-        print(dest_path_to_resource)
+        logging.info(f"Worker Started for route {route.route_id}")
 
         dest_endpoint_url = f"http://{dest_server.ip}:{dest_server.port}{dest_endpoint.url}"
 
@@ -134,7 +131,6 @@ async def worker(route):
                 
                     value = path_data[src_path]
 
-                    print(rule.transform_type)
                     if rule.transform_type == 'map': # here if there is no mapping then by default we consider the same value
                         # here the first value will give me the map value, if the mapping value is not found then return the default value
                         value = rule.config.get(str(value), value) 
@@ -155,10 +151,6 @@ async def worker(route):
                         
                     dest_path = dest_id_to_path[rule.dest_field_id]
                     output_data[dest_path] = value
-
-            print(output_data)
-            print("concat data --> ",concat_data)
-            print("split data --> ",split_data)
 
             ################################## Concat Data ##################################
             for dest_id , rules in concat_data.items():
@@ -211,7 +203,7 @@ async def worker(route):
                 delimiter= rules[0].config.get('delimiter', ' ') # concat on delimiter or by default with space " " 
                 parts = str(path_data[src_path]).split(delimiter)
 
-                for i, rule in enumerate(rules):
+                for i, rule in enumerate(rules): # (len = rules) < (len = parts)
                     if i < len(parts):
                         if rule.dest_field_id not in dest_id_to_path:
                             logging.error(f"""While Spliting, The destination id in rule {rule.dest_field_id}
@@ -223,8 +215,6 @@ async def worker(route):
                         output_data[dest_path] = parts[i]
             
             # BUILD MESSAGE
-            print("OUTPUT Data")
-            print(output_data)
             if dest_server.protocol == "FHIR":
                 msg = await build_fhir_json(output_data, dest_path_to_resource)
 
@@ -233,8 +223,7 @@ async def worker(route):
                                                dest=dest_server.name, msg_type=route.msg_type)
 
             try: # message
-                print("msg -> ",msg)
-                async with httpx.AsyncClient() as client:
+                async with httpx.AsyncClient() as client: # here we are properly closing the connection as well
                     response = await client.post(url=dest_endpoint_url, json=msg)
                     if response.status_code == 200 or response.status_code == 201:
                         logging.info("Sucessfully Send to url: {dest_endpoint_url}")
@@ -243,6 +232,7 @@ async def worker(route):
                 
             except Exception as exp:
                 logging.error(f"{exp} \nThis came when sending data to url: {dest_endpoint_url}")
+                raise
 
     except Exception as exp:
         return str(exp)
@@ -289,7 +279,10 @@ async def ingest(full_path: str, req: Request):
                 path_data[path] = value
         
         for route in routes:
-            await route_queue[route.route_id].put(path_data)
+            if route.route_id in route_queue:
+                await route_queue[route.route_id].put(path_data)
+            else:
+                logging.warning(f"Route {route.route_id} queue not found. Worker may not be running")
         
         return {"message": "sucessfully send data to all destinations"}
 
@@ -299,13 +292,11 @@ async def ingest(full_path: str, req: Request):
 
 async def build_hl7_message(output_data, src, dest, msg_type):
     segments = {}
-    print("enter segment")
     date = datetime.now()
     dt = datetime.strptime(str(date), "%Y-%m-%d %H:%M:%S.%f")
     date = dt.strftime("%Y%m%d%H%M%S")
 
     header = f"MSH|^~\\&|{src}||{dest}||{date}||{msg_type}|MSG{str(uuid.uuid4())}|P|2.5"
-    print(header)
     for path, value in output_data.items():
         # example: PID-5.1
         segment = path.split("-")[0]

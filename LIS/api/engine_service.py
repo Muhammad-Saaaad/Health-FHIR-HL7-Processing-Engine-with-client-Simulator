@@ -17,20 +17,23 @@ async def add_patient(req: Request, db: Session = Depends(get_db)):
         data = await req.json()
         _, path = hl7_extract_paths(segment=data.split('\n')[1])
         values = get_hl7_value_by_path(data, path)
-        print(values)
-        # dt = datetime.strptime(str(value[]))
+        
+        dt = datetime.strptime(values['PID-7'], "%Y%m%d")
+        date = dt.strftime("%Y-%m-%d")
 
-        # patient = model.Patient(
-        #     mpi = values['PID-3'],
-        #     fname = values['PID-5.1'] if 'PID-5.1' in values else values['PID-5'].split(' ')[0],
-        #     lname = values['PID-5.2'] if 'PID-5.2' in values else values['PID-5'].split(' ')[1:].join(' '),
-        #     dob = values['date_of_birth'],
-        #     gender = values['gender']
-        # )
+        gender = "male" if values['PID-8'] == "M" else "female"
 
-        # db.add(patient)
-        # db.commit()
-        # db.refresh(patient)
+        patient = model.Patient(
+            mpi = values['PID-3'],
+            fname = values['PID-5.1'] if 'PID-5.1' in values else values['PID-5'].split(' ')[0],
+            lname = values['PID-5.2'] if 'PID-5.2' in values else values['PID-5'].split(' ')[1:].join(' '),
+            dob = date,
+            gender = gender
+        )
+
+        db.add(patient)
+        db.commit()
+        db.refresh(patient)
 
         return {"message": "Patient Added sucessfully"}
 

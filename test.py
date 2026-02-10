@@ -149,3 +149,16 @@ def get_hl7_value_by_path(hl7_message, paths):
 #     print(segment_type)
 #     print(paths)
 #     print(value)
+
+from datetime import datetime
+
+date = datetime.now().date()
+dt = datetime.strptime(str(date), "%Y-%m-%d")
+date = dt.strftime("%Y%m%d")
+
+print(date)
+
+dt = datetime.strptime(date, "%Y%m%d")
+date = dt.strftime("%Y-%m-%d")
+
+print(date)

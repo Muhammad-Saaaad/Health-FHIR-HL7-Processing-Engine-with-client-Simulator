@@ -53,9 +53,9 @@ async def add_patient(patient: schema.post_patient ,db: Session = Depends(get_db
         }
         response = engine_service.register_engine(fhir_patient)
         
-        if response:
-            # db.commit()
-            db.rollback()
+        if response == "sucessfull":
+            db.commit()
+            # db.rollback()
             return {"message": "data inserted sucessfully"}
         
         db.rollback()
