@@ -25,17 +25,17 @@
 #   ]
 # }
 
-# test = {
-#   "resourceType": "Patient",
-#   "identifier": [{ "value": "23" }],
-#   "name": [{ "family": ["saad"], "given": ["Muhammad", "ali"] }],
-#   "gender": "male",
-#   "birthDate": "2004-10-06",
-#   "address": [{ "text": "123 street, city, country" }],
-#   "telecom" : [{
-#       "value" : "+33 (237) 998327"
-#     }]
-# }
+test = {
+  "resourceType": "Patient",
+  "identifier": [{ "value": "23" }],
+  "name": [{ "family": ["saad"], "given": ["Muhammad", "ali"] }],
+  "gender": "male",
+  "birthDate": "2004-10-06",
+  "address": [{ "text": "123 street, city, country" }],
+  "telecom" : [{
+      "value" : "+33 (237) 998327"
+    }]
+}
 
 
 def hl7_extract_paths(segment):
@@ -142,10 +142,10 @@ def get_hl7_value_by_path(hl7_message, paths):
 
 
 # resource_type = test['resourceType']
-for segment in test.split('\n')[1:]:
+# for segment in test.split('\n')[1:]:
 
-    segment_type, paths = hl7_extract_paths(segment)
-    value = get_hl7_value_by_path(test, paths)
-    print(segment_type)
-    print(paths)
-    print(value)
+#     segment_type, paths = hl7_extract_paths(segment)
+#     value = get_hl7_value_by_path(test, paths)
+#     print(segment_type)
+#     print(paths)
+#     print(value)

@@ -1,10 +1,12 @@
+import asyncio
+
 import httpx
 from fastapi import APIRouter, status, HTTPException, Depends
 from sqlalchemy.orm import Session
 
 from schemas.server import AddUpdateServer, GetServer
 import models
-from database import get_db
+from database import get_db, session_local
 
 router = APIRouter(tags=["Server"])
 
@@ -15,8 +17,9 @@ async def add_server(server: AddUpdateServer, db: Session = Depends(get_db)):
         if db.query(models.Server).filter(models.Server.name == server.name).first():
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Server with this name already exists")
 
-        if not await server_health_check(server.ip, server.port):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Server is not reachable or unhealthy")
+        async with httpx.AsyncClient() as client:
+            if not await server_health_check(client, server.ip, server.port):
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Server is not reachable or unhealthy")
 
         new_server = models.Server(
             name=server.name,
@@ -88,12 +91,34 @@ def delete_server(server_id: int, db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
 
-async def server_health_check(ip: str, port: int): # checks the server health after every 60 seonds
+async def server_health():
+        print("start status checking")
+        while True: # after every 30 second we check all the servers status, if they are active or not
+            try:
+                    db = session_local()
+                    servers = db.query(models.Server).all()
+
+                    async with httpx.AsyncClient() as client:
+                        for server in servers:
+                            is_alive= await server_health_check(client, server.ip, server.port)
+                            new_status = 'Active' if is_alive else 'Inactive'
+                            if server.status != new_status:
+                                server.status = new_status
+                    
+                    db.commit()
+            except Exception as exp:
+                if db:
+                    db.rollback()
+                print(f"Exception Error while checking status: {str(exp)}")
+            finally:
+                if db:
+                    db.close()
+            await asyncio.sleep(60) # check status after every 30 seconds
+
+
+async def server_health_check(client, ip: str, port: int): # checks the server health after every 60 seonds
     try:
-        response = await httpx.AsyncClient().get(f"http://{ip}:{port}/health", timeout=5)
-        if response.status_code == 200:
-            return True
-        else:
-            return False
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
+        response = await client.get(f"http://{ip}:{port}/health", timeout=5)
+        return response.status_code == 200
+    except:
+        return False

@@ -7,7 +7,7 @@ from api import auth, claims, engine_service, patient, policy
 app = FastAPI(title="Hospital Insurance System")
 models.Base.metadata.create_all(bind=engine)
 
-@app.get("/", status_code=status.HTTP_200_OK)
+@app.get("/health", status_code=status.HTTP_200_OK)
 def home():
     return {"message": "Final System is Live! 🚀 Go to /docs"}
 

@@ -67,6 +67,8 @@ def add_endpoint(endpoint: AddEndpoint, db: Session = Depends(get_db)):
         db.flush()
         db.refresh(new_endpoint)
 
+        print('endpoint added')
+
         if endpoint.server_protocol == "FHIR":
             if add_fhir_endpoint_fields(endpoint_id=new_endpoint.endpoint_id, sample_msg=endpoint.sample_msg, db=db):
                 db.commit()
@@ -257,15 +259,13 @@ def get_hl7_value_by_path(hl7_message, paths):
         
     return value
 
-
-
-def get_value_by_path(obj, path): # give the entire fhir msg and it will extract the value at that path
+def get_fhir_value_by_path(obj, path): # give the entire fhir msg and it will extract the value at that path
     
     # Split path by dots and brackets [ ]
     # "name[0].family" -> ["name", "0", "", "family"]
-    #  "text" -> ["text"]
+    #  "gender" -> ["gender"]
     keys = re.split(r'\.|\[|\]', path)
-    print(keys)
+    # print(keys)
     keys = [k for k in keys if k]  # Remove empty strings
     
     current = obj

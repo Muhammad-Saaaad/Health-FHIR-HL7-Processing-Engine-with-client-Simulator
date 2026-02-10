@@ -72,7 +72,7 @@ class MappingRule(Base):
     route_id = Column(Integer, ForeignKey("route.route_id")) # route(fk of route)
     src_field_id = Column(Integer, ForeignKey("endpoint_fileds.endpoint_filed_id")) # src_field(fk of endpoint_fileds)
     dest_field_id = Column(Integer, ForeignKey("endpoint_fileds.endpoint_filed_id")) # dest_field(fk of endpoint_fileds)
-    transform_type = Column(String(20), nullable=False)
+    transform_type = Column(String(20), nullable=False) # copy | map | format | split | concat
     config = Column(JSON, nullable=False)
 
     route = relationship("Route", back_populates="mapping_rules")

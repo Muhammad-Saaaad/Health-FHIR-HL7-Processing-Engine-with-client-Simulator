@@ -154,7 +154,6 @@ def endpoint_field_paths(endpoint_id: int, db:Session = Depends(get_db)):
 @router.post("/add-route", status_code=status.HTTP_201_CREATED)
 def add_route(data: AddRoute, db: Session = Depends(get_db)):
     try:
-        print("Enter")
         if db.query(models.Route).filter(models.Route.name == data.name).first():
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Route name already exists")
         
@@ -213,7 +212,7 @@ def add_route(data: AddRoute, db: Session = Depends(get_db)):
                         config = rule['config']
                     ))
 
-            elif rule['transform'] == 'copy' or rule['transform'] == 'map':
+            elif rule['transform'] in ['copy', 'map', 'format'] :
                 rules.append(models.MappingRule(
                         route_id = route.route_id,
                         src_field_id = rule['src_paths'][0],
@@ -233,18 +232,49 @@ def add_route(data: AddRoute, db: Session = Depends(get_db)):
     except Exception as exp:
         db.rollback()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
-    
-# "mappings": [ # suppose this data is also comming from the frontend when adding route.
-#     {
-#       # "src_paths": ["name[0].given", "name[0].family"],
-#       # "dest_paths": ["PID-5"],
 
-#       "src_paths": [12, 11],
-#       "dest_paths": [1],
-#       "transform": "concat",
+# example:
+
+# {
+#   "name": "ehr-to-lis",
+#   "src_server_id": 1,
+#   "src_endpoint_id": 23,
+#   "des_server_id": 3,
+#   "des_endpoint_id": 24,
+#   "msg_type": "ADT",
+#   "rules": {
+#     "mappings": [ 
+#     {
+#       "src_paths": [45],
+#       "dest_paths": [49],
+#       "transform": "copy",
+#       "config": {}
+#     },
+#     {
+#       "src_paths": [46],
+#       "dest_paths": [50,51],
+#       "transform": "split",
 #       "config": {
-#         "delimiter": " "
+#          "delimiter": " "
 #       }
 #     },
-#     {},
-#   ]
+#     {
+#       "src_paths": [47],
+#       "dest_paths": [53],
+#       "transform": "map",
+#       "config": {
+#         "Male": "M", "Female": "F"
+#        }
+#     },
+#     {
+#      "src_paths": [48],
+#       "dest_paths": [52],
+#       "transform": "format",
+#       "config": {
+#          "from": "%Y-%m-%d", "to": "%Y%m%d"
+#       }
+#     }
+     
+#    ]
+#   }
+# }

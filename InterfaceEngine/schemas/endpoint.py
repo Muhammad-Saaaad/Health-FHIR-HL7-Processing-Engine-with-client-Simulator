@@ -7,5 +7,3 @@ class AddEndpoint(BaseModel):
     server_protocol: Literal["FHIR", "HL7"]
     url: str
     sample_msg: Dict[str, Any] | str # Changed from Json to Dict for easier handling
-
-    

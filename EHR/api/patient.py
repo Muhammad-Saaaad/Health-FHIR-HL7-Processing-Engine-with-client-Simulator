@@ -28,21 +28,30 @@ async def add_patient(patient: schema.post_patient ,db: Session = Depends(get_db
             nic = patient.nic,
             name = patient.name,
             phone_no = patient.phone_no,
-            gender = patient.gender,
+            gender = patient.gender.capitalize(),
             date_of_birth = patient.date_of_birth,
             address = patient.address
         )
         db.add(new_patient)
         db.flush()
+        db.refresh(new_patient)
     
-        engine_data = {
-            "mpi": new_patient.mpi,
-            "name": new_patient.name,
+        fhir_patient =  {
+            "resourceType": "Patient",
+            "identifier": [
+                {
+                    "value": new_patient.mpi
+                }
+            ],
+            "name": [
+                {
+                    "text": new_patient.name
+                }
+            ],
             "gender": new_patient.gender,
-            "date_of_birth": str(patient.date_of_birth)
+            "birthDate": str(new_patient.date_of_birth)
         }
-
-        response = engine_service.register_engine(engine_data)
+        response = engine_service.register_engine(fhir_patient)
         
         if response:
             # db.commit()
