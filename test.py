@@ -28,7 +28,7 @@
 test = {
   "resourceType": "Patient",
   "identifier": [{ "value": "23" }],
-  "name": [{ "family": ["saad"], "given": ["Muhammad", "ali"] }],
+  "name": [{ "family": ["saad"], "given": [] }],
   "gender": "male",
   "birthDate": "2004-10-06",
   "address": [{ "text": "123 street, city, country" }],
@@ -63,7 +63,7 @@ def hl7_extract_paths(segment):
             paths.append(path)
     return (segment_type, paths)
 
-test = "MSH|^~\\&|LIS||EHR||20260203120000||ADT^A01|MSG00001|P|2.5\nPID|1||23||saad^Muhammad ali||20041006|M|||||"
+# test = "MSH|^~\\&|LIS||EHR||20260203120000||ADT^A01|MSG00001|P|2.5\nPID|1||23||saad^Muhammad ali||20041006|M|||||"
 # ORM|2||12||Muhammad^ali||20041006|M|||123 street, city, country||+33 (237) 998327
 import re
 
@@ -141,24 +141,61 @@ def get_hl7_value_by_path(hl7_message, paths):
 #     return current
 
 
-# resource_type = test['resourceType']
-# for segment in test.split('\n')[1:]:
+def fhir_extract_paths(data, prefix=""):
+    paths = []
 
-#     segment_type, paths = hl7_extract_paths(segment)
-#     value = get_hl7_value_by_path(test, paths)
-#     print(segment_type)
-#     print(paths)
+    if isinstance(data, dict):
+        for key, value in data.items():
+            if key == 'resourceType':
+                continue
+            new_prefix = f"{prefix}.{key}" if prefix else key
+            paths.extend(fhir_extract_paths(value, new_prefix))
+
+    elif isinstance(data, list):
+        if len(data) > 0:
+            # if the all the items in the list are strings and length >1 then it means the data is like this ["saad", "ali"]
+            # so we add the just the entire list there
+            if all(isinstance(item, str) for item in data) and len(data) >1:
+                paths.append(prefix)
+            else:
+                for i, item in enumerate(data):
+                    paths.extend(fhir_extract_paths(item, f"{prefix}[{i}]"))
+
+    else:
+        paths.append(prefix)
+
+    return paths
+
+def get_fhir_value_by_path(obj, path): # give the entire fhir msg and it will extract the value at that path
+    
+    # Split path by dots and brackets [ ]
+    # "name[0].family" -> ["name", "0", "", "family"]
+    #  "gender" -> ["gender"]
+    keys = re.split(r'\.|\[|\]', path)
+    # print(keys)
+    keys = [k for k in keys if k]  # Remove empty strings
+    
+    current = obj
+    
+    for key in keys:
+        if key.isdigit():  # Array index
+            current = current[int(key)]
+        else:  # Object key
+            current = current.get(key) if isinstance(current, dict) else None
+            
+        if current is None:
+            return None
+            
+    return current
+
+# resource_type = test['resourceType']
+# paths = fhir_extract_paths(test)
+# print(paths)
+# for path in paths:
+
+#     value = get_fhir_value_by_path(test, path)
+#     print(path)
 #     print(value)
 
-from datetime import datetime
-
-date = datetime.now().date()
-dt = datetime.strptime(str(date), "%Y-%m-%d")
-date = dt.strftime("%Y%m%d")
-
-print(date)
-
-dt = datetime.strptime(date, "%Y%m%d")
-date = dt.strftime("%Y-%m-%d")
-
-print(date)
+path = 'PID-5'
+print(path.split('.'))

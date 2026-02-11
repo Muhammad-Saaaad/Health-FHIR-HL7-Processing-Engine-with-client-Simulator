@@ -92,28 +92,28 @@ def delete_server(server_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
 
 async def server_health():
-        print("start status checking")
-        while True: # after every 30 second we check all the servers status, if they are active or not
-            try:
-                    db = session_local()
-                    servers = db.query(models.Server).all()
+    print("start status checking")
+    while True: # after every 30 second we check all the servers status, if they are active or not
+        try:
+                db = session_local()
+                servers = db.query(models.Server).all()
 
-                    async with httpx.AsyncClient() as client:
-                        for server in servers:
-                            is_alive= await server_health_check(client, server.ip, server.port)
-                            new_status = 'Active' if is_alive else 'Inactive'
-                            if server.status != new_status:
-                                server.status = new_status
-                    
-                    db.commit()
-            except Exception as exp:
-                if db:
-                    db.rollback()
-                print(f"Exception Error while checking status: {str(exp)}")
-            finally:
-                if db:
-                    db.close()
-            await asyncio.sleep(60) # check status after every 30 seconds
+                async with httpx.AsyncClient() as client:
+                    for server in servers:
+                        is_alive= await server_health_check(client, server.ip, server.port)
+                        new_status = 'Active' if is_alive else 'Inactive'
+                        if server.status != new_status:
+                            server.status = new_status
+                
+                db.commit()
+        except Exception as exp:
+            if db:
+                db.rollback()
+            print(f"Exception Error while checking status: {str(exp)}")
+        finally:
+            if db:
+                db.close()
+        await asyncio.sleep(60) # check status after every 30 seconds
 
 
 async def server_health_check(client, ip: str, port: int): # checks the server health after every 60 seonds

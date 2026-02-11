@@ -26,7 +26,7 @@ async def add_patient(req: Request, db: Session = Depends(get_db)):
         patient = model.Patient(
             mpi = values['PID-3'],
             fname = values['PID-5.1'] if 'PID-5.1' in values else values['PID-5'].split(' ')[0],
-            lname = values['PID-5.2'] if 'PID-5.2' in values else values['PID-5'].split(' ')[1:].join(' '),
+            lname = values['PID-5.2'] if 'PID-5.2' in values else values['PID-5'].split(' ')[1:].join(' ') if len(values['PID-5'].split(' ')) > 1 else '' ,
             dob = date,
             gender = gender
         )

@@ -17,18 +17,42 @@ def all_routes(db: Session = Depends(get_db)):
 
 @router.get("/mapping_rules/{route_id}", status_code=status.HTTP_200_OK)
 def get_rules(route_id: int, db: Session = Depends(get_db)):
+    """
+        Take the route id, and give detail mapping based on the route id.
+
+        returns:
+        [
+            {
+                "src_field": {
+                "endpoint_filed_id": 45,
+                "resource": "Patient",
+                "path": "identifier[0].value",
+                "name": "mpi"
+                },
+                "dest_field": {
+                "endpoint_filed_id": 49,
+                "resource": "PID",
+                "path": "PID-3",
+                "name": "mpi"
+                },
+                "mapping_rule_id": 17,
+                "transform_type": "copy",
+                "config": {}
+            }
+        ]
+    """
     try:
 
         if not db.get(models.Route, route_id):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Route id {route_id} does not exists")
 
-        mapping_rules = db.query(models.MappingRule).filter(models.MappingRule.route_id == route_id).all()
+        mapping_rules_of_route = db.query(models.MappingRule).filter(models.MappingRule.route_id == route_id).all()
         mapping_data = []
         split_data = []
         concat_data = []
 
-        for rule in mapping_rules: # this rule is from the database hence it can only be access via . not like this: ['']
-            if rule.transform_type == 'copy' or rule.transform_type == 'map':
+        for rule in mapping_rules_of_route: # this rule is from the database hence it can only be access via . not like this: ['']
+            if rule.transform_type in ['copy', 'map', 'format']:
                 mapping = {
                     "src_field" : {
                         "endpoint_filed_id": rule.src_field_id,
@@ -140,6 +164,12 @@ def get_rules(route_id: int, db: Session = Depends(get_db)):
 
 @router.get("/endpoint_field_path/{endpoint_id}", status_code=status.HTTP_200_OK)
 def endpoint_field_paths(endpoint_id: int, db:Session = Depends(get_db)):
+    """
+        Takes all the endpoint fileds of a specific endpoint. it is use when you wanted to get fields 
+        of a specific endpoint while making a route.
+
+        returns: List of all the endpoint fileds of a specific endpoint. 
+    """
     try:    
 
         if not db.get(models.Endpoints, endpoint_id):
@@ -153,6 +183,11 @@ def endpoint_field_paths(endpoint_id: int, db:Session = Depends(get_db)):
 
 @router.post("/add-route", status_code=status.HTTP_201_CREATED)
 def add_route(data: AddRoute, db: Session = Depends(get_db)):
+    """
+    takes the route data such as: the example commented at the end, perform validation like: 
+    The route already exists or not. The route name is unique or not.
+    The src server id and dest server id is valid or not. and also the src|dest endpoint id.
+    """
     try:
         if db.query(models.Route).filter(models.Route.name == data.name).first():
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Route name already exists")
@@ -185,14 +220,15 @@ def add_route(data: AddRoute, db: Session = Depends(get_db)):
         db.add(route)
         db.flush()
         db.refresh(route)
-        print(data.rules)
+
+        # Takes the mapping part of the data.
         for rule in data.rules['mappings']:
-            if len(rule['src_paths']) > 1 and len(rule['dest_paths']) > 1:
+            if len(rule['src_paths']) > 1 and len(rule['dest_paths']) > 1: # if there are multiple src and destination mapping
                 db.rollback()
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="cannot give 2 src and destination in a single rule")
             
             rules = []
-            if rule['transform'] == 'concat':
+            if rule['transform'] == 'concat': # if transformation type is concat then take 1 dest_path and list of src paths
                 for src_path in rule['src_paths']:
                     rules.append(models.MappingRule(
                         route_id = route.route_id,
@@ -200,9 +236,9 @@ def add_route(data: AddRoute, db: Session = Depends(get_db)):
                         dest_field_id = rule['dest_paths'][0],
                         transform_type = rule['transform'],
                         config = rule['config']
-                    ))
+                ))
                 
-            elif rule['transform'] == 'split':
+            elif rule['transform'] == 'split': # if transformation type is split then take 1 src_path and list of dest paths
                 for dest_path in rule['dest_paths']:
                     rules.append(models.MappingRule(
                         route_id = route.route_id,
@@ -210,7 +246,7 @@ def add_route(data: AddRoute, db: Session = Depends(get_db)):
                         dest_field_id = dest_path,
                         transform_type = rule['transform'],
                         config = rule['config']
-                    ))
+                ))
 
             elif rule['transform'] in ['copy', 'map', 'format'] :
                 rules.append(models.MappingRule(
@@ -219,7 +255,7 @@ def add_route(data: AddRoute, db: Session = Depends(get_db)):
                         dest_field_id = rule['dest_paths'][0],
                         transform_type = rule['transform'],
                         config = rule['config']
-                    ))
+                ))
             
             else:
                 db.rollback()

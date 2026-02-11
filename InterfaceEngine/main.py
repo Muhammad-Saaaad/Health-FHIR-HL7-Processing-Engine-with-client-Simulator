@@ -41,43 +41,53 @@ app.include_router(endpoint.router, prefix="/endpoint")
 def check_health():
     return {"message": "✔ Interface Engine running"}
 
-active_listners = {}
-route_queue = {}
+active_route_listners = {} # consist of all the running routes lisning for a soruce endpoint
+route_queue = {} # consist of each route key with that route value that it gets from source endpoint
 
 async def route_manager():
+    """
+        Takes all the routes from database, and use route_worker function, after that the route|channel
+        can do everything
+    """
     try:
         while True:
             try:
 
                 db = session_local()
-                routes = db.query(models.Route).all()
+                all_routes = db.query(models.Route).all()
                 db.close()
 
-                for route in routes:
-                    if route.route_id not in active_listners:
+                for route in all_routes:
+                    if route.route_id not in active_route_listners:
 
-                        route_queue[route.route_id] = asyncio.Queue()
-                        task = asyncio.create_task(worker(route))
-                        active_listners[route.route_id] = task
-                        logging.info(f"worker start for route {route.route_id}")
-                
+                        route_queue[route.route_id] = asyncio.Queue() # make a async queue for a new route that is not lisning
+                        task = asyncio.create_task(route_worker(route))
+                        active_route_listners[route.route_id] = task
+                        logging.info(f"route_worker start for route {route.route_id}")
                 await asyncio.sleep(5)
+
             except asyncio.CancelledError:
                 logging.info("Route_manager received Cancellation signal")
                 raise # Re-raise to properly exit
+            
             except Exception as exp:
                 logging.error(f"Error in route_manager: {str(exp)}")
                 await asyncio.sleep(5)  # Continue running despite errors
+    
     except asyncio.CancelledError:
 
         logging.info(f"Route Manger shutting down")
-        # Cleanup: cancle all worker tasks that we run above
-        for route_id, task in active_listners.items():
+        # Cleanup: cancle all route_worker tasks that we run above
+        for route_id, task in active_route_listners.items():
             task.cancel()
-        # wait for all the workers to finish
-        await asyncio.gather(*active_listners.values(), return_exceptions=True)
+        # wait for all the route_workers to finish
+        await asyncio.gather(*active_route_listners.values(), return_exceptions=True)
 
-async def worker(route):
+async def route_worker(route): # rename this to channel_worker instead of route_worker
+    """
+        use Route worker to listen incomming data using aysync queue, then itvalidate, send data,
+        parse data and convert data from fhir <--> hl7.
+    """
     try:
         db = session_local()
         dest_endpoint= db.get(models.Endpoints, route.dest_endpoint_id)
@@ -90,27 +100,27 @@ async def worker(route):
         dest_endpoint_fields = db.query(models.EndpointFileds) \
             .filter(models.EndpointFileds.endpoint_id == route.dest_endpoint_id).all()
         
-        mapping_rules = db.query(models.MappingRule) \
+        mapping_rules_for_specific_route = db.query(models.MappingRule) \
             .filter(models.MappingRule.route_id == route.route_id).all()
         
         db.close()
 
-        # lookup maps
+        # lookup maps 
         src_id_to_path = {f.endpoint_filed_id: f.path for f in src_endpoint_fields}
         dest_id_to_path = {f.endpoint_filed_id: f.path for f in dest_endpoint_fields}
         dest_path_to_resource = {f.path: f.resource for f in dest_endpoint_fields}
 
-        logging.info(f"Worker Started for route {route.route_id}")
+        logging.info(f"route_Worker Started for route {route.route_id}")
 
         dest_endpoint_url = f"http://{dest_server.ip}:{dest_server.port}{dest_endpoint.url}"
 
         while True:
-            path_data = await route_queue[route.route_id].get()
-            output_data = {}
-            concat_data = {}
-            split_data = {}
+            src_path_to_value = await route_queue[route.route_id].get()
+            output_data = {} # contains the output fileds with value
+            concat_data = {} # contains single dest filed id, and multiple mapping rule that concate multiple src into a single destination.
+            split_data = {} # contain single src filed id, and multiple mapping rule that split that single src into multiple destination.
 
-            for rule in mapping_rules: # we have all the mapping rules based on the specific route id.
+            for rule in mapping_rules_for_specific_route:
 
                 if rule.transform_type == 'concat': # for concat we should have multiple src and 1 dest
                     # this takes a key and the value, if the key doesn't exists or exists with a different value
@@ -126,10 +136,11 @@ async def worker(route):
                 else: # map | copy | formate
                     src_path = src_id_to_path[rule.src_field_id]
 
-                    if src_path not in path_data:
+                    if src_path not in src_path_to_value:
+                        logging.info(f"The src path {src_path} not found in src_path_to_value: {src_path_to_value}")
                         continue
                 
-                    value = path_data[src_path]
+                    value = src_path_to_value[src_path]
 
                     if rule.transform_type == 'map': # here if there is no mapping then by default we consider the same value
                         # here the first value will give me the map value, if the mapping value is not found then return the default value
@@ -165,11 +176,11 @@ async def worker(route):
 
                     src_path = src_id_to_path[rule.src_field_id]
 
-                    if src_path in path_data:
-                        values.append(str(path_data[src_path]))
+                    if src_path in src_path_to_value:
+                        values.append(str(src_path_to_value[src_path]))
 
                     else:
-                        logging.warning(f"while Concatnation, The src_path {src_path} not found in path data: {path_data}")
+                        logging.warning(f"while Concatnation, The src_path {src_path} not found in path data: {src_path_to_value}")
                         continue
                 
                 delimiter = rules[0].config.get('delimiter', " ") # concat on delimiter or by default with space " " 
@@ -195,15 +206,15 @@ async def worker(route):
 
 
                 src_path = src_id_to_path[src_id]
-                if src_path not in path_data:
-                    logging.warning(f"while Spliting, The src_path {src_path} not found in path data: {path_data}")
+                if src_path not in src_path_to_value:
+                    logging.warning(f"while Spliting, The src_path {src_path} not found in path data: {src_path_to_value}")
                     continue
                 
                 # As rules 
                 delimiter= rules[0].config.get('delimiter', ' ') # concat on delimiter or by default with space " " 
-                parts = str(path_data[src_path]).split(delimiter)
+                parts = str(src_path_to_value[src_path]).split(delimiter)
 
-                for i, rule in enumerate(rules): # (len = rules) < (len = parts)
+                for i, rule in enumerate(rules):
                     if i < len(parts):
                         if rule.dest_field_id not in dest_id_to_path:
                             logging.error(f"""While Spliting, The destination id in rule {rule.dest_field_id}
@@ -213,16 +224,20 @@ async def worker(route):
 
                         dest_path = dest_id_to_path[rule.dest_field_id]
                         output_data[dest_path] = parts[i]
-            
+                
+                if len(parts) > len(rules): # here if the while spliting, if there is some data left concatenate it with the last path
+                    dest_path = dest_id_to_path[rules[-1].dest_field_id] # take the last destination path
+                    output_data[dest_path] += " " + (' ').join(parts[len(rules):]) # join all the remaining parts with the remining data
+
             # BUILD MESSAGE
             if dest_server.protocol == "FHIR":
-                msg = await build_fhir_json(output_data, dest_path_to_resource)
+                msg = await build_fhir_json(output_data, dest_path_to_resource) # make a fhir message with the data
 
             else:
                 msg = await build_hl7_message(output_data=output_data, src=src_server.name,
                                                dest=dest_server.name, msg_type=route.msg_type)
 
-            try: # message
+            try: # here we are making a async client and also making sure that it close after its work has been completed sucessfully.
                 async with httpx.AsyncClient() as client: # here we are properly closing the connection as well
                     response = await client.post(url=dest_endpoint_url, json=msg)
                     if response.status_code == 200 or response.status_code == 201:
@@ -240,17 +255,17 @@ async def worker(route):
 @app.post("/{full_path:path}", status_code=status.HTTP_200_OK)
 async def ingest(full_path: str, req: Request):
     try:
-        print(full_path)
-        payload = await req.json()
+        payload = await req.json() # data recieved form the srouce endpoint.
 
         db = session_local()
-        # check url
+        # check url if it exists in the database.
         endpoint = db.query(models.Endpoints).filter(models.Endpoints.url == '/'+full_path).first()
         if not endpoint:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'The endpoint url: /{full_path} is not valid')
         
         endpoint_fields = db.query(models.EndpointFileds).filter(models.EndpointFileds.endpoint_id == endpoint.endpoint_id).all()
         
+        # getting all the routes with this endpoint as src endpoint.
         routes = db.query(models.Route).filter(models.Route.src_endpoint_id == endpoint.endpoint_id).all()
         server = db.get(models.Server, endpoint.server_id)
         db.close()
@@ -268,21 +283,21 @@ async def ingest(full_path: str, req: Request):
                     print(f"path: {field.path} is not in the payload")
         
         # Extract value based on the path
-        path_data = {}
+        src_path_to_value = {}
         if server.protocol == "FHIR":
             for path in paths:
                 value = get_fhir_value_by_path(obj=payload, path=path)
-                path_data[path] = value
+                src_path_to_value[path] = value
         else:
             for path in paths:
                 value = get_hl7_value_by_path(obj=payload, path=path)
-                path_data[path] = value
+                src_path_to_value[path] = value
         
         for route in routes:
             if route.route_id in route_queue:
-                await route_queue[route.route_id].put(path_data)
+                await route_queue[route.route_id].put(src_path_to_value)
             else:
-                logging.warning(f"Route {route.route_id} queue not found. Worker may not be running")
+                logging.warning(f"Route {route.route_id} queue not found. route_Worker may not be running")
         
         return {"message": "sucessfully send data to all destinations"}
 

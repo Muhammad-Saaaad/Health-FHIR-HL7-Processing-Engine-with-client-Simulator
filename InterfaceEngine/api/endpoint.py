@@ -89,6 +89,11 @@ def add_endpoint(endpoint: AddEndpoint, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
     
 def add_fhir_endpoint_fields(endpoint_id: int, sample_msg: str,  db: Session): # uses the old session
+    """
+        Take the fhir message and the endpoint id, extract the paths and from fhir message,
+        then uses canonical paths to get the names and add then endpoint fileds
+        paths, names and resources|segments. 
+    """
     try:
         global canonical_paths
 
@@ -270,7 +275,10 @@ def get_fhir_value_by_path(obj, path): # give the entire fhir msg and it will ex
     
     current = obj
     
-    for key in keys:
+    for key in keys: 
+        # Checks if the current is a dictionary, if yes then take the key else take none. 
+        # checks if the key is a digit if yes, then it's means that the current is a list
+        #    and we take the index of it, that is the key in this case
         if key.isdigit():  # Array index
             current = current[int(key)]
         else:  # Object key
