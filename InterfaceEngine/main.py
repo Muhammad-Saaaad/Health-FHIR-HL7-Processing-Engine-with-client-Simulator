@@ -6,6 +6,7 @@ import uuid
 from contextlib import asynccontextmanager
 import httpx
 from fastapi import FastAPI, status, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 
 from api import server, route, endpoint
 from api.endpoint import get_fhir_value_by_path, get_hl7_value_by_path, fhir_extract_paths, hl7_extract_paths
@@ -30,6 +31,13 @@ async def lifeSpan(app: FastAPI):
     return
 
 app = FastAPI(title="Interface Engine", lifespan=lifeSpan)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins= ["*"],
+    allow_credentials= True,
+    allow_headers=["*"],
+    allow_methods=["*"]
+)
 models.Base.metadata.create_all(bind=engine)
 
 app.include_router(server.router, prefix="/server")

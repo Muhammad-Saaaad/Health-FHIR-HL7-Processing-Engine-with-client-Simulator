@@ -12,7 +12,7 @@ def get_all_patients(db: Session = Depends(get_db)):
     patients = db.query(model.Patient).all()
     return patients
 
-@router.get("/patients/{pid}", response_model=GetPatient, tags=["patient"])
+@router.get("/patients/{pid}", response_model=GetPatient, tags=["patient"]) # by default fastapi return 500 for db issue.
 def get_patient_detail(pid: int, db: Session = Depends(get_db)):
     patient = db.get(model.Patient, pid)
     if not patient:

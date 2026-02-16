@@ -7,30 +7,30 @@ from schemas import patient_schema as schema
 
 router = APIRouter(tags=["Patients"])
 
-# @router.post("/reg_patient", response_model=schema.PatientDisplay, status_code=status.HTTP_201_CREATED, tags=["Patients"])
-# def register_patient(request: schema.PatientCreate, db: Session = Depends(get_db)):
+@router.post("/reg_patient", response_model=schema.PatientDisplay, status_code=status.HTTP_201_CREATED, tags=["Patients"])
+def register_patient(request: schema.PatientCreate, db: Session = Depends(get_db)):
 
-#     is_user = db.query(models.SystemUser).filter(models.SystemUser.user_id == request.user_id).first()
+    is_user = db.query(models.SystemUser).filter(models.SystemUser.user_id == request.user_id).first()
 
-#     if not is_user:
-#         raise HTTPException(status_code=404, detail="Invalid user id")
+    if not is_user:
+        raise HTTPException(status_code=404, detail="Invalid user id")
     
-#     if db.query(models.Patient).filter(models.Patient.cnic == request.cnic).first():
-#         raise HTTPException(status_code=409, detail="Patient already exists")
+    if db.query(models.Patient).filter(models.Patient.cnic == request.cnic).first():
+        raise HTTPException(status_code=409, detail="Patient already exists")
 
 
-#     new_patient = models.Patient(
-#         name=request.name,
-#         cnic=request.cnic,
-#         phone_no=request.phone_no,
-#         gender=request.gender,
-#         date_of_birth=request.date_of_birth,
-#         user_id=request.user_id
-#     )
-#     db.add(new_patient)
-#     db.commit()
-#     db.refresh(new_patient)
-#     return new_patient
+    new_patient = models.Patient(
+        name=request.name,
+        cnic=request.cnic,
+        phone_no=request.phone_no,
+        gender=request.gender,
+        date_of_birth=request.date_of_birth,
+        user_id=request.user_id
+    )
+    db.add(new_patient)
+    db.commit()
+    db.refresh(new_patient)
+    return new_patient
 
 @router.get("/get_all_patients", response_model=list[schema.PatientDisplay], status_code=status.HTTP_200_OK, tags=["Patients"])
 def get_all_patients(db: Session = Depends(get_db)):

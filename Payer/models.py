@@ -21,13 +21,12 @@ class Patient(Base):
     mpi = Column(Integer, primary_key=True, index=True, nullable=False)
     
     name = Column(String(100), nullable=False)
-    # phone_no = Column(String(20))
+    phone_no = Column(String(20))
     gender = Column(String(10), nullable=False)
     date_of_birth = Column(Date, nullable=False)
 
     policies = relationship("InsurancePolicy", back_populates="patient")
     claims = relationship("PatientClaim", back_populates="patient")
-
 
 class InsurancePolicy(Base):
     __tablename__ = "Insurance_Policy"
@@ -35,13 +34,14 @@ class InsurancePolicy(Base):
     policy_id = Column(Integer, primary_key=True, index=True) 
     mpi = Column(Integer, ForeignKey("Patient.mpi"), nullable=False)
     
-    u_id = Column(Integer, ForeignKey("SystemUser.user_id"), nullable=False)
+    u_id = Column(Integer, ForeignKey("SystemUser.user_id"), nullable=False) # check if the user exists or not
     category_name = Column(String(50), nullable=False)
     total_coverage = Column(Numeric(10, 2), nullable=False)
     amount_used = Column(Numeric(10, 2), nullable=True)
-    description = Column(Text, nullable=True)
-    status = Column(String(20), nullable=False, default="Active") # status active or deactive
-    created_date = Column(Date, default=datetime.now(), nullable=False)
+    # description = Column(Text, nullable=True)
+    status = Column(String(20), nullable=False, default="Active") # status active or inactive
+    created_at = Column(DateTime, default=datetime.now(), nullable=False)
+    updated_at = Column(DateTime, default=datetime.now(), nullable=False)
 
     patient = relationship("Patient", back_populates="policies")
     manager = relationship("SystemUser", back_populates="policies_managed")
