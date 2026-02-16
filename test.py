@@ -197,5 +197,8 @@ def get_fhir_value_by_path(obj, path): # give the entire fhir msg and it will ex
 #     print(path)
 #     print(value)
 
-path = 'PID-5'
-print(path.split('.'))
+from datetime import datetime
+
+date_with_time = datetime.now()
+
+print(date_with_time.date())

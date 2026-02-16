@@ -1,14 +1,18 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, BeforeValidator
 from datetime import datetime, date
+from typing import Annotated
 
-class PatientBase(BaseModel):
-    cnic: str = Field(..., max_length=20)
-    fname: str = Field(..., max_length=25)
+datestr = Annotated[str, BeforeValidator(lambda v: str(v.date()) )] # take the datetime and give only date.
+
+class GetPatient(BaseModel):
+    mpi: int 
+    fname: str 
     lname: str | None
     dob: datetime | None
-    gender: str = Field(..., max_length=10)
-    phone: str | None
-    dignosis: str | None
+    gender: str 
+    updated_at: datestr
+
+    model_config = {"from_attributes": True}
 
 # --- Schema for Patient Creation ---
 class Patient(BaseModel):

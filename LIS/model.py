@@ -28,6 +28,7 @@ class Patient(base):
     dob = Column(DateTime, nullable=True)
     gender = Column(String(10), nullable=False)
     created_at = Column(DateTime, default=datetime.now())
+    updated_at = Column(DateTime, default=datetime.now())
 
     test_bill = relationship("LabTestBilling", back_populates="patient")
     test_req = relationship("LabTestRequest", back_populates="patient")
