@@ -8,7 +8,7 @@ class GetPatient(BaseModel):
     mpi: int 
     fname: str 
     lname: str | None
-    dob: datetime | None
+    dob: datestr
     gender: str 
     updated_at: datestr
 
