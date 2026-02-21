@@ -16,10 +16,10 @@ class SystemUser(Base):
     locked_claims = relationship("PatientClaim", back_populates="locked_by")
 
 class Patient(Base):
-    __tablename__ = "Patient"
+    __tablename__ = "Patient" # make sure at the backend that the mpi should remain unique.
 
     pid = Column(Integer, primary_key=True, index=True)
-    mpi = Column(Integer, unique=True, index=True, nullable=True)
+    mpi = Column(Integer, index=True, nullable=True)
     
     name = Column(String(100), nullable=False)
     phone_no = Column(String(20), nullable=True)
@@ -54,7 +54,7 @@ class PatientClaim(Base):
 
     claim_id = Column(Integer, primary_key=True, index=True) 
     policy_id = Column(Integer, ForeignKey("Insurance_Policy.policy_id"), nullable=False) 
-    mpi = Column(Integer, ForeignKey("Patient.mpi"), nullable=False)
+    pid = Column(Integer, ForeignKey("Patient.pid"), nullable=False)
 
     service_name = Column(String(100), nullable=False)
     bill_amount = Column(Numeric(10, 2), nullable=False)
