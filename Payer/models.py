@@ -18,10 +18,11 @@ class SystemUser(Base):
 class Patient(Base):
     __tablename__ = "Patient"
 
-    mpi = Column(Integer, primary_key=True, index=True, nullable=False)
+    pid = Column(Integer, primary_key=True, index=True)
+    mpi = Column(Integer, unique=True, index=True, nullable=True)
     
     name = Column(String(100), nullable=False)
-    phone_no = Column(String(20))
+    phone_no = Column(String(20), nullable=True)
     gender = Column(String(10), nullable=False)
     date_of_birth = Column(Date, nullable=False)
 
@@ -32,7 +33,7 @@ class InsurancePolicy(Base):
     __tablename__ = "Insurance_Policy"
 
     policy_id = Column(Integer, primary_key=True, index=True) 
-    mpi = Column(Integer, ForeignKey("Patient.mpi"), nullable=False)
+    pid = Column(Integer, ForeignKey("Patient.pid"), nullable=False)
     
     u_id = Column(Integer, ForeignKey("SystemUser.user_id"), nullable=False) # check if the user exists or not
     category_name = Column(String(50), nullable=False)

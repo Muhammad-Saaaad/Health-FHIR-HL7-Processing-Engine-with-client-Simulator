@@ -41,6 +41,16 @@ def login_doctor(doctor: schema.Login, db :Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
 
+@router.get("/get-doctor/{email}/{password}", status_code=status.HTTP_200_OK)
+def get_doctor(email: str, password: str, db: Session = Depends(get_db)):
+    try:
+        doctor = db.query(model.Doctor).filter(
+            model.Doctor.email == email , model.Doctor.password == password).first()
+        return doctor
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
+        
+
 @router.put("/change-phone-no{p_no}/id{doc_id}", status_code=status.HTTP_202_ACCEPTED)
 def alter_phone_no(p_no: str , doc_id: int, db :Session = Depends(get_db)):
     try:

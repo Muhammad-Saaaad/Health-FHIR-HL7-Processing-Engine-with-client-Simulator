@@ -12,15 +12,15 @@ router = APIRouter(tags=["Server"])
 
 @router.post("/add-server", status_code=status.HTTP_201_CREATED)
 async def add_server(server: AddUpdateServer, db: Session = Depends(get_db)):
+
+    if db.query(models.Server).filter(models.Server.name == server.name).first():
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Server with this name already exists")
+
+    async with httpx.AsyncClient() as client:
+        if not await server_health_check(client, server.ip, server.port):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Server is not reachable or unhealthy")
+
     try:
-
-        if db.query(models.Server).filter(models.Server.name == server.name).first():
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Server with this name already exists")
-
-        async with httpx.AsyncClient() as client:
-            if not await server_health_check(client, server.ip, server.port):
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Server is not reachable or unhealthy")
-
         new_server = models.Server(
             name=server.name,
             ip=server.ip,
@@ -46,27 +46,23 @@ def all_servers(db: Session = Depends(get_db)):
 
 @router.get("/specific-server/{server_id}", status_code=status.HTTP_200_OK, response_model=GetServer)
 def specific_server(server_id: int, db: Session = Depends(get_db)):
-    try:
-        is_server = db.get(models.Server, server_id)
-        if not is_server:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Server id {server_id} not found")
-            
-        return is_server
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
-
+    is_server = db.get(models.Server, server_id)
+    if not is_server:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Server id {server_id} not found")
+        
+    return is_server
 
 @router.put("/update-server/{server_id}", status_code=status.HTTP_200_OK)
 def update_server(server_id: int, server: AddUpdateServer, db: Session = Depends(get_db)):
+    existing_server = db.query(models.Server).filter(models.Server.server_id == server_id).first()
+    if not existing_server:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Server not found")
+    
+    # if you want to implement or here you write a or_() in the filter and then the conditions
+    if db.query(models.Server).filter(models.Server.server_id != server_id, models.Server.name == server.name).first():
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Server with this name already exists")
+        
     try:
-        existing_server = db.query(models.Server).filter(models.Server.server_id == server_id).first()
-        if not existing_server:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Server not found")
-        
-        # if you want to implement or here you write a or_() in the filter and then the conditions
-        if db.query(models.Server).filter(models.Server.server_id != server_id, models.Server.name == server.name).first():
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Server with this name already exists")
-        
         existing_server.name = server.name
         existing_server.ip = server.ip
         existing_server.port = server.port
@@ -79,11 +75,11 @@ def update_server(server_id: int, server: AddUpdateServer, db: Session = Depends
 
 @router.delete("/delete-server/{server_id}", status_code=status.HTTP_200_OK)
 def delete_server(server_id: int, db: Session = Depends(get_db)):
-    try:
-        existing_server = db.query(models.Server).filter(models.Server.server_id == server_id).first()
-        if not existing_server:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Server not found")
+    existing_server = db.query(models.Server).filter(models.Server.server_id == server_id).first()
+    if not existing_server:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Server not found")
         
+    try:
         db.delete(existing_server)
         db.commit()
         return {"message": "Server deleted successfully"}

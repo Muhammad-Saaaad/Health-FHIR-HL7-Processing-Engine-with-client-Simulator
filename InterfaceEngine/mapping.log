@@ -1775,3 +1775,167 @@ task: <Task cancelling name='Task-4' coro=<server_health() running at E:\project
 2026-02-11 18:43:00,340 - INFO - route_Worker Started for route 7
 2026-02-11 18:43:12,554 - INFO - Route_manager received Cancellation signal
 2026-02-11 18:43:12,554 - INFO - Route Manger shutting down
+2026-02-19 10:21:15,089 - INFO - route_worker start for route 7
+2026-02-19 10:21:15,850 - INFO - route_Worker Started for route 7
+2026-02-19 12:03:14,427 - INFO - Route_manager received Cancellation signal
+2026-02-19 12:03:14,427 - INFO - Route Manger shutting down
+2026-02-19 12:03:23,756 - INFO - route_worker start for route 7
+2026-02-19 12:03:24,923 - INFO - route_Worker Started for route 7
+2026-02-19 12:17:05,573 - INFO - Route_manager received Cancellation signal
+2026-02-19 12:17:05,574 - INFO - Route Manger shutting down
+2026-02-19 12:17:15,759 - INFO - route_worker start for route 7
+2026-02-19 12:17:16,412 - INFO - route_Worker Started for route 7
+2026-02-19 13:04:26,923 - INFO - Route_manager received Cancellation signal
+2026-02-19 13:04:26,923 - INFO - Route Manger shutting down
+2026-02-19 13:08:02,265 - INFO - route_worker start for route 7
+2026-02-19 13:08:03,283 - INFO - route_Worker Started for route 7
+2026-02-19 13:10:18,149 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-19 13:11:23,281 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-19 13:12:28,438 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-02-19 13:13:33,683 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-19 13:14:38,934 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-19 13:15:44,294 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-19 13:16:50,075 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-19 22:06:13,371 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-19 22:07:18,153 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-19 22:08:22,879 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-19 22:09:27,614 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-19 22:10:32,328 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-19 22:11:36,979 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-19 22:12:41,668 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 06:49:51,821 - INFO - route_worker start for route 7
+2026-02-20 06:49:53,341 - INFO - route_Worker Started for route 7
+2026-02-20 08:00:37,393 - INFO - Route_manager received Cancellation signal
+2026-02-20 08:00:37,395 - INFO - Route Manger shutting down
+2026-02-20 08:05:28,183 - INFO - route_worker start for route 7
+2026-02-20 08:05:28,815 - INFO - route_Worker Started for route 7
+2026-02-20 12:38:19,807 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 12:39:24,443 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 12:40:29,048 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 12:41:33,696 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 12:42:38,350 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 12:43:43,081 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 12:44:47,845 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 12:45:52,506 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 12:46:57,109 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 12:48:01,721 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 12:49:06,375 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 12:50:11,057 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 12:51:15,659 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 12:52:20,306 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 12:53:24,968 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 12:54:29,620 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 12:55:34,282 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 12:56:39,019 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 12:57:43,690 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 12:58:48,379 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 12:59:53,011 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 13:00:57,635 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 13:01:27,133 - INFO - Route_manager received Cancellation signal
+2026-02-20 13:01:27,135 - INFO - Route Manger shutting down
+2026-02-20 13:02:51,846 - INFO - route_worker start for route 7
+2026-02-20 13:02:52,278 - INFO - route_Worker Started for route 7
+2026-02-20 13:02:52,552 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 13:03:57,280 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 13:05:01,921 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 13:06:06,574 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 13:07:11,228 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 13:08:15,935 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 13:09:20,835 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 13:10:25,599 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 13:11:30,490 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 13:12:35,840 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 13:13:40,846 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 13:14:45,566 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 13:15:50,579 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 13:16:55,551 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 13:18:00,404 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 13:19:05,120 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 14:08:28,782 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 14:09:33,439 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 14:10:38,099 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 14:11:42,730 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 14:12:47,378 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 14:13:52,172 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 14:14:56,861 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 14:16:01,521 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 14:17:06,185 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 14:18:10,839 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 14:19:15,525 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 14:20:20,268 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 14:21:24,899 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 14:22:29,631 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 14:23:34,339 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 14:24:38,985 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 14:25:43,798 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 14:26:48,482 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 14:27:53,109 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 14:28:57,782 - INFO - HTTP Request: GET http://localhost:8001/health "HTTP/1.1 200 OK"
+2026-02-20 14:45:46,163 - INFO - route_worker start for route 7
+2026-02-20 14:45:47,551 - INFO - route_Worker Started for route 7
+2026-02-20 14:45:53,276 - INFO - Route_manager received Cancellation signal
+2026-02-20 14:45:53,277 - INFO - Route Manger shutting down
+2026-02-20 14:46:53,412 - ERROR - Task was destroyed but it is pending!
+task: <Task cancelling name='Task-4' coro=<server_health() running at E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\InterfaceEngine\api\server.py:116> wait_for=<Future pending cb=[Task.task_wakeup()]> cb=[gather.<locals>._done_callback() at E:\Ananconda\Lib\asyncio\tasks.py:767]>
+2026-02-20 14:46:56,901 - INFO - route_worker start for route 7
+2026-02-20 14:46:57,653 - INFO - route_Worker Started for route 7
+2026-02-20 14:47:08,928 - INFO - route_worker start for route 7
+2026-02-20 14:47:09,469 - INFO - route_Worker Started for route 7
+2026-02-20 14:47:28,177 - INFO - Route_manager received Cancellation signal
+2026-02-20 14:47:28,179 - INFO - Route Manger shutting down
+2026-02-20 14:47:31,552 - INFO - route_worker start for route 7
+2026-02-20 14:47:32,594 - INFO - route_Worker Started for route 7
+2026-02-20 14:55:01,477 - INFO - Route_manager received Cancellation signal
+2026-02-20 14:55:01,477 - INFO - Route Manger shutting down
+2026-02-20 14:55:05,093 - INFO - route_worker start for route 7
+2026-02-20 14:55:05,939 - INFO - route_Worker Started for route 7
+2026-02-20 14:55:05,941 - INFO - Route_manager received Cancellation signal
+2026-02-20 14:55:05,941 - INFO - Route Manger shutting down
+2026-02-20 14:56:10,301 - ERROR - Task was destroyed but it is pending!
+task: <Task cancelling name='Task-4' coro=<server_health() running at E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\InterfaceEngine\api\server.py:115> wait_for=<Future pending cb=[Task.task_wakeup()]> cb=[gather.<locals>._done_callback() at E:\Ananconda\Lib\asyncio\tasks.py:767]>
+2026-02-20 14:56:14,269 - INFO - route_worker start for route 7
+2026-02-20 14:56:15,162 - INFO - route_Worker Started for route 7
+2026-02-20 14:59:59,977 - INFO - HTTP Request: GET http://localhost:8004/health "HTTP/1.1 200 OK"
+2026-02-20 15:00:50,236 - INFO - HTTP Request: GET http://localhost:8004/health "HTTP/1.1 200 OK"
+2026-02-20 15:01:57,733 - INFO - HTTP Request: GET http://localhost:8004/health "HTTP/1.1 200 OK"
+2026-02-20 15:03:05,541 - INFO - HTTP Request: GET http://localhost:8004/health "HTTP/1.1 200 OK"
+2026-02-20 15:04:13,021 - INFO - HTTP Request: GET http://localhost:8004/health "HTTP/1.1 200 OK"
+2026-02-20 15:05:21,628 - INFO - HTTP Request: GET http://localhost:8004/health "HTTP/1.1 200 OK"
+2026-02-20 15:06:29,211 - INFO - HTTP Request: GET http://localhost:8004/health "HTTP/1.1 200 OK"
+2026-02-20 15:07:36,748 - INFO - HTTP Request: GET http://localhost:8004/health "HTTP/1.1 200 OK"
+2026-02-20 15:08:44,363 - INFO - HTTP Request: GET http://localhost:8004/health "HTTP/1.1 200 OK"
+2026-02-20 15:09:51,963 - INFO - HTTP Request: GET http://localhost:8004/health "HTTP/1.1 200 OK"
+2026-02-20 15:10:59,653 - INFO - HTTP Request: GET http://localhost:8004/health "HTTP/1.1 200 OK"
+2026-02-20 15:12:07,636 - INFO - HTTP Request: GET http://localhost:8004/health "HTTP/1.1 200 OK"
+2026-02-20 15:13:15,088 - INFO - HTTP Request: GET http://localhost:8004/health "HTTP/1.1 200 OK"
+2026-02-20 15:14:22,609 - INFO - HTTP Request: GET http://localhost:8004/health "HTTP/1.1 200 OK"
+2026-02-20 15:15:30,248 - INFO - HTTP Request: GET http://localhost:8004/health "HTTP/1.1 200 OK"
+2026-02-20 15:16:38,057 - INFO - HTTP Request: GET http://localhost:8004/health "HTTP/1.1 200 OK"
+2026-02-20 15:17:45,577 - INFO - HTTP Request: GET http://localhost:8004/health "HTTP/1.1 200 OK"
+2026-02-20 15:18:53,271 - INFO - HTTP Request: GET http://localhost:8004/health "HTTP/1.1 200 OK"
+2026-02-20 15:19:07,680 - INFO - Route_manager received Cancellation signal
+2026-02-20 15:19:07,683 - INFO - Route Manger shutting down
+2026-02-20 15:21:39,048 - INFO - route_worker start for route 7
+2026-02-20 15:21:39,683 - INFO - route_Worker Started for route 7
+2026-02-20 15:21:39,691 - INFO - Route_manager received Cancellation signal
+2026-02-20 15:21:39,691 - INFO - Route Manger shutting down
+2026-02-20 15:21:57,471 - INFO - route_worker start for route 7
+2026-02-20 15:21:58,251 - INFO - route_Worker Started for route 7
+2026-02-20 18:51:59,289 - INFO - Route_manager received Cancellation signal
+2026-02-20 18:51:59,290 - INFO - Route Manger shutting down
+2026-02-20 18:52:32,370 - INFO - route_worker start for route 7
+2026-02-20 18:52:33,005 - INFO - route_Worker Started for route 7
+2026-02-21 12:49:07,972 - INFO - Route_manager received Cancellation signal
+2026-02-21 12:49:07,981 - INFO - Route Manger shutting down
+2026-02-21 12:49:25,185 - INFO - route_worker start for route 7
+2026-02-21 12:49:27,820 - INFO - route_Worker Started for route 7
+2026-02-21 12:50:13,865 - INFO - Route_manager received Cancellation signal
+2026-02-21 12:50:13,865 - INFO - Route Manger shutting down
+2026-02-21 12:50:51,171 - INFO - route_worker start for route 7
+2026-02-21 12:50:53,968 - INFO - route_Worker Started for route 7
+2026-02-21 12:50:54,015 - INFO - Route_manager received Cancellation signal
+2026-02-21 12:50:54,015 - INFO - Route Manger shutting down
+2026-02-21 13:18:17,079 - INFO - route_worker start for route 7
+2026-02-21 13:18:18,214 - INFO - route_Worker Started for route 7
+2026-02-21 18:58:34,605 - INFO - Route_manager received Cancellation signal
+2026-02-21 18:58:34,610 - INFO - Route Manger shutting down

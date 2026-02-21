@@ -37,11 +37,10 @@ canonical_paths = {
 
 @router.get("/server-endpoint/{server_id}", status_code=status.HTTP_200_OK)
 def server_endpoint(server_id: int, db:Session = Depends(get_db)):
+
+    if not db.get(models.Server, server_id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"server id {server_id} does not exists")
     try:
-
-        if not db.get(models.Server, server_id):
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"server id {server_id} does not exists")
-
         data = db.query(models.Endpoints).filter(models.Endpoints.server_id == server_id).all()
         return data
 
@@ -50,15 +49,15 @@ def server_endpoint(server_id: int, db:Session = Depends(get_db)):
 
 @router.post("/add-endpoint", status_code=status.HTTP_201_CREATED)
 def add_endpoint(endpoint: AddEndpoint, db: Session = Depends(get_db)):
+    if not db.get(models.Server, endpoint.server_id):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Server does not exist")
+
+    if db.query(models.Endpoints).filter(models.Endpoints.server_id == endpoint.server_id, 
+                                            models.Endpoints.url == endpoint.url).first():
+        
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="URL already exists")
+
     try:
-        if not db.get(models.Server, endpoint.server_id):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Server does not exist")
-
-        if db.query(models.Endpoints).filter(models.Endpoints.server_id == endpoint.server_id, 
-                                             models.Endpoints.url == endpoint.url).first():
-            
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="URL already exists")
-
         new_endpoint = models.Endpoints(
             server_id=endpoint.server_id,
             url=endpoint.url,
@@ -66,27 +65,24 @@ def add_endpoint(endpoint: AddEndpoint, db: Session = Depends(get_db)):
         db.add(new_endpoint)
         db.flush()
         db.refresh(new_endpoint)
-
-        print('endpoint added')
-
-        if endpoint.server_protocol == "FHIR":
-            if add_fhir_endpoint_fields(endpoint_id=new_endpoint.endpoint_id, sample_msg=endpoint.sample_msg, db=db):
-                db.commit()
-            else:
-                db.rollback()
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to add endpoint FHIR fields from sample message")
-            
-        elif endpoint.server_protocol == "HL7":
-            if add_hl7_endpoint_fields(endpoint_id=new_endpoint.endpoint_id, sample_msg=endpoint.sample_msg, db=db):
-                db.commit()
-            else:
-                db.rollback()
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to add endpoint HL7 fields from sample message")
-
-        return {"message": "Endpoint added successfully"}
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
+
+    if endpoint.server_protocol == "FHIR":
+        if add_fhir_endpoint_fields(endpoint_id=new_endpoint.endpoint_id, sample_msg=endpoint.sample_msg, db=db):
+            db.commit()
+        else:
+            db.rollback()
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to add endpoint FHIR fields from sample message")
+        
+    elif endpoint.server_protocol == "HL7":
+        if add_hl7_endpoint_fields(endpoint_id=new_endpoint.endpoint_id, sample_msg=endpoint.sample_msg, db=db):
+            db.commit()
+        else:
+            db.rollback()
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to add endpoint HL7 fields from sample message")
+        return {"message": "Endpoint added successfully"}
     
 def add_fhir_endpoint_fields(endpoint_id: int, sample_msg: str,  db: Session): # uses the old session
     """
