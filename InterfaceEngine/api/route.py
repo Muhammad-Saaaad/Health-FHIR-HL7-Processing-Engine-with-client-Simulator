@@ -9,6 +9,30 @@ router = APIRouter(tags=["Route"])
 
 @router.get("/all-routes", status_code=status.HTTP_200_OK, response_model=list[GetRoute])
 def all_routes(db: Session = Depends(get_db)):
+    """
+    Retrieve all configured routes in the Interface Engine.
+
+    A route defines how messages are forwarded from a source server/endpoint
+    to a destination server/endpoint, along with the associated field mapping rules.
+
+    **Query Parameters:** None
+
+    **Response (200 OK):**
+    Returns a list of all route objects. Each item includes:
+    - `route_id`: Unique route identifier
+    - `name`: Descriptive name for the route (e.g., "ehr-to-lis")
+    - `src_server_id`: Source server ID
+    - `src_endpoint_id`: Source endpoint ID
+    - `dest_server_id`: Destination server ID
+    - `dest_endpoint_id`: Destination endpoint ID
+    - `msg_type`: Message/event type this route handles (e.g., "ADT")
+
+    **Note:**
+    - Returns an empty list if no routes have been configured.
+
+    **Error Responses:**
+    - `400 Bad Request`: Unexpected database error
+    """
     try:
         routes = db.query(models.Route).all()
         return routes
@@ -18,28 +42,58 @@ def all_routes(db: Session = Depends(get_db)):
 @router.get("/mapping_rules/{route_id}", status_code=status.HTTP_200_OK)
 def get_rules(route_id: int, db: Session = Depends(get_db)):
     """
-        Take the route id, and give detail mapping based on the route id.
+    Retrieve all field mapping rules for a specific route, grouped by transformation type.
 
-        returns:
-        [
-            {
-                "src_field": {
-                "endpoint_filed_id": 45,
-                "resource": "Patient",
-                "path": "identifier[0].value",
-                "name": "mpi"
-                },
-                "dest_field": {
-                "endpoint_filed_id": 49,
-                "resource": "PID",
-                "path": "PID-3",
-                "name": "mpi"
-                },
-                "mapping_rule_id": 17,
-                "transform_type": "copy",
-                "config": {}
-            }
-        ]
+    Returns a structured representation of how source fields are mapped to destination fields.
+    Rules are grouped into three transformation categories: copy/map/format, split, and concat.
+
+    **Path Parameters:**
+    - `route_id` (int, required): The unique identifier of the route to inspect.
+
+    **Response (200 OK):**
+    Returns a mixed list of mapping rule objects. The shape depends on `transform_type`:
+
+    - **copy / map / format** — one-to-one field mapping:
+      ```json
+      {
+        "src_field": { "endpoint_filed_id": 45, "resource": "Patient", "path": "identifier[0].value", "name": "mpi" },
+        "dest_field": { "endpoint_filed_id": 49, "resource": "PID", "path": "PID-3", "name": "mpi" },
+        "mapping_rule_id": 17,
+        "transform_type": "copy",
+        "config": {}
+      }
+      ```
+
+    - **split** — one source field mapped to multiple destination fields:
+      ```json
+      {
+        "src_field": { ... },
+        "dest_field": [ { ... }, { ... } ],
+        "transform_type": "split",
+        "config": { "delimiter": " " }
+      }
+      ```
+
+    - **concat** — multiple source fields merged into one destination field:
+      ```json
+      {
+        "src_field": [ { ... }, { ... } ],
+        "dest_field": { ... },
+        "transform_type": "concat",
+        "config": {}
+      }
+      ```
+
+    **Supported Transform Types:**
+    - `copy`: Direct value copy from source to destination
+    - `map`: Value substitution using a lookup table in `config` (e.g., `{"Male": "M", "Female": "F"}`)
+    - `format`: Date/time format conversion using `config` (e.g., `{"from": "%Y-%m-%d", "to": "%Y%m%d"}`)
+    - `split`: Split a single source value into multiple destinations using a delimiter
+    - `concat`: Merge multiple source values into a single destination field
+
+    **Error Responses:**
+    - `404 Not Found`: No route exists with the given `route_id`
+    - `400 Bad Request`: Unexpected database error
     """
 
     if not db.get(models.Route, route_id):
@@ -165,12 +219,27 @@ def get_rules(route_id: int, db: Session = Depends(get_db)):
 @router.get("/endpoint_field_path/{endpoint_id}", status_code=status.HTTP_200_OK)
 def endpoint_field_paths(endpoint_id: int, db:Session = Depends(get_db)):
     """
-        Takes all the endpoint fileds of a specific endpoint. it is use when you wanted to get fields 
-        of a specific endpoint while making a route.
+    Retrieve all discovered fields for a specific endpoint.
 
-        returns: List of all the endpoint fileds of a specific endpoint. 
+    This is used when configuring a new route — you call this endpoint for both the source
+    and destination endpoint to get the list of available fields, then use those field IDs
+    in the route's mapping rules.
+
+    **Path Parameters:**
+    - `endpoint_id` (int, required): The unique ID of the endpoint whose fields to retrieve.
+
+    **Response (200 OK):**
+    Returns a list of endpoint field objects. Each item includes:
+    - `endpoint_filed_id`: Unique field identifier (used as `src_paths` / `dest_paths` in route rules)
+    - `endpoint_id`: The parent endpoint's ID
+    - `resource`: The FHIR resource type or HL7 segment (e.g., "Patient", "PID")
+    - `path`: The field path in dot/bracket notation (e.g., "name[0].text", "PID-5.1")
+    - `name`: The canonical human-readable field name (e.g., "fullname", "mpi")
+
+    **Error Responses:**
+    - `404 Not Found`: No endpoint exists with the given `endpoint_id`
+    - `400 Bad Request`: Unexpected database error
     """
-
     if not db.get(models.Endpoints, endpoint_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"endpoint id {endpoint_id} does not exists")
 
@@ -184,9 +253,58 @@ def endpoint_field_paths(endpoint_id: int, db:Session = Depends(get_db)):
 @router.post("/add-route", status_code=status.HTTP_201_CREATED)
 def add_route(data: AddRoute, db: Session = Depends(get_db)):
     """
-    takes the route data such as: the example commented at the end, perform validation like: 
-    The route already exists or not. The route name is unique or not.
-    The src server id and dest server id is valid or not. and also the src|dest endpoint id.
+    Create a new message routing rule between two server endpoints with field-level mapping.
+
+    A route defines the complete pipeline for transforming and forwarding a message from
+    a source endpoint to a destination endpoint. Each mapping rule specifies how individual
+    fields are transformed (copy, split, concat, map, format).
+
+    **Request Body:**
+    - `name` (str, required): Unique descriptive name for this route (e.g., "ehr-to-lis").
+    - `src_server_id` (int, required): ID of the source server. Must exist.
+    - `src_endpoint_id` (int, required): ID of the source endpoint. Must exist.
+    - `des_server_id` (int, required): ID of the destination server. Must exist.
+    - `des_endpoint_id` (int, required): ID of the destination endpoint. Must exist.
+    - `msg_type` (str, required): Message/event type this route handles (e.g., "ADT", "ORU").
+    - `rules` (object, required): Mapping rules object with the following structure:
+      ```json
+      {
+        "mappings": [
+          {
+            "src_paths": [<endpoint_field_id>],
+            "dest_paths": [<endpoint_field_id>],
+            "transform": "copy | map | format | split | concat",
+            "config": {}
+          }
+        ]
+      }
+      ```
+
+    **Transform Types and Config:**
+    | Type | `src_paths` | `dest_paths` | `config` example |
+    |------|------------|-------------|-----------------|
+    | `copy` | 1 field | 1 field | `{}` |
+    | `map` | 1 field | 1 field | `{"Male": "M", "Female": "F"}` |
+    | `format` | 1 field | 1 field | `{"from": "%Y-%m-%d", "to": "%Y%m%d"}` |
+    | `split` | 1 field | multiple fields | `{"delimiter": " "}` |
+    | `concat` | multiple fields | 1 field | `{}` |
+
+    **Response (201 Created):**
+    Returns a confirmation message:
+    - `message`: "Sucessfully done"
+
+    **Constraints:**
+    - Route name must be unique.
+    - The same src+dest endpoint pair cannot be registered twice (even with a different name).
+    - All server and endpoint IDs must refer to existing records.
+    - A single mapping rule cannot have multiple source AND multiple destination paths simultaneously.
+
+    **Error Responses:**
+    - `409 Conflict`: Route name already exists
+    - `409 Conflict`: A route with the same src/dest endpoint pair already exists
+    - `404 Not Found`: src or dest server/endpoint ID not found
+    - `403 Forbidden`: A single rule has both multiple src_paths and multiple dest_paths
+    - `400 Bad Request`: Invalid transform type, or unexpected database error
     """
     if db.query(models.Route).filter(models.Route.name == data.name).first():
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Route name already exists")
@@ -267,49 +385,3 @@ def add_route(data: AddRoute, db: Session = Depends(get_db)):
         db.add_all(rules)
     db.commit() # this is added outside the loop so all the mapping_rules are added permentlly at the same time.
     return {"message": "Sucessfully done"}
-
-# example:
-
-# {
-#   "name": "ehr-to-lis",
-#   "src_server_id": 1,
-#   "src_endpoint_id": 23,
-#   "des_server_id": 3,
-#   "des_endpoint_id": 24,
-#   "msg_type": "ADT",
-#   "rules": {
-#     "mappings": [ 
-#     {
-#       "src_paths": [45],
-#       "dest_paths": [49],
-#       "transform": "copy",
-#       "config": {}
-#     },
-#     {
-#       "src_paths": [46],
-#       "dest_paths": [50,51],
-#       "transform": "split",
-#       "config": {
-#          "delimiter": " "
-#       }
-#     },
-#     {
-#       "src_paths": [47],
-#       "dest_paths": [53],
-#       "transform": "map",
-#       "config": {
-#         "Male": "M", "Female": "F"
-#        }
-#     },
-#     {
-#      "src_paths": [48],
-#       "dest_paths": [52],
-#       "transform": "format",
-#       "config": {
-#          "from": "%Y-%m-%d", "to": "%Y%m%d"
-#       }
-#     }
-     
-#    ]
-#   }
-# }

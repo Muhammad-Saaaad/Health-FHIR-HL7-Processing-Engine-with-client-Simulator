@@ -1939,3 +1939,17 @@ task: <Task cancelling name='Task-4' coro=<server_health() running at E:\project
 2026-02-21 13:18:18,214 - INFO - route_Worker Started for route 7
 2026-02-21 18:58:34,605 - INFO - Route_manager received Cancellation signal
 2026-02-21 18:58:34,610 - INFO - Route Manger shutting down
+2026-02-21 21:52:26,052 - INFO - route_worker start for route 7
+2026-02-21 21:52:27,377 - INFO - route_Worker Started for route 7
+2026-02-21 23:28:59,105 - INFO - Route_manager received Cancellation signal
+2026-02-21 23:28:59,105 - INFO - Route Manger shutting down
+2026-02-21 23:29:03,951 - INFO - route_worker start for route 7
+2026-02-21 23:29:04,598 - INFO - route_Worker Started for route 7
+2026-02-21 23:30:09,387 - INFO - Route_manager received Cancellation signal
+2026-02-21 23:30:09,387 - INFO - Route Manger shutting down
+2026-02-21 23:30:11,301 - INFO - route_worker start for route 7
+2026-02-21 23:30:11,691 - INFO - route_Worker Started for route 7
+2026-02-21 23:30:59,600 - INFO - Route_manager received Cancellation signal
+2026-02-21 23:30:59,600 - INFO - Route Manger shutting down
+2026-02-21 23:31:01,770 - INFO - route_worker start for route 7
+2026-02-21 23:31:02,159 - INFO - route_Worker Started for route 7
