@@ -13,6 +13,32 @@ router = APIRouter(tags=['Engine'])
 
 @router.post("/get/new-patient", status_code=status.HTTP_200_OK)
 async def add_patient(req: Request, db: Session = Depends(get_db)):
+    """
+    Internal engine endpoint to receive and process a new patient from an HL7 v2.x message.
+
+    This endpoint is called exclusively by the InterfaceEngine when it receives a new HL7 ADT
+    (Admit, Discharge, Transfer) message. It parses the raw HL7 message body to extract patient
+    demographic data from the PID segment and stores it in the LIS database.
+
+    **Request Body (raw HL7 v2.x message as plain text):**
+    - A multi-line HL7 message string. The PID segment is expected on line 2 (index 1).
+    - Key PID fields extracted:
+        - `PID-3`: MPI (Master Patient Index / Patient ID)
+        - `PID-5` or `PID-5.1` / `PID-5.2`: Patient first and last name
+        - `PID-7`: Date of birth in `YYYYMMDD` format (converted to `YYYY-MM-DD`)
+        - `PID-8`: Gender code (`M` → "male", anything else → "female")
+
+    **Response (200 OK):**
+    Returns a confirmation message:
+    - `message`: "Patient Added sucessfully"
+
+    **Note:**
+    - This is an internal service-to-service endpoint. Do not call this directly from the front-end.
+    - HL7 component separators (`^`) and sub-component separators (`&`) are both handled.
+
+    **Error Responses:**
+    - `400 Bad Request`: Invalid or malformed HL7 message, missing required PID fields, or DB error
+    """
     try:
         data = await req.json()
         _, path = hl7_extract_paths(segment=data.split('\n')[1])

@@ -11,6 +11,17 @@ router = APIRouter(tags=['Patient'])
 
 @router.get("/patients", response_model=list[schema.get_patient], status_code=status.HTTP_200_OK)
 def get_patient(db: Session = Depends(get_db)):
+    """
+    Retrieve all patients from the EHR system.
+    
+    **Query Parameters:** None
+    
+    **Response:**
+    Returns array of all patient records with complete details
+    
+    **Error Responses:**
+    - 409 Conflict: Database or data consistency error
+    """
     try:
         all_patients = db.query(model.Patient).all()
         return all_patients
@@ -19,6 +30,31 @@ def get_patient(db: Session = Depends(get_db)):
     
 @router.post("/patients", status_code=status.HTTP_201_CREATED)
 async def add_patient(patient: schema.post_patient ,db: Session = Depends(get_db)):
+    """
+    Register a new patient in the EHR system and sync with FHIR engine.
+    
+    **Request Body:**
+    - `nic` (str, required): National ID/NIC - must be unique, validates against existing records
+    - `name` (str, required): Patient's full name
+    - `phone_no` (str, optional): Patient's phone number
+    - `gender` (str, optional): Patient's gender - will be capitalized automatically
+    - `date_of_birth` (date, optional): Patient's DOB in YYYY-MM-DD format
+    - `address` (str, optional): Patient's address
+    
+    **Side Effect:** Automatically creates corresponding FHIR Patient resource in InterfaceEngine
+    
+    **Response:**
+    Returns JSON: {"message": "data inserted sucessfully"} if both local and FHIR registration succeed
+    
+    **Constraints:**
+    - NIC must be unique (no duplicates allowed)
+    
+    **Error Responses:**
+    - 400 Bad Request: NIC already exists or FHIR integration failed
+    - 422 Unprocessable Entity: Invalid data or missing required fields
+    
+    **Note:** Registration is rolled back if FHIR registration fails to maintain data consistency
+    """
     try:
         # select top 1 from patient where nic = patient.nic
         if db.query(model.Patient).filter(model.Patient.nic == patient.nic).first():
