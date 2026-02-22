@@ -2,3 +2,4 @@
 health-venv
 .env
 __pycache__
+venv
