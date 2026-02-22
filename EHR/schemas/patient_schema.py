@@ -19,5 +19,8 @@ class post_patient(BaseModel):
     gender : str
     date_of_birth: date | None
     address : str | None
+    insurance_company: str
+    policy_number: int
+    plan_type: str
 
     model_config = {"from_attributes": True}

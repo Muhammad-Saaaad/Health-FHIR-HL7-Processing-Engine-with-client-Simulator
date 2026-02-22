@@ -86,33 +86,36 @@ def patients_per_policy_cat(policy_category : str, db: Session = Depends(get_db)
     Retrieve all patients enrolled in a specific insurance policy category.
 
     **Path Parameters:**
-    - `policy_category` (str, required): The policy category name to filter by (e.g., "Premium", "Basic", "Gold").
+    - `policy_category` (str, required): The policy category name to filter by (e.g., "Gold", "Silver", "Bronze").
 
     **Response (200 OK):**
     Returns a list of patient objects enrolled in that category. Each item includes:
     - `p_id`: Patient's unique ID
     - `name`: Patient's full name
-    - `cnic`: Patient's national ID number
     - `date_of_birth`: Patient's date of birth
     - `policy_category`: The category name used to filter
 
     **Note:**
     - Returns an empty list if no patients are enrolled in the specified category.
-    - The category name match is case-sensitive.
+    - The category name match is case-sensitive (e.g., "Gold" vs "gold" are different).
+
+    **Known Issue:**
+    - The response dict currently includes `"cnic": d.cnic`, but the Payer `Patient` model
+      has no `cnic` column. This will raise an `AttributeError` at runtime and needs to be removed.
     """
-    data = db.query(models.Patient).join(models.InsurancePolicy).filter(
+    try:
+        data = db.query(models.Patient).join(models.InsurancePolicy).filter(
         models.InsurancePolicy.category_name == policy_category).all()
 
-    output = []
-    for d in data:
-        output.append({
-            "p_id": d.p_id,
-            "name": d.name,
-            "cnic": d.cnic,
-            "date_of_birth": d.date_of_birth,
-            "policy_catrgory": policy_category
-        })
-    
-    print(output)
-
-    return output
+        output = []
+        for d in data:
+            output.append({
+                "p_id": d.p_id,
+                "name": d.name,
+                "cnic": d.cnic,
+                "date_of_birth": d.date_of_birth,
+                "policy_catrgory": policy_category
+            })
+        return output
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

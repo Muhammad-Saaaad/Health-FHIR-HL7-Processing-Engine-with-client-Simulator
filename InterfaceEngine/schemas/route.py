@@ -3,6 +3,7 @@ from pydantic import BaseModel
 class Server(BaseModel):
     server_id: int
     name: str
+    protocol: str
     
     model_config= {"from_attributes": True}
 
@@ -36,3 +37,9 @@ class AddRoute(BaseModel):
     msg_type: str
 
     rules : dict
+
+# rules includes -->
+# src_paths: list[int]
+# dest_paths: list[int]
+# transform: str
+# config: dict

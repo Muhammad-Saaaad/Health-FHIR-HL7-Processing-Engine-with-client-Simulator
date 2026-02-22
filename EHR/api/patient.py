@@ -40,8 +40,11 @@ async def add_patient(patient: schema.post_patient ,db: Session = Depends(get_db
     - `gender` (str, optional): Patient's gender - will be capitalized automatically
     - `date_of_birth` (date, optional): Patient's DOB in YYYY-MM-DD format
     - `address` (str, optional): Patient's address
+    - `policy_number` (str, required): Insurance policy number forwarded to Payer via FHIR Coverage resource
+    - `plan_type` (str, required): Insurance plan type forwarded to Payer via FHIR Coverage resource
     
-    **Side Effect:** Automatically creates corresponding FHIR Patient resource in InterfaceEngine
+    **Side Effect:** Automatically creates corresponding FHIR Patient + Coverage Bundle in InterfaceEngine,
+    which routes the data to downstream systems (LIS, Payer).
     
     **Response:**
     Returns JSON: {"message": "data inserted sucessfully"} if both local and FHIR registration succeed
@@ -72,20 +75,29 @@ async def add_patient(patient: schema.post_patient ,db: Session = Depends(get_db
         db.flush()
         db.refresh(new_patient)
     
-        fhir_patient =  {
-            "resourceType": "Patient",
-            "identifier": [
+        fhir_patient = {
+            "resourceType": "Bundle",
+            "type": "message",
+            "entry": [
                 {
-                    "value": new_patient.mpi
-                }
-            ],
-            "name": [
+                    "resource": {
+                        "resourceType": "Patient",
+                        "identifier": [{"value": new_patient.mpi}],
+                        "name": [{"text": new_patient.name}],
+                        "gender": new_patient.gender,
+                        "birthDate": str(new_patient.date_of_birth),
+                        "address": [{"text": new_patient.address}],
+                        "telecom": [{"value": new_patient.phone_no}]
+                    }
+                },
                 {
-                    "text": new_patient.name
+                    "resource": {
+                        "resourceType": "Coverage",
+                        "identifier": [{"value": patient.policy_number}],
+                        "type": {"text": patient.plan_type}
+                    }
                 }
-            ],
-            "gender": new_patient.gender,
-            "birthDate": str(new_patient.date_of_birth)
+            ]
         }
         response = engine_service.register_engine(fhir_patient)
         

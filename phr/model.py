@@ -26,6 +26,7 @@ class Patient(Base):
     mpi = Column(Integer, primary_key= True, index= True)
 
     nic = Column(String(15), unique=True, nullable= False)
+    password = Column(String(50), nullable= False, default="")
     name = Column(String(100), nullable= False)
     phone_no = Column(String(100), nullable= True)
     gender = Column(String(10), nullable= False)

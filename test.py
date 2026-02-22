@@ -1,29 +1,27 @@
-# test = {
-#   "resourceType": "Bundle",
-#   "type": "message",
-#   "entry": [
-#     { 
-#         "resource": {
-#             "resourceType": "Patient",
-#             "identifier": [{ "value": "23" }],
-#             "name": [{ "text": "Muhammad saad" }],
-#             "name": [{ "family": "saad", "given": ["Muhammad", "ali"] }],
-#             "gender": "male",
-#             "birthDate": "2004-10-06"
-#         }
-#     },
-#     { 
-#         "resource": {
-#             "resourceType": "Patient",
-#             "identifier": [,
-#             "name": [{ "text": "Muhammad saad" }],
-#             "name": [{ "family": "saad", "given": ["Muhammad", "ali"] }],
-#             "gender": "male",
-#             "birthDate": "2004-10-06"
-#         }
-#     },
-#   ]
-# }
+test = {
+    "resourceType": "Bundle",
+    "type": "message",
+    "entry": [
+        { 
+            "resource": {
+                "resourceType": "Patient",
+                "identifier": [{ "value": "23" }],
+                "name": [{ "text": "Muhammad saad" }],
+                "gender": "male",
+                "birthDate": "2004-10-06",
+                "address": [{ "text": "123 street, city, country" }],
+                "telecom" : [{"value" : "+33 (237) 998327"}]
+            }
+        },
+        {
+            "resource": {
+                "resourceType": "Coverage",
+                "identifier": [{ "value": 12 }],
+                "type": {"text": "Silver"}
+            }
+        }
+    ]
+}
 
 test = {
   "resourceType": "Patient",
@@ -38,7 +36,7 @@ test = {
 }
 
 
-def hl7_extract_paths(segment):
+def hl7_extract_paths(segment) -> (str, list[str]):
     paths = []
 
     # for segment in segments[1:]:
@@ -63,8 +61,10 @@ def hl7_extract_paths(segment):
             paths.append(path)
     return (segment_type, paths)
 
-# test = "MSH|^~\\&|LIS||EHR||20260203120000||ADT^A01|MSG00001|P|2.5\nPID|1||23||saad^Muhammad ali||20041006|M|||||"
-# ORM|2||12||Muhammad^ali||20041006|M|||123 street, city, country||+33 (237) 998327
+# test = """MSH|^~\\&|EHR||LIS||20260203120000||ADT^A01|MSG00001|P|2.5\nPID|1||23||saad^Muhammad ali||20041006|M|||||
+# ORM|2||12||Muhammad^ali||20041006|M|||123 street, city, country||+33 (237) 998327"""
+# test = """MSH|^~\\&|LIS||EHR||20260203120000||ADT^A01|MSG00001|P|2.5\nPID|1||23||saad^Muhammad ali||20041006|M|||||
+# IN1|1||12||Silver"""
 import re
 
 def get_hl7_value_by_path(hl7_message, paths): 
@@ -91,7 +91,10 @@ def get_hl7_value_by_path(hl7_message, paths):
         
     return value
 
-
+# for segment in test.split('\n')[1:]:
+#     segment_type, paths = hl7_extract_paths(segment)
+#     print(segment_type, paths)
+#     print(get_hl7_value_by_path(test, paths))
 
 # def extract_paths(data, prefix=""):
 #     paths = []

@@ -12,6 +12,7 @@ class SystemUser(Base):
     password = Column(String(255), nullable=False)
     created_at = Column(DateTime, default=datetime.now(), nullable=False)
     
+    patient = relationship("Patient", back_populates="user")
     policies_managed = relationship("InsurancePolicy", back_populates="manager")
     locked_claims = relationship("PatientClaim", back_populates="locked_by")
 
@@ -20,6 +21,7 @@ class Patient(Base):
 
     pid = Column(Integer, primary_key=True, index=True)
     mpi = Column(Integer, index=True, nullable=True)
+    u_id = Column(Integer, ForeignKey("SystemUser.user_id"), nullable=False)
     
     name = Column(String(100), nullable=False)
     phone_no = Column(String(20), nullable=True)
@@ -28,6 +30,7 @@ class Patient(Base):
 
     policies = relationship("InsurancePolicy", back_populates="patient")
     claims = relationship("PatientClaim", back_populates="patient")
+    user = relationship("SystemUser", back_populates="patient")
 
 class InsurancePolicy(Base):
     __tablename__ = "Insurance_Policy"
@@ -35,7 +38,7 @@ class InsurancePolicy(Base):
     policy_id = Column(Integer, primary_key=True, index=True) 
     pid = Column(Integer, ForeignKey("Patient.pid"), nullable=False)
     
-    u_id = Column(Integer, ForeignKey("SystemUser.user_id"), nullable=False) # check if the user exists or not
+    u_id = Column(Integer, ForeignKey("SystemUser.user_id"), nullable=False)
     category_name = Column(String(50), nullable=False)
     total_coverage = Column(Numeric(10, 2), nullable=False)
     amount_used = Column(Numeric(10, 2), nullable=True)

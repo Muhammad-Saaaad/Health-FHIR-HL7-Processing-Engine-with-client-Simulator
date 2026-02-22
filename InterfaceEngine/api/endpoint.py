@@ -16,15 +16,21 @@ logging.basicConfig(
 )
 
 canonical_paths = {
-    "identifier[0].value": "mpi",
-    "name[0].text": "fullname",
-    "name[0].given": "given name",
-    "name[0].family[0]": "family name",
-    "gender": "gender",
-    "birthDate": "birth date",
-    "telecom[0].value": "phone number",
-    "address[0].text": "address",
-    
+    # FHIR — Patient resource  (prefix = "Patient-")
+    "Patient-identifier[0].value": "mpi",
+    "Patient-name[0].text": "fullname",
+    "Patient-name[0].given": "given name",
+    "Patient-name[0].family[0]": "family name",
+    "Patient-gender": "gender",
+    "Patient-birthDate": "birth date",
+    "Patient-telecom[0].value": "phone number",
+    "Patient-address[0].text": "address",
+
+    # FHIR — Coverage resource  (prefix = "Coverage-")
+    "Coverage-identifier[0].value": "policy number",
+    "Coverage-type.text": "plan type",
+
+    # HL7 — PID segment
     "PID-3": "mpi",
     "PID-5": "fullname",
     "PID-5.1": "family name",
@@ -32,7 +38,11 @@ canonical_paths = {
     "PID-7": "birth date",
     "PID-8": "gender",
     "PID-11": "address",
-    "PID-13": "phone number"
+    "PID-13": "phone number",
+
+    # HL7 — IN1 segment
+    "IN1-2": "policy number",
+    "IN1-4": "plan type"
 }
 
 @router.get("/server-endpoint/{server_id}", status_code=status.HTTP_200_OK)
@@ -138,7 +148,7 @@ def add_endpoint(endpoint: AddEndpoint, db: Session = Depends(get_db)):
         else:
             db.rollback()
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to add endpoint HL7 fields from sample message")
-        return {"message": "Endpoint added successfully"}
+    return {"message": "Endpoint added successfully"}
     
 def add_fhir_endpoint_fields(endpoint_id: int, sample_msg: str,  db: Session): # uses the old session
     """
@@ -165,7 +175,11 @@ def add_fhir_endpoint_fields(endpoint_id: int, sample_msg: str,  db: Session): #
         print(sample_msg)
         if sample_msg['resourceType'] != 'Bundle': 
             resource_type = sample_msg['resourceType']
-            paths = fhir_extract_paths(sample_msg)
+            raw_paths = fhir_extract_paths(sample_msg)
+            # Prefix each path with the resource type so identical paths in
+            # different resources resolve to different canonical names.
+            # e.g. "identifier[0].value" → "Patient-identifier[0].value"
+            paths = [f"{resource_type}-{p}" for p in raw_paths]
 
             endpoint_fields = {}
             for path in paths:
@@ -193,7 +207,9 @@ def add_fhir_endpoint_fields(endpoint_id: int, sample_msg: str,  db: Session): #
         else:
             for entry in sample_msg['entry']:
                 resource_type = entry['resource']['resourceType']
-                paths = fhir_extract_paths(entry['resource'])
+                raw_paths = fhir_extract_paths(entry['resource'])
+                # Prefix with resource type for the same reason as above.
+                paths = [f"{resource_type}-{p}" for p in raw_paths]
 
                 endpoint_fields = {}
                 for path in paths:
@@ -408,10 +424,15 @@ def get_fhir_value_by_path(obj, path): # give the entire fhir msg and it will ex
         >>> get_fhir_value_by_path(fhir_patient, "name[0].text")
         "John Smith"
     """
+    # Strip the resource-type prefix before traversal.
+    # e.g. "Patient-name[0].text" → "name[0].text"
+    if "-" in path:
+        path = path.split("-", 1)[1]
+
     # Split path by dots and brackets [ ]
     # "name[0].family" -> ["name", "0", "", "family"]
     #  "gender" -> ["gender"]
-    keys = re.split(r'\.|\\[|\\]', path)
+    keys = re.split(r'\.|\[|\]', path)
     keys = [k for k in keys if k]  # Remove empty strings
     
     current = obj

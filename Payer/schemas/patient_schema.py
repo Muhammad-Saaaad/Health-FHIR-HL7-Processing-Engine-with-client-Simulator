@@ -5,18 +5,20 @@ from schemas.policy_schema import patient_policy
 
 class PatientCreate(BaseModel):
     name: str
-    cnic: str
     phone_no: str | None
     gender: str | None
     date_of_birth: date | None
     user_id: int | None
+    insurance_type : str
 
 class PatientDisplay(BaseModel):
     p_id: int
+    mpi: int | None
     name: str
-    cnic: str
+    gender: str | None
     date_of_birth: date | None
-    user_id: int | None
+    phone_no: str | None
+    policy_number: int | None
 
     model_config = {"from_attributes": True}
 

@@ -40,7 +40,10 @@ async def add_patient(req: Request, db: Session = Depends(get_db)):
     - `400 Bad Request`: Invalid or malformed HL7 message, missing required PID fields, or DB error
     """
     try:
-        data = await req.json()
+        # HL7 is sent as plain text — read raw bytes and decode
+        raw = await req.body()
+        data = raw.decode("utf-8")
+
         _, path = hl7_extract_paths(segment=data.split('\n')[1])
         values = get_hl7_value_by_path(data, path)
         
@@ -51,8 +54,8 @@ async def add_patient(req: Request, db: Session = Depends(get_db)):
 
         patient = model.Patient(
             mpi = values['PID-3'],
-            fname = values['PID-5.1'] if 'PID-5.1' in values else values['PID-5'].split(' ')[0],
-            lname = values['PID-5.2'] if 'PID-5.2' in values else values['PID-5'].split(' ')[1:].join(' ') if len(values['PID-5'].split(' ')) > 1 else '' ,
+            fname = values['PID-5.1'] if 'PID-5.1' in values else values.get('PID-5', '').split(' ')[0],
+            lname = values['PID-5.2'] if 'PID-5.2' in values else ' '.join(values.get('PID-5', '').split(' ')[1:]),
             dob = date,
             gender = gender
         )
@@ -64,9 +67,25 @@ async def add_patient(req: Request, db: Session = Depends(get_db)):
         return {"message": "Patient Added sucessfully"}
 
     except Exception as exp:
-        raise HTTPException(str(exp))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
 
 def hl7_extract_paths(segment):
+    """
+    Parse a single HL7 segment string and return all field/component/subcomponent paths.
+
+    Generates dot-notation path strings such as:
+    - `PID-3` for a simple field
+    - `PID-5.1` for the first component within a field (split by `^`)
+    - `PID-5.1.2` for a subcomponent (split by `&`)
+
+    Args:
+        segment (str): A single HL7 v2.x segment string (e.g., "PID|1||12345^^^MR||Smith^John").
+
+    Returns:
+        tuple: (segment_type: str, paths: list[str])
+            - `segment_type`: The segment identifier (e.g., "PID").
+            - `paths`: List of all non-empty path strings found in the segment.
+    """
     paths = []
 
     # for segment in segments[1:]:
@@ -92,6 +111,20 @@ def hl7_extract_paths(segment):
     return (segment_type, paths)
 
 def get_hl7_value_by_path(hl7_message, paths): 
+    """
+    Extract values from a full HL7 message for a given list of dot-notation paths.
+
+    Iterates over all segments in the message and resolves each path, handling field,
+    component (`^`), and subcomponent (`&`) levels.
+
+    Args:
+        hl7_message (str): Full HL7 v2.x message string with segments separated by newlines.
+        paths (list[str]): List of paths to extract (e.g., ["PID-3", "PID-5.1"]).
+
+    Returns:
+        dict: A mapping of path -> extracted string value.
+              Returns empty string for paths not found or out of bounds.
+    """
     segments = hl7_message.split('\n')[1:]
     value = {}
     for segment in segments:

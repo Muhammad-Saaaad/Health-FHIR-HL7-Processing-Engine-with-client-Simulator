@@ -47,9 +47,9 @@ def all_routes(db: Session = Depends(get_db)):
             {
                 "route_id": route.route_id,
                 "channel_name": route.name,
-                "src_server": {"server_id": route.src_server.server_id, "name": route.src_server.name},
+                "src_server": {"server_id": route.src_server.server_id, "name": route.src_server.name, 'protocol': route.src_server.protocol},
                 "src_endpoint": {"endpoint_id": route.src_endpoint.endpoint_id, "url": route.src_endpoint.url},
-                "dest_server": {"server_id": route.dest_server.server_id, "name": route.dest_server.name},
+                "dest_server": {"server_id": route.dest_server.server_id, "name": route.dest_server.name, 'protocol': route.dest_server.protocol},
                 "dest_endpoint": {"endpoint_id": route.dest_endpoint.endpoint_id, "url": route.dest_endpoint.url},
                 "msg_type": route.msg_type
             } for route in routes

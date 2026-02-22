@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 # from sqlalchemy.exc import SAWarning
 # import warnings
  
+from api import authentication
 from database import engine
 import model
 
@@ -18,7 +19,7 @@ app.add_middleware(
 )
 model.Base.metadata.create_all(bind=engine)
 
-# app.include_router(engine_service.router)
+app.include_router(authentication.router)
 
 @app.get("/health")
 def check_health():

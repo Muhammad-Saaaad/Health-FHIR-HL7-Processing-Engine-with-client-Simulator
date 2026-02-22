@@ -91,10 +91,14 @@ async def route_manager():
         # wait for all the route_workers to finish
         await asyncio.gather(*active_route_listners.values(), return_exceptions=True)
 
-async def route_worker(route): # rename this to channel_worker instead of route_worker
+async def route_worker(route):
     """
-        use Route worker to listen incomming data using aysync queue, then itvalidate, send data,
-        parse data and convert data from fhir <--> hl7.
+        use Route worker to listen incomming data using aysync queue, then it validates, sends data,
+        parses data and converts data from fhir <--> hl7.
+
+        The queue items are (src_path_to_value, future) tuples. After delivery the worker
+        resolves the future so that ingest() can await the result and respond to the caller
+        with a real success/failure status.
     """
     try:
         db = session_local()
@@ -123,139 +127,155 @@ async def route_worker(route): # rename this to channel_worker instead of route_
         dest_endpoint_url = f"http://{dest_server.ip}:{dest_server.port}{dest_endpoint.url}"
 
         while True:
-            src_path_to_value = await route_queue[route.route_id].get()
+            # Each queue item is a (data, future) tuple.
+            # The future lets ingest() know whether delivery succeeded or failed.
+            src_path_to_value, result_future = await route_queue[route.route_id].get()
             output_data = {} # contains the output fileds with value
             concat_data = {} # contains single dest filed id, and multiple mapping rule that concate multiple src into a single destination.
             split_data = {} # contain single src filed id, and multiple mapping rule that split that single src into multiple destination.
 
-            for rule in mapping_rules_for_specific_route:
+            try:
+                for rule in mapping_rules_for_specific_route:
 
-                if rule.transform_type == 'concat': # for concat we should have multiple src and 1 dest
-                    # this takes a key and the value, if the key doesn't exists or exists with a different value
-                    # it will replace it with []
-                    concat_data.setdefault(rule.dest_field_id, []) 
-                    # this rule contains the src ids and other metadata that will be use for concatination.
-                    concat_data[rule.dest_field_id].append(rule)
-                
-                elif rule.transform_type == 'split': # for split we should have multiple dest and 1 src
-                    # here we have a singe src id, that will split into multiple destinations
-                    split_data.setdefault(rule.src_field_id, []).append(rule)
-                
-                else: # map | copy | formate
-                    src_path = src_id_to_path[rule.src_field_id]
+                    if rule.transform_type == 'concat': # for concat we should have multiple src and 1 dest
+                        # this takes a key and the value, if the key doesn't exists or exists with a different value
+                        # it will replace it with []
+                        concat_data.setdefault(rule.dest_field_id, []) 
+                        # this rule contains the src ids and other metadata that will be use for concatination.
+                        concat_data[rule.dest_field_id].append(rule)
+                    
+                    elif rule.transform_type == 'split': # for split we should have multiple dest and 1 src
+                        # here we have a singe src id, that will split into multiple destinations
+                        split_data.setdefault(rule.src_field_id, []).append(rule)
+                    
+                    else: # map | copy | formate
+                        src_path = src_id_to_path[rule.src_field_id]
 
-                    if src_path not in src_path_to_value:
-                        logging.info(f"The src path {src_path} not found in src_path_to_value: {src_path_to_value}")
-                        continue
-                
-                    value = src_path_to_value[src_path]
+                        if src_path not in src_path_to_value:
+                            logging.info(f"The src path {src_path} not found in src_path_to_value: {src_path_to_value}")
+                            continue
+                    
+                        value = src_path_to_value[src_path]
 
-                    if rule.transform_type == 'map': # here if there is no mapping then by default we consider the same value
-                        # here the first value will give me the map value, if the mapping value is not found then return the default value
-                        value = rule.config.get(str(value), value) 
+                        if rule.transform_type == 'map': # here if there is no mapping then by default we consider the same value
+                            # here the first value will give me the map value, if the mapping value is not found then return the default value
+                            value = rule.config.get(str(value), value) 
 
-                    elif rule.transform_type == 'format':
-                        try: # 2004-10-06 → 20041006 vice versa
+                        elif rule.transform_type == 'format':
+                            try: # 2004-10-06 → 20041006 vice versa
 
-                            dt = datetime.strptime(str(value), rule.config["from"])
-                            value = dt.strftime(rule.config["to"])
+                                dt = datetime.strptime(str(value), rule.config["from"])
+                                value = dt.strftime(rule.config["to"])
 
-                        except Exception as exp:
-                            logging.error(f"Error while transformation: {str(exp)}")
+                            except Exception as exp:
+                                logging.error(f"Error while transformation: {str(exp)}")
 
-                    if rule.dest_field_id not in dest_id_to_path:
-                        logging.error(f"""The destination id in rule {rule.dest_field_id}
-                                       does not matches with the destination map id {dest_id_to_path}""")
-                        continue
-                        
-                    dest_path = dest_id_to_path[rule.dest_field_id]
-                    output_data[dest_path] = value
-
-            ################################## Concat Data ##################################
-            for dest_id , rules in concat_data.items():
-                values = []
-
-                for rule in rules:
-                    if rule.src_field_id not in src_id_to_path:
-                        logging.error(f"""While Concatnation, The src_filed id in rule {rule.src_field_id}
-                                    does not exists in the src_id_to_path {src_id_to_path}
-                                    There must be a issue when you input data in database.""")
-                        continue
-
-                    src_path = src_id_to_path[rule.src_field_id]
-
-                    if src_path in src_path_to_value:
-                        values.append(str(src_path_to_value[src_path]))
-
-                    else:
-                        logging.warning(f"while Concatnation, The src_path {src_path} not found in path data: {src_path_to_value}")
-                        continue
-                
-                delimiter = rules[0].config.get('delimiter', " ") # concat on delimiter or by default with space " " 
-                concated_value = delimiter.join(values)
-
-                if rule.dest_field_id not in dest_id_to_path:
-                    logging.error(f"""While Concatnation, The destination id in rule {rule.dest_field_id}
-                                    does not matches with the destination map id {dest_id_to_path}
-                                    There must be a issue when you input data in database""")
-                    continue
-
-                dest_path = dest_id_to_path[dest_id]
-                output_data[dest_path] = concated_value
-            
-            #################################### Spit Data ####################################
-            for src_id, rules in split_data.items():
-
-                if src_id not in src_id_to_path:
-                    logging.error(f"""While Spliting, The src_filed_id from route
-                                    does not exists in the src_id_to_path {src_id_to_path}
-                                    There must be a issue when you input data in database.""")
-                    continue
-
-
-                src_path = src_id_to_path[src_id]
-                if src_path not in src_path_to_value:
-                    logging.warning(f"while Spliting, The src_path {src_path} not found in path data: {src_path_to_value}")
-                    continue
-                
-                # As rules 
-                delimiter= rules[0].config.get('delimiter', ' ') # concat on delimiter or by default with space " " 
-                parts = str(src_path_to_value[src_path]).split(delimiter)
-
-                for i, rule in enumerate(rules):
-                    if i < len(parts):
                         if rule.dest_field_id not in dest_id_to_path:
-                            logging.error(f"""While Spliting, The destination id in rule {rule.dest_field_id}
-                                        does not matches with the destination map id {dest_id_to_path}
-                                        There must be a issue when you input data in database""")
+                            logging.error(f"""The destination id in rule {rule.dest_field_id}
+                                           does not matches with the destination map id {dest_id_to_path}""")
+                            continue
+                            
+                        dest_path = dest_id_to_path[rule.dest_field_id]
+                        output_data[dest_path] = value
+
+                ################################## Concat Data ##################################
+                for dest_id , rules in concat_data.items():
+                    values = []
+
+                    for rule in rules:
+                        if rule.src_field_id not in src_id_to_path:
+                            logging.error(f"""While Concatnation, The src_filed id in rule {rule.src_field_id}
+                                        does not exists in the src_id_to_path {src_id_to_path}
+                                        There must be a issue when you input data in database.""")
                             continue
 
-                        dest_path = dest_id_to_path[rule.dest_field_id]
-                        output_data[dest_path] = parts[i]
+                        src_path = src_id_to_path[rule.src_field_id]
+
+                        if src_path in src_path_to_value:
+                            values.append(str(src_path_to_value[src_path]))
+
+                        else:
+                            logging.warning(f"while Concatnation, The src_path {src_path} not found in path data: {src_path_to_value}")
+                            continue
+                    
+                    delimiter = rules[0].config.get('delimiter', " ") # concat on delimiter or by default with space " " 
+                    concated_value = delimiter.join(values)
+
+                    if rule.dest_field_id not in dest_id_to_path:
+                        logging.error(f"""While Concatnation, The destination id in rule {rule.dest_field_id}
+                                        does not matches with the destination map id {dest_id_to_path}
+                                        There must be a issue when you input data in database""")
+                        continue
+
+                    dest_path = dest_id_to_path[dest_id]
+                    output_data[dest_path] = concated_value
                 
-                if len(parts) > len(rules): # here if the while spliting, if there is some data left concatenate it with the last path
-                    dest_path = dest_id_to_path[rules[-1].dest_field_id] # take the last destination path
-                    output_data[dest_path] += " " + (' ').join(parts[len(rules):]) # join all the remaining parts with the remining data
+                #################################### Spit Data ####################################
+                for src_id, rules in split_data.items():
 
-            # BUILD MESSAGE
-            if dest_server.protocol == "FHIR":
-                msg = await build_fhir_json(output_data, dest_path_to_resource) # make a fhir message with the data
+                    if src_id not in src_id_to_path:
+                        logging.error(f"""While Spliting, The src_filed_id from route
+                                        does not exists in the src_id_to_path {src_id_to_path}
+                                        There must be a issue when you input data in database.""")
+                        continue
 
-            else:
-                msg = await build_hl7_message(output_data=output_data, src=src_server.name,
-                                               dest=dest_server.name, msg_type=route.msg_type)
 
-            try: # here we are making a async client and also making sure that it close after its work has been completed sucessfully.
-                async with httpx.AsyncClient() as client: # here we are properly closing the connection as well
-                    response = await client.post(url=dest_endpoint_url, json=msg)
-                    if response.status_code == 200 or response.status_code == 201:
-                        logging.info("Sucessfully Send to url: {dest_endpoint_url}")
+                    src_path = src_id_to_path[src_id]
+                    if src_path not in src_path_to_value:
+                        logging.warning(f"while Spliting, The src_path {src_path} not found in path data: {src_path_to_value}")
+                        continue
+                    
+                    # As rules 
+                    delimiter= rules[0].config.get('delimiter', ' ') # concat on delimiter or by default with space " " 
+                    parts = str(src_path_to_value[src_path]).split(delimiter)
+
+                    for i, rule in enumerate(rules):
+                        if i < len(parts):
+                            if rule.dest_field_id not in dest_id_to_path:
+                                logging.error(f"""While Spliting, The destination id in rule {rule.dest_field_id}
+                                            does not matches with the destination map id {dest_id_to_path}
+                                            There must be a issue when you input data in database""")
+                                continue
+
+                            dest_path = dest_id_to_path[rule.dest_field_id]
+                            output_data[dest_path] = parts[i]
+                    
+                    if len(parts) > len(rules): # here if the while spliting, if there is some data left concatenate it with the last path
+                        dest_path = dest_id_to_path[rules[-1].dest_field_id] # take the last destination path
+                        output_data[dest_path] += " " + (' ').join(parts[len(rules):]) # join all the remaining parts with the remining data
+
+                # BUILD MESSAGE
+                if dest_server.protocol == "FHIR":
+                    msg = await build_fhir_json(output_data, dest_path_to_resource) # make a fhir message with the data
+
+                else:
+                    msg = await build_hl7_message(output_data=output_data, src=src_server.name,
+                                                   dest=dest_server.name, msg_type=route.msg_type)
+
+                # DELIVER — resolve the future so ingest() knows the result
+                async with httpx.AsyncClient() as client:
+                    if dest_server.protocol == "FHIR":
+                        response = await client.post(url=dest_endpoint_url, json=msg)
                     else:
-                        logging.error("data was not send to url: {dest_endpoint_url}")
-                
+                        # HL7 is plain text — do NOT json= encode it or it arrives as a
+                        # JSON string "MSH|..." instead of the raw HL7 text
+                        response = await client.post(
+                            url=dest_endpoint_url,
+                            content=msg,
+                            headers={"Content-Type": "text/plain"}
+                        )
+                    if response.status_code in (200, 201):
+                        logging.info(f"Successfully sent to url: {dest_endpoint_url}")
+                        result_future.set_result(True)
+                    else:
+                        err = f"Destination {dest_endpoint_url} returned {response.status_code}: {response.text}"
+                        logging.error(err)
+                        result_future.set_exception(Exception(err))
+
             except Exception as exp:
-                logging.error(f"{exp} \nThis came when sending data to url: {dest_endpoint_url}")
-                raise
+                logging.error(f"{exp}\nThis came when processing/sending data for route {route.route_id}")
+                if not result_future.done():
+                    result_future.set_exception(exp)
 
     except Exception as exp:
         return str(exp)
@@ -263,12 +283,11 @@ async def route_worker(route): # rename this to channel_worker instead of route_
 @app.post("/{full_path:path}", status_code=status.HTTP_200_OK)
 async def ingest(full_path: str, req: Request):
     try:
-        payload = await req.json() # data recieved form the srouce endpoint.
-
         db = session_local()
         # check url if it exists in the database.
         endpoint = db.query(models.Endpoints).filter(models.Endpoints.url == '/'+full_path).first()
         if not endpoint:
+            db.close()
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'The endpoint url: /{full_path} is not valid')
         
         endpoint_fields = db.query(models.EndpointFileds).filter(models.EndpointFileds.endpoint_id == endpoint.endpoint_id).all()
@@ -277,38 +296,113 @@ async def ingest(full_path: str, req: Request):
         routes = db.query(models.Route).filter(models.Route.src_endpoint_id == endpoint.endpoint_id).all()
         server = db.get(models.Server, endpoint.server_id)
         db.close()
-        
-        # Extract paths based on the protocol
+
+        # Read the request body based on protocol.
+        # FHIR endpoints send JSON; HL7 endpoints send the raw HL7 string
+        # (either as text/plain bytes OR as a JSON-encoded string — we handle both).
         if server.protocol == "FHIR":
-            paths = fhir_extract_paths(payload)
+            payload = await req.json()  # dict
         else:
-            paths = hl7_extract_paths(payload)
+            # Try JSON first (EHR may wrap the HL7 string in JSON).
+            # Fall back to raw bytes if the body is already plain text.
+            try:
+                payload = await req.json()  # may be a bare string "MSH|..."
+                if not isinstance(payload, str):
+                    # Unexpected — treat whatever we got as a string
+                    payload = str(payload)
+            except Exception:
+                raw = await req.body()
+                payload = raw.decode("utf-8")
+        
+        # Extract paths based on the protocol, mirroring how add_fhir/hl7_endpoint_fields
+        # parses paths during endpoint 
+        if server.protocol == "FHIR":
+            resource_type = payload.get("resourceType", "Unknown")
+            if resource_type == "Bundle":
+                # Bundle: extract paths per entry resource, prefixed with each resource type.
+                # e.g. "Patient-birthDate", "Coverage-identifier[0].value"
+                paths = []
+                for entry in payload.get("entry", []):
+                    resource = entry.get("resource", {})
+                    res_type = resource.get("resourceType", "Unknown")
+                    raw_paths = fhir_extract_paths(resource)
+                    paths.extend([f"{res_type}-{p}" for p in raw_paths])
+            else:
+                # Single resource: prefix with that resource's type.
+                raw_paths = fhir_extract_paths(payload)
+                paths = [f"{resource_type}-{p}" for p in raw_paths]
+        else:
+            # HL7: iterate each non-MSH segment and collect paths, just like
+            # add_hl7_endpoint_fields does during endpoint registration.
+            paths = []
+            for segment in payload.split('\n')[1:]:
+                if not segment.strip():
+                    continue
+                _, seg_paths = hl7_extract_paths(segment)
+                paths.extend(seg_paths)
 
         # Data Validation --> here you can do any kind of step if data is not available
         # you can also return the msg back, if data is not valid. but right know we will just ignore it.
+        print(f"\n[DEBUG] Extracted paths from payload: {paths}")
         for field in endpoint_fields:
                 if field.path not in paths:
-                    print(f"path: {field.path} is not in the payload")
+                    print(f"[DEBUG] MISSING from payload — DB field path: {field.path}")
         
         # Extract value based on the path
+        # Note: get_fhir_value_by_path strips the resource prefix internally
         src_path_to_value = {}
         if server.protocol == "FHIR":
-            for path in paths:
-                value = get_fhir_value_by_path(obj=payload, path=path)
-                src_path_to_value[path] = value
+            if resource_type == "Bundle":
+                # For Bundles, look up value inside the correct entry resource.
+                # get_fhir_value_by_path strips the "ResourceType-" prefix and
+                # traverses the top-level object — so pass each entry resource.
+                for entry in payload.get("entry", []):
+                    resource = entry.get("resource", {})
+                    res_type = resource.get("resourceType", "Unknown")
+                    raw_paths = fhir_extract_paths(resource)
+                    for p in raw_paths:
+                        full_path = f"{res_type}-{p}"
+                        value = get_fhir_value_by_path(obj=resource, path=full_path)
+                        src_path_to_value[full_path] = value
+            else:
+                for path in paths:
+                    value = get_fhir_value_by_path(obj=payload, path=path)
+                    src_path_to_value[path] = value
         else:
-            for path in paths:
-                value = get_hl7_value_by_path(obj=payload, path=path)
-                src_path_to_value[path] = value
+            # For HL7, extract all values in one pass over the message segments
+            src_path_to_value = get_hl7_value_by_path(hl7_message=payload, paths=paths)
         
+        # For each route, create a Future so we can await the delivery result.
+        # route_worker resolves the future after it gets a response from the destination.
+        loop = asyncio.get_event_loop()
+        delivery_futures = []
         for route in routes:
             if route.route_id in route_queue:
-                await route_queue[route.route_id].put(src_path_to_value)
+                future = loop.create_future()
+                await route_queue[route.route_id].put((src_path_to_value, future))
+                delivery_futures.append((route.route_id, future))
             else:
                 logging.warning(f"Route {route.route_id} queue not found. route_Worker may not be running")
         
-        return {"message": "sucessfully send data to all destinations"}
+        # Wait for all route workers to finish delivery.
+        # If any delivery failed, raise an error so the caller (EHR) knows to rollback.
+        errors = []
+        for route_id, future in delivery_futures:
+            try:
+                await future
+            except Exception as exp:
+                errors.append(f"Route {route_id}: {str(exp)}")
+        
+        if errors:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"One or more downstream deliveries failed: {'; '.join(errors)}"
+            )
+        
+        return {"message": "Successfully sent data to all destinations"}
 
+    except HTTPException:
+        raise  # re-raise HTTP exceptions as-is
     except Exception as exp:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
 
@@ -319,7 +413,7 @@ async def build_hl7_message(output_data, src, dest, msg_type):
     dt = datetime.strptime(str(date), "%Y-%m-%d %H:%M:%S.%f")
     date = dt.strftime("%Y%m%d%H%M%S")
 
-    header = f"MSH|^~\\&|{src}||{dest}||{date}||{msg_type}|MSG{str(uuid.uuid4())}|P|2.5"
+    header = f"MSH|^~\&|{src}||{dest}||{date}||{msg_type}|MSG{str(uuid.uuid4())}|P|2.5"
     for path, value in output_data.items():
         # example: PID-5.1
         segment = path.split("-")[0]
