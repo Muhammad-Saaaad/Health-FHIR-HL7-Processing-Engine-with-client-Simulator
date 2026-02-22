@@ -1953,3 +1953,39 @@ task: <Task cancelling name='Task-4' coro=<server_health() running at E:\project
 2026-02-21 23:30:59,600 - INFO - Route Manger shutting down
 2026-02-21 23:31:01,770 - INFO - route_worker start for route 7
 2026-02-21 23:31:02,159 - INFO - route_Worker Started for route 7
+2026-02-22 12:36:27,682 - INFO - route_worker start for route 7
+2026-02-22 12:36:28,160 - INFO - route_Worker Started for route 7
+2026-02-22 12:43:07,645 - INFO - Route_manager received Cancellation signal
+2026-02-22 12:43:07,646 - INFO - Route Manger shutting down
+2026-02-22 12:43:09,492 - INFO - route_worker start for route 7
+2026-02-22 12:43:09,869 - INFO - route_Worker Started for route 7
+2026-02-22 12:45:09,539 - INFO - Route_manager received Cancellation signal
+2026-02-22 12:45:09,539 - INFO - Route Manger shutting down
+2026-02-22 12:45:11,845 - INFO - route_worker start for route 7
+2026-02-22 12:45:12,701 - INFO - route_Worker Started for route 7
+2026-02-22 12:45:15,218 - INFO - Route_manager received Cancellation signal
+2026-02-22 12:45:15,218 - INFO - Route Manger shutting down
+2026-02-22 12:46:34,532 - INFO - route_worker start for route 7
+2026-02-22 12:46:34,911 - INFO - route_Worker Started for route 7
+2026-02-22 12:47:47,027 - INFO - Route_manager received Cancellation signal
+2026-02-22 12:47:47,027 - INFO - Route Manger shutting down
+2026-02-22 12:51:00,339 - INFO - route_worker start for route 7
+2026-02-22 12:51:00,726 - INFO - route_Worker Started for route 7
+2026-02-22 12:57:31,246 - INFO - Route_manager received Cancellation signal
+2026-02-22 12:57:31,246 - INFO - Route Manger shutting down
+2026-02-22 12:57:34,106 - INFO - route_worker start for route 7
+2026-02-22 12:57:34,480 - INFO - route_Worker Started for route 7
+2026-02-22 12:58:21,971 - INFO - Route_manager received Cancellation signal
+2026-02-22 12:58:21,971 - INFO - Route Manger shutting down
+2026-02-22 12:58:24,411 - INFO - route_worker start for route 7
+2026-02-22 12:58:24,784 - INFO - route_Worker Started for route 7
+2026-02-22 13:04:11,721 - INFO - Route_manager received Cancellation signal
+2026-02-22 13:04:11,721 - INFO - Route Manger shutting down
+2026-02-22 13:04:16,121 - INFO - route_worker start for route 7
+2026-02-22 13:04:16,507 - INFO - route_Worker Started for route 7
+2026-02-22 13:05:21,003 - INFO - Route_manager received Cancellation signal
+2026-02-22 13:05:21,003 - INFO - Route Manger shutting down
+2026-02-22 13:05:23,698 - INFO - route_worker start for route 7
+2026-02-22 13:05:24,088 - INFO - route_Worker Started for route 7
+2026-02-22 13:06:08,971 - INFO - Route_manager received Cancellation signal
+2026-02-22 13:06:08,971 - INFO - Route Manger shutting down

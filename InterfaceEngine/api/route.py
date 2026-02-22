@@ -18,14 +18,22 @@ def all_routes(db: Session = Depends(get_db)):
     **Query Parameters:** None
 
     **Response (200 OK):**
-    Returns a list of all route objects. Each item includes:
-    - `route_id`: Unique route identifier
-    - `name`: Descriptive name for the route (e.g., "ehr-to-lis")
-    - `src_server_id`: Source server ID
-    - `src_endpoint_id`: Source endpoint ID
-    - `dest_server_id`: Destination server ID
-    - `dest_endpoint_id`: Destination endpoint ID
-    - `msg_type`: Message/event type this route handles (e.g., "ADT")
+    Returns a list of route objects. Each item includes:
+    - `route_id` (int): Unique route identifier
+    - `channel_name` (str): Descriptive name for the route (e.g., "ehr-to-lis")
+    - `src_server` (object): Source server details:
+        - `server_id` (int): Source server ID
+        - `name` (str): Source server name
+    - `src_endpoint` (object): Source endpoint details:
+        - `endpoint_id` (int): Source endpoint ID
+        - `url` (str): Source endpoint URL
+    - `dest_server` (object): Destination server details:
+        - `server_id` (int): Destination server ID
+        - `name` (str): Destination server name
+    - `dest_endpoint` (object): Destination endpoint details:
+        - `endpoint_id` (int): Destination endpoint ID
+        - `url` (str): Destination endpoint URL
+    - `msg_type` (str): Message/event type this route handles (e.g., "ADT")
 
     **Note:**
     - Returns an empty list if no routes have been configured.
@@ -35,7 +43,18 @@ def all_routes(db: Session = Depends(get_db)):
     """
     try:
         routes = db.query(models.Route).all()
-        return routes
+        response = [
+            {
+                "route_id": route.route_id,
+                "channel_name": route.name,
+                "src_server": {"server_id": route.src_server.server_id, "name": route.src_server.name},
+                "src_endpoint": {"endpoint_id": route.src_endpoint.endpoint_id, "url": route.src_endpoint.url},
+                "dest_server": {"server_id": route.dest_server.server_id, "name": route.dest_server.name},
+                "dest_endpoint": {"endpoint_id": route.dest_endpoint.endpoint_id, "url": route.dest_endpoint.url},
+                "msg_type": route.msg_type
+            } for route in routes
+        ]
+        return response
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
 
