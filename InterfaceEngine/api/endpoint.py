@@ -37,7 +37,25 @@ canonical_paths = {
 
 @router.get("/server-endpoint/{server_id}", status_code=status.HTTP_200_OK)
 def server_endpoint(server_id: int, db:Session = Depends(get_db)):
+    """
+    Retrieve all registered endpoints belonging to a specific server.
 
+    **Path Parameters:**
+    - `server_id` (int, required): The unique ID of the server whose endpoints to retrieve.
+
+    **Response (200 OK):**
+    Returns a list of endpoint objects registered under the given server. Each object includes:
+    - `endpoint_id`: Unique endpoint identifier
+    - `server_id`: The parent server's ID
+    - `url`: The endpoint URL
+
+    **Note:**
+    - Returns an empty list if the server has no registered endpoints.
+
+    **Error Responses:**
+    - `404 Not Found`: No server exists with the given `server_id`
+    - `400 Bad Request`: Unexpected database error
+    """
     if not db.get(models.Server, server_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"server id {server_id} does not exists")
     try:
@@ -49,6 +67,44 @@ def server_endpoint(server_id: int, db:Session = Depends(get_db)):
 
 @router.post("/add-endpoint", status_code=status.HTTP_201_CREATED)
 def add_endpoint(endpoint: AddEndpoint, db: Session = Depends(get_db)):
+    """
+    Register a new endpoint for a server and auto-extract its field mappings from a sample message.
+
+    This is a key configuration step in the Interface Engine. After registering an endpoint,
+    the engine parses the provided sample message (FHIR or HL7) to automatically discover
+    available fields and stores them as `EndpointFields` — which are then used when building routes.
+
+    **Request Body:**
+    - `server_id` (int, required): ID of the server this endpoint belongs to. Must exist.
+    - `url` (str, required): The endpoint URL. Must be unique per server.
+    - `server_protocol` (str, required): Protocol of the message format — `"FHIR"` or `"HL7"`.
+    - `sample_msg` (dict | str, required): A sample message in the specified protocol format.
+        - For `"FHIR"`: Provide a JSON object — either a single FHIR resource or a FHIR Bundle.
+        - For `"HL7"`: Provide a raw HL7 v2.x string with segments separated by newlines (`\\n`).
+
+    **Response (201 Created):**
+    Returns a confirmation message:
+    - `message`: "Endpoint added successfully"
+
+    **Side Effects:**
+    - Parses the `sample_msg` to extract field paths.
+    - Matches extracted paths against the canonical mapping table to assign human-readable names.
+    - Stores the discovered fields as `EndpointField` records in the database, linked to this endpoint.
+    - Unrecognized paths are logged as warnings and skipped.
+
+    **Supported Canonical Field Names:**
+    `mpi`, `fullname`, `given name`, `family name`, `gender`, `birth date`, `phone number`, `address`
+
+    **Constraints:**
+    - `server_id` must refer to an existing server.
+    - The URL must be unique within the same server.
+    - `server_protocol` must be either `"FHIR"` or `"HL7"` (case-sensitive).
+
+    **Error Responses:**
+    - `400 Bad Request`: Server does not exist
+    - `400 Bad Request`: URL already exists for this server
+    - `400 Bad Request`: Failed to extract fields from the provided sample message
+    """
     if not db.get(models.Server, endpoint.server_id):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Server does not exist")
 
@@ -86,9 +142,22 @@ def add_endpoint(endpoint: AddEndpoint, db: Session = Depends(get_db)):
     
 def add_fhir_endpoint_fields(endpoint_id: int, sample_msg: str,  db: Session): # uses the old session
     """
-        Take the fhir message and the endpoint id, extract the paths and from fhir message,
-        then uses canonical paths to get the names and add then endpoint fileds
-        paths, names and resources|segments. 
+    Internal helper: parse a FHIR sample message, extract field paths, map them to canonical
+    names, and persist them as EndpointField records for the given endpoint.
+
+    Supports both single FHIR resources and FHIR Bundle messages.
+    Fields not found in the canonical_paths table are skipped and logged as warnings.
+
+    Args:
+        endpoint_id (int): The ID of the endpoint to attach discovered fields to.
+        sample_msg (dict): A parsed FHIR JSON message — either a resource or a Bundle.
+        db (Session): Active SQLAlchemy database session.
+
+    Returns:
+        True on success.
+
+    Raises:
+        HTTPException (400): If any error occurs during path extraction or DB operations.
     """
     try:
         global canonical_paths
@@ -155,6 +224,24 @@ def add_fhir_endpoint_fields(endpoint_id: int, sample_msg: str,  db: Session): #
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
 
 def add_hl7_endpoint_fields(endpoint_id: int, sample_msg: str,  db: Session): # uses the old session
+    """
+    Internal helper: parse an HL7 v2.x sample message, extract field paths per segment,
+    map them to canonical names, and persist them as EndpointField records.
+
+    Iterates over each segment (skipping the MSH header), extracts field/component/subcomponent
+    paths using HL7 dot-notation (e.g., PID-5.1), and stores matched fields.
+
+    Args:
+        endpoint_id (int): The ID of the endpoint to attach discovered fields to.
+        sample_msg (str): Raw HL7 v2.x message string with segments separated by newlines.
+        db (Session): Active SQLAlchemy database session.
+
+    Returns:
+        True on success.
+
+    Raises:
+        HTTPException (400): If any error occurs during parsing or DB operations.
+    """
     try:
         global canonical_paths
 
@@ -187,9 +274,25 @@ def add_hl7_endpoint_fields(endpoint_id: int, sample_msg: str,  db: Session): # 
 
 
 def hl7_extract_paths(segment):
+    """
+    Parse a single HL7 segment string and return all field/component/subcomponent paths.
+
+    Generates dot-notation paths such as:
+    - `PID-3` (simple field)
+    - `PID-5.1` (component within a field)
+    - `PID-5.1.2` (subcomponent within a component)
+
+    Args:
+        segment (str): A single HL7 segment string (e.g., "PID|1||12345^^^MR||Smith^John^A").
+
+    Returns:
+        tuple: (segment_type: str, paths: list[str])
+            - `segment_type`: e.g., "PID", "MSH"
+            - `paths`: list of dot-notation path strings for all non-empty fields
+    """
     paths = []
 
-    # for segment in segments[1:]:
+    # for segment in segments[1:]
     fields = segment.split('|')
     segment_type = fields[0] # PID etc.
     for i , field in enumerate(fields[1:], start=1):
@@ -212,6 +315,21 @@ def hl7_extract_paths(segment):
     return (segment_type, paths)
 
 def fhir_extract_paths(data, prefix=""):
+    """
+    Recursively traverse a FHIR JSON object and return all leaf-node paths in dot/bracket notation.
+
+    Generates paths such as:
+    - `"gender"` (simple scalar field)
+    - `"name[0].text"` (field inside a list item)
+    - `"name[0].given"` (list of strings — stored as the list path itself)
+
+    Args:
+        data (dict | list | scalar): The FHIR JSON object or sub-object to traverse.
+        prefix (str): The current accumulated path (used during recursion). Leave empty on first call.
+
+    Returns:
+        list[str]: All discovered leaf-level paths within the data structure.
+    """
     paths = []
 
     if isinstance(data, dict):
@@ -237,6 +355,19 @@ def fhir_extract_paths(data, prefix=""):
     return paths
 
 def get_hl7_value_by_path(hl7_message, paths): 
+    """
+    Extract values from an HL7 message for a given list of dot-notation field paths.
+
+    Iterates over all segments in the message and resolves each path. Handles field-level,
+    component-level (`^`), and subcomponent-level (`&`) access.
+
+    Args:
+        hl7_message (str): Full HL7 v2.x message string with segments separated by newlines.
+        paths (list[str]): List of paths to extract (e.g., ["PID-3", "PID-5.1"]).
+
+    Returns:
+        dict: A mapping of path -> extracted value (e.g., {"PID-3": "12345", "PID-5.1": "Smith"}).
+    """
     segments = hl7_message.split('\n')[1:]
     value = {}
     for segment in segments:
@@ -261,12 +392,26 @@ def get_hl7_value_by_path(hl7_message, paths):
     return value
 
 def get_fhir_value_by_path(obj, path): # give the entire fhir msg and it will extract the value at that path
-    
+    """
+    Extract a single value from a FHIR JSON object using a dot/bracket notation path.
+
+    Traverses the object step by step, handling both dict keys and list indices.
+
+    Args:
+        obj (dict): The root FHIR JSON object to traverse.
+        path (str): Dot/bracket notation path string (e.g., `"name[0].family"`, `"gender"`).
+
+    Returns:
+        The value at the specified path, or `None` if any key/index along the path is missing.
+
+    Example:
+        >>> get_fhir_value_by_path(fhir_patient, "name[0].text")
+        "John Smith"
+    """
     # Split path by dots and brackets [ ]
     # "name[0].family" -> ["name", "0", "", "family"]
     #  "gender" -> ["gender"]
-    keys = re.split(r'\.|\[|\]', path)
-    # print(keys)
+    keys = re.split(r'\.|\\[|\\]', path)
     keys = [k for k in keys if k]  # Remove empty strings
     
     current = obj
