@@ -44,6 +44,9 @@ async def add_server(server: AddUpdateServer, db: Session = Depends(get_db)):
     """
     if db.query(models.Server).filter(models.Server.name == server.name).first():
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Server with this name already exists")
+    
+    if db.query(models.Server).filter(models.Server.ip == server.ip, models.Server.port == server.port).first():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Server with the same ip, port already exists")
 
     async with httpx.AsyncClient() as client:
         if not await server_health_check(client, server.ip, server.port):

@@ -3,13 +3,13 @@ from fastapi.middleware.cors import CORSMiddleware
 # from sqlalchemy.exc import SAWarning
 # import warnings
  
-from api import authentication
+from api import authentication, doctor
 from database import engine
 import model
 
 
 # warnings.filterwarnings("ignore", category=SAWarning)
-app = FastAPI(title="EHR System")
+app = FastAPI(title="PHR System")
 app.add_middleware(
     CORSMiddleware,
     allow_origins= ["*"],
@@ -20,6 +20,7 @@ app.add_middleware(
 model.Base.metadata.create_all(bind=engine)
 
 app.include_router(authentication.router)
+app.include_router(doctor.router)
 
 @app.get("/health")
 def check_health():
