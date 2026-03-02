@@ -229,7 +229,7 @@ async def server_health():
         finally:
             if db:
                 db.close()
-        await asyncio.sleep(60) # check status after every 30 seconds
+        await asyncio.sleep(30) # check status after every 30 seconds
 
 
 async def server_health_check(client, ip: str, port: int):

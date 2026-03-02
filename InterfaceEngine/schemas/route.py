@@ -31,8 +31,8 @@ class AddRoute(BaseModel):
 
     src_server_id: int
     src_endpoint_id: int
-    des_server_id: int
-    des_endpoint_id: int
+    dest_server_id: int
+    dest_endpoint_id: int
 
     msg_type: str
 

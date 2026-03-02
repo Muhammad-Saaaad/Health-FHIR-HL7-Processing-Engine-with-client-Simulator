@@ -12,7 +12,7 @@ router = APIRouter(tags=['Engine'])
 
 
 @router.post("/get/new-patient", status_code=status.HTTP_200_OK)
-async def add_patient(req: Request, db: Session = Depends(get_db)):
+def add_patient(req: Request, db: Session = Depends(get_db)):
     """
     Internal engine endpoint to receive and process a new patient from an HL7 v2.x message.
 
@@ -41,7 +41,7 @@ async def add_patient(req: Request, db: Session = Depends(get_db)):
     """
     try:
         # HL7 is sent as plain text — read raw bytes and decode
-        raw = await req.body()
+        raw = req.body()
         data = raw.decode("utf-8")
 
         _, path = hl7_extract_paths(segment=data.split('\n')[1])

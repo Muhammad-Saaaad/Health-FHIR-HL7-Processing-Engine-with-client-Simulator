@@ -149,7 +149,43 @@ def add_endpoint(endpoint: AddEndpoint, db: Session = Depends(get_db)):
             db.rollback()
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to add endpoint HL7 fields from sample message")
     return {"message": "Endpoint added successfully"}
-    
+
+
+@router.get("/endpoint_field_path/{endpoint_id}", status_code=status.HTTP_200_OK)
+def endpoint_field_paths(endpoint_id: int, db:Session = Depends(get_db)):
+    """
+    Retrieve all discovered fields for a specific endpoint.
+
+    This is used when configuring a new route — you call this endpoint for both the source
+    and destination endpoint to get the list of available fields, then use those field IDs
+    in the route's mapping rules.
+
+    **Path Parameters:**
+    - `endpoint_id` (int, required): The unique ID of the endpoint whose fields to retrieve.
+
+    **Response (200 OK):**
+    Returns a list of endpoint field objects. Each item includes:
+    - `endpoint_filed_id`: Unique field identifier (used as `src_paths` / `dest_paths` in route rules)
+    - `endpoint_id`: The parent endpoint's ID
+    - `resource`: The FHIR resource type or HL7 segment (e.g., "Patient", "PID")
+    - `path`: The field path in dot/bracket notation (e.g., "name[0].text", "PID-5.1")
+    - `name`: The canonical human-readable field name (e.g., "fullname", "mpi")
+
+    **Error Responses:**
+    - `404 Not Found`: No endpoint exists with the given `endpoint_id`
+    - `400 Bad Request`: Unexpected database error
+    """
+    if not db.get(models.Endpoints, endpoint_id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"endpoint id {endpoint_id} does not exists")
+
+    try:    
+        data = db.query(models.EndpointFileds).filter(models.EndpointFileds.endpoint_id == endpoint_id).all()
+        return data
+
+    except Exception as exp:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
+
+
 def add_fhir_endpoint_fields(endpoint_id: int, sample_msg: str,  db: Session): # uses the old session
     """
     Internal helper: parse a FHIR sample message, extract field paths, map them to canonical

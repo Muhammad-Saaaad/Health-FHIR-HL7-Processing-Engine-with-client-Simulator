@@ -235,40 +235,6 @@ def get_rules(route_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
 
 
-@router.get("/endpoint_field_path/{endpoint_id}", status_code=status.HTTP_200_OK)
-def endpoint_field_paths(endpoint_id: int, db:Session = Depends(get_db)):
-    """
-    Retrieve all discovered fields for a specific endpoint.
-
-    This is used when configuring a new route — you call this endpoint for both the source
-    and destination endpoint to get the list of available fields, then use those field IDs
-    in the route's mapping rules.
-
-    **Path Parameters:**
-    - `endpoint_id` (int, required): The unique ID of the endpoint whose fields to retrieve.
-
-    **Response (200 OK):**
-    Returns a list of endpoint field objects. Each item includes:
-    - `endpoint_filed_id`: Unique field identifier (used as `src_paths` / `dest_paths` in route rules)
-    - `endpoint_id`: The parent endpoint's ID
-    - `resource`: The FHIR resource type or HL7 segment (e.g., "Patient", "PID")
-    - `path`: The field path in dot/bracket notation (e.g., "name[0].text", "PID-5.1")
-    - `name`: The canonical human-readable field name (e.g., "fullname", "mpi")
-
-    **Error Responses:**
-    - `404 Not Found`: No endpoint exists with the given `endpoint_id`
-    - `400 Bad Request`: Unexpected database error
-    """
-    if not db.get(models.Endpoints, endpoint_id):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"endpoint id {endpoint_id} does not exists")
-
-    try:    
-        data = db.query(models.EndpointFileds).filter(models.EndpointFileds.endpoint_id == endpoint_id).all()
-        return data
-
-    except Exception as exp:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
-
 @router.post("/add-route", status_code=status.HTTP_201_CREATED)
 def add_route(data: AddRoute, db: Session = Depends(get_db)):
     """
@@ -282,8 +248,8 @@ def add_route(data: AddRoute, db: Session = Depends(get_db)):
     - `name` (str, required): Unique descriptive name for this route (e.g., "ehr-to-lis").
     - `src_server_id` (int, required): ID of the source server. Must exist.
     - `src_endpoint_id` (int, required): ID of the source endpoint. Must exist.
-    - `des_server_id` (int, required): ID of the destination server. Must exist.
-    - `des_endpoint_id` (int, required): ID of the destination endpoint. Must exist.
+    - `dest_server_id` (int, required): ID of the destination server. Must exist.
+    - `dest_endpoint_id` (int, required): ID of the destination endpoint. Must exist.
     - `msg_type` (str, required): Message/event type this route handles (e.g., "ADT", "ORU").
     - `rules` (object, required): Mapping rules object with the following structure:
       ```json
@@ -329,19 +295,19 @@ def add_route(data: AddRoute, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Route name already exists")
     
     if db.query(models.Route).filter(models.Route.src_endpoint_id == data.src_endpoint_id, 
-                                        models.Route.dest_endpoint_id == data.des_endpoint_id).first():
+                                        models.Route.dest_endpoint_id == data.dest_endpoint_id).first():
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="This same route with different name already exists")
     
     if not db.get(models.Server, data.src_server_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="src server id not found")
     
-    if not db.get(models.Server, data.des_server_id):
+    if not db.get(models.Server, data.dest_server_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="dest server id not found")
             
     if not db.get(models.Endpoints, data.src_endpoint_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="src endpoint id not found")
     
-    if not db.get(models.Endpoints, data.des_endpoint_id):
+    if not db.get(models.Endpoints, data.dest_endpoint_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="dest endpoint id not found")
         
     try:
@@ -349,8 +315,8 @@ def add_route(data: AddRoute, db: Session = Depends(get_db)):
             name = data.name,
             src_server_id = data.src_server_id,
             src_endpoint_id = data.src_endpoint_id,
-            dest_server_id = data.des_server_id,
-            dest_endpoint_id = data.des_endpoint_id,
+            dest_server_id = data.dest_server_id,
+            dest_endpoint_id = data.dest_endpoint_id,
             msg_type = data.msg_type
         )
 
@@ -390,11 +356,11 @@ def add_route(data: AddRoute, db: Session = Depends(get_db)):
 
         elif rule['transform'] in ['copy', 'map', 'format'] :
             rules.append(models.MappingRule(
-                    route_id = route.route_id,
-                    src_field_id = rule['src_paths'][0],
-                    dest_field_id = rule['dest_paths'][0],
-                    transform_type = rule['transform'],
-                    config = rule['config']
+                route_id = route.route_id,
+                src_field_id = rule['src_paths'][0],
+                dest_field_id = rule['dest_paths'][0],
+                transform_type = rule['transform'],
+                config = rule['config']
             ))
         
         else:
@@ -404,3 +370,30 @@ def add_route(data: AddRoute, db: Session = Depends(get_db)):
         db.add_all(rules)
     db.commit() # this is added outside the loop so all the mapping_rules are added permentlly at the same time.
     return {"message": "Sucessfully done"}
+
+@router.delete("/delete-route/{route_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_route(route_id: int, db: Session = Depends(get_db)):
+    """
+    Delete an existing route and all its associated mapping rules.
+
+    **Path Parameters:**
+    - `route_id` (int, required): The unique identifier of the route to delete.
+
+    **Response:**
+    - `204 No Content`: Route and its mapping rules were successfully deleted.
+
+    **Error Responses:**
+    - `404 Not Found`: No route exists with the given `route_id`
+    - `400 Bad Request`: Unexpected database error
+    """
+    route = db.get(models.Route, route_id)
+    if not route:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Route id {route_id} does not exists")
+    
+    try:
+        db.query(models.MappingRule).filter(models.MappingRule.route_id == route_id).delete()
+        db.delete(route)
+        db.commit()
+    except Exception as exp:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))

@@ -57,7 +57,7 @@ async def get_registed_patient(req: Request, db: Session = Depends(get_db)):
 
         # --- Extract from PID ---
         dt = datetime.strptime(all_values['PID-7'], "%Y%m%d")
-        date = dt.strftime("%Y-%m-%d")
+        date_of_birth = dt.strftime("%Y-%m-%d")
         gender = "Male" if all_values.get('PID-8') == "M" else "Female"
 
         if 'PID-5.1' in all_values or 'PID-5.2' in all_values: # hl7 cannot have a full name you should always break it down.
@@ -80,7 +80,7 @@ async def get_registed_patient(req: Request, db: Session = Depends(get_db)):
         .join(models.InsurancePolicy, models.InsurancePolicy.pid == models.Patient.pid)
         .filter(
             models.Patient.gender == gender,
-            models.Patient.date_of_birth == date,
+            models.Patient.date_of_birth == date_of_birth,
             models.InsurancePolicy.policy_id == int(policy_number)
         )
         .first()
@@ -96,7 +96,7 @@ async def get_registed_patient(req: Request, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found")
 
 
-def hl7_extract_paths(segment) -> (str, list[str]):
+def hl7_extract_paths(segment):
     """
     Parse a single HL7 segment string and return all field/component/subcomponent paths.
 

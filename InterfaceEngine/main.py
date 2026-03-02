@@ -34,7 +34,7 @@ app = FastAPI(title="Interface Engine", lifespan=lifeSpan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins= ["*"],
-    allow_credentials= True,
+    allow_credentials= False,
     allow_headers=["*"],
     allow_methods=["*"]
 )
