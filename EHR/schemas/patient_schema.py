@@ -17,7 +17,7 @@ class post_patient(BaseModel):
     name : str
     phone_no : str | None
     gender : str
-    date_of_birth: date | None
+    date_of_birth: date
     address : str | None
     insurance_company: str
     policy_number: int

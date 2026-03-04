@@ -59,6 +59,7 @@ async def add_patient(patient: schema.post_patient ,db: Session = Depends(get_db
     **Note:** Registration is rolled back if FHIR registration fails to maintain data consistency
     """
     try:
+        
         # select top 1 from patient where nic = patient.nic
         if db.query(model.Patient).filter(model.Patient.nic == patient.nic).first():
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"messsage":"nic already exists"})

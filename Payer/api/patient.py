@@ -14,7 +14,6 @@ def register_patient(request: schema.PatientCreate, db: Session = Depends(get_db
 
     **Request Body:**
     - `name` (str, required): Patient's full name.
-    - `cnic` (str, required): Patient's CNIC / national ID number.
     - `phone_no` (str, optional): Patient's phone number. Must be unique across all patients.
     - `gender` (str, optional): Patient's gender (e.g., "Male", "Female").
     - `date_of_birth` (date, optional): Patient's date of birth in YYYY-MM-DD format.
@@ -50,7 +49,7 @@ def register_patient(request: schema.PatientCreate, db: Session = Depends(get_db
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Patient already exists")
 
     try:
-
+        print("Enter in the patient registration function")
         new_patient = models.Patient(
             u_id=request.user_id,
             name=request.name,
@@ -70,6 +69,8 @@ def register_patient(request: schema.PatientCreate, db: Session = Depends(get_db
         elif request.insurance_type in ("Bronze"):
             total_coverage = 200000
 
+        print(f"Total coverage for {request.insurance_type} is {total_coverage}")
+
         new_policy = models.InsurancePolicy(
             pid=new_patient.pid,
             u_id = new_patient.u_id,
@@ -81,6 +82,8 @@ def register_patient(request: schema.PatientCreate, db: Session = Depends(get_db
         db.add(new_policy)
         db.commit()
         db.refresh(new_policy)
+
+        print(f"New patient created with ID: {new_patient.pid} and policy ID: {new_policy.policy_id}")
 
         return {"message": "Added Sucessfully"}
     except Exception as e:
