@@ -31,7 +31,7 @@ class Patient(Base):
     name = Column(String(100), nullable= False)
     phone_no = Column(String(100), nullable= True)
     gender = Column(String(10), nullable= False)
-    date_of_birth = Column(Date, nullable= True)
+    date_of_birth = Column(Date, nullable= False)
     address = Column(String(255), nullable= True)
 
     visiting_notes = relationship("VisitingNotes", back_populates="patient")

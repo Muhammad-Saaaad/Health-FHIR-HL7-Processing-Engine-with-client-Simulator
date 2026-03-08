@@ -1,0 +1,141 @@
+2026-03-08 00:29:06,078 - INFO - route_worker start for route 11
+2026-03-08 00:29:06,078 - INFO - route_worker start for route 15
+2026-03-08 00:29:07,820 - INFO - route_Worker Started for route 11
+2026-03-08 00:29:07,848 - INFO - route_Worker Started for route 15
+2026-03-08 00:31:31,462 - INFO - route_worker start for route 11
+2026-03-08 00:31:31,462 - INFO - route_worker start for route 15
+2026-03-08 00:31:32,331 - INFO - route_Worker Started for route 11
+2026-03-08 00:31:32,342 - INFO - route_Worker Started for route 15
+2026-03-08 00:36:55,063 - INFO - Route_manager received Cancellation signal
+2026-03-08 00:36:55,065 - INFO - Route Manger shutting down
+2026-03-08 00:37:47,990 - INFO - route_worker start for route 11
+2026-03-08 00:37:47,990 - INFO - route_worker start for route 15
+2026-03-08 00:37:48,925 - INFO - route_Worker Started for route 11
+2026-03-08 00:37:48,942 - INFO - route_Worker Started for route 15
+2026-03-08 00:38:50,617 - INFO - Route_manager received Cancellation signal
+2026-03-08 00:38:50,617 - INFO - Route Manger shutting down
+2026-03-08 00:38:55,401 - INFO - route_worker start for route 11
+2026-03-08 00:38:55,401 - INFO - route_worker start for route 15
+2026-03-08 00:38:56,682 - INFO - route_Worker Started for route 11
+2026-03-08 00:38:56,695 - INFO - route_Worker Started for route 15
+2026-03-08 00:40:12,097 - WARNING - No canonical mapping found for path PID-1, skipping.
+2026-03-08 00:40:12,097 - INFO - Mapped field mpi to path PID-3
+2026-03-08 00:40:12,101 - INFO - Mapped field family name to path PID-5.1
+2026-03-08 00:40:12,101 - INFO - Mapped field given name to path PID-5.2
+2026-03-08 00:40:12,101 - INFO - Mapped field birth date to path PID-7
+2026-03-08 00:40:12,101 - INFO - Mapped field gender to path PID-8
+2026-03-08 00:41:38,780 - WARNING - No canonical mapping found for path PID-1, skipping.
+2026-03-08 00:41:38,784 - INFO - Mapped field mpi to path PID-3
+2026-03-08 00:41:38,785 - INFO - Mapped field family name to path PID-5.1
+2026-03-08 00:41:38,786 - INFO - Mapped field given name to path PID-5.2
+2026-03-08 00:41:38,788 - INFO - Mapped field birth date to path PID-7
+2026-03-08 00:41:38,790 - INFO - Mapped field gender to path PID-8
+2026-03-08 01:03:21,766 - INFO - Route_manager received Cancellation signal
+2026-03-08 01:03:21,766 - INFO - Route Manger shutting down
+2026-03-08 01:14:24,458 - INFO - route_worker start for route 11
+2026-03-08 01:14:24,458 - INFO - route_worker start for route 15
+2026-03-08 01:14:25,199 - INFO - route_Worker Started for route 11
+2026-03-08 01:14:25,260 - INFO - route_Worker Started for route 15
+2026-03-08 01:14:25,301 - INFO - Route_manager received Cancellation signal
+2026-03-08 01:14:25,301 - INFO - Route Manger shutting down
+2026-03-08 01:14:50,546 - INFO - route_worker start for route 11
+2026-03-08 01:14:50,546 - INFO - route_worker start for route 15
+2026-03-08 01:14:51,284 - INFO - route_Worker Started for route 11
+2026-03-08 01:14:51,292 - INFO - route_Worker Started for route 15
+2026-03-08 01:35:45,346 - WARNING - No canonical mapping found for path     PID-1, skipping.
+2026-03-08 01:35:45,350 - WARNING - No canonical mapping found for path     PID-3, skipping.
+2026-03-08 01:35:45,354 - WARNING - No canonical mapping found for path     PID-5.1, skipping.
+2026-03-08 01:35:45,357 - WARNING - No canonical mapping found for path     PID-5.2, skipping.
+2026-03-08 01:35:45,359 - WARNING - No canonical mapping found for path     PID-7, skipping.
+2026-03-08 01:35:45,359 - WARNING - No canonical mapping found for path     PID-8, skipping.
+2026-03-08 01:35:45,361 - WARNING - No canonical mapping found for path     IN1-1, skipping.
+2026-03-08 01:35:45,369 - WARNING - No canonical mapping found for path     IN1-3, skipping.
+2026-03-08 01:35:45,371 - WARNING - No canonical mapping found for path     IN1-5, skipping.
+2026-03-08 01:36:25,627 - INFO - Route_manager received Cancellation signal
+2026-03-08 01:36:25,627 - INFO - Route Manger shutting down
+2026-03-08 01:36:31,171 - INFO - route_worker start for route 11
+2026-03-08 01:36:31,171 - INFO - route_worker start for route 15
+2026-03-08 01:36:32,237 - INFO - route_Worker Started for route 11
+2026-03-08 01:36:32,263 - INFO - route_Worker Started for route 15
+2026-03-08 01:36:32,306 - INFO - Route_manager received Cancellation signal
+2026-03-08 01:36:32,307 - INFO - Route Manger shutting down
+2026-03-08 06:06:39,270 - INFO - route_worker start for route 11
+2026-03-08 06:06:39,270 - INFO - route_worker start for route 15
+2026-03-08 06:06:39,671 - INFO - route_Worker Started for route 11
+2026-03-08 06:06:39,678 - INFO - route_Worker Started for route 15
+2026-03-08 06:07:18,913 - WARNING - No canonical mapping found for path     PID-1, skipping.
+2026-03-08 06:07:18,914 - WARNING - No canonical mapping found for path     PID-3, skipping.
+2026-03-08 06:07:18,914 - WARNING - No canonical mapping found for path     PID-5.1, skipping.
+2026-03-08 06:07:18,916 - WARNING - No canonical mapping found for path     PID-5.2, skipping.
+2026-03-08 06:07:18,917 - WARNING - No canonical mapping found for path     PID-7, skipping.
+2026-03-08 06:07:18,917 - WARNING - No canonical mapping found for path     PID-8, skipping.
+2026-03-08 06:07:18,918 - WARNING - No canonical mapping found for path     IN1-1, skipping.
+2026-03-08 06:07:18,918 - WARNING - No canonical mapping found for path     IN1-3, skipping.
+2026-03-08 06:07:18,919 - WARNING - No canonical mapping found for path     IN1-5, skipping.
+2026-03-08 06:08:22,695 - WARNING - No canonical mapping found for path PID-1, skipping.
+2026-03-08 06:08:22,695 - INFO - Mapped field mpi to path PID-3
+2026-03-08 06:08:22,696 - INFO - Mapped field family name to path PID-5.1
+2026-03-08 06:08:22,696 - INFO - Mapped field given name to path PID-5.2
+2026-03-08 06:08:22,696 - INFO - Mapped field birth date to path PID-7
+2026-03-08 06:08:22,697 - INFO - Mapped field gender to path PID-8
+2026-03-08 06:08:22,706 - WARNING - No canonical mapping found for path IN1-1, skipping.
+2026-03-08 06:08:22,707 - WARNING - No canonical mapping found for path IN1-3, skipping.
+2026-03-08 06:08:22,707 - WARNING - No canonical mapping found for path IN1-5, skipping.
+2026-03-08 06:38:17,221 - INFO - Route_manager received Cancellation signal
+2026-03-08 06:38:17,221 - INFO - Route Manger shutting down
+2026-03-08 06:38:19,057 - INFO - route_worker start for route 11
+2026-03-08 06:38:19,058 - INFO - route_worker start for route 15
+2026-03-08 06:38:19,431 - INFO - route_Worker Started for route 11
+2026-03-08 06:38:19,437 - INFO - route_Worker Started for route 15
+2026-03-08 06:39:47,444 - WARNING - No canonical mapping found for path PID-1, skipping.
+2026-03-08 06:39:47,445 - INFO - Mapped field mpi to path PID-3
+2026-03-08 06:39:47,446 - INFO - Mapped field family name to path PID-5.1
+2026-03-08 06:39:47,446 - INFO - Mapped field given name to path PID-5.2
+2026-03-08 06:39:47,447 - INFO - Mapped field birth date to path PID-7
+2026-03-08 06:39:47,447 - INFO - Mapped field gender to path PID-8
+2026-03-08 06:39:47,454 - WARNING - No canonical mapping found for path IN1-1, skipping.
+2026-03-08 06:39:47,454 - INFO - Mapped field policy number to path IN1-2
+2026-03-08 06:39:47,456 - INFO - Mapped field plan type to path IN1-15
+2026-03-08 06:41:11,341 - WARNING - No canonical mapping found for path PID-1, skipping.
+2026-03-08 06:41:11,342 - INFO - Mapped field mpi to path PID-3
+2026-03-08 06:41:11,342 - INFO - Mapped field family name to path PID-5.1
+2026-03-08 06:41:11,342 - INFO - Mapped field given name to path PID-5.2
+2026-03-08 06:41:11,343 - INFO - Mapped field birth date to path PID-7
+2026-03-08 06:41:11,343 - INFO - Mapped field gender to path PID-8
+2026-03-08 06:41:11,350 - WARNING - No canonical mapping found for path IN1-1, skipping.
+2026-03-08 06:41:11,350 - INFO - Mapped field policy number to path IN1-2
+2026-03-08 06:41:11,350 - INFO - Mapped field plan type to path IN1-15
+2026-03-08 06:48:17,367 - INFO - Route_manager received Cancellation signal
+2026-03-08 06:48:17,368 - INFO - Route Manger shutting down
+2026-03-08 06:48:19,449 - INFO - route_worker start for route 11
+2026-03-08 06:48:19,450 - INFO - route_worker start for route 15
+2026-03-08 06:48:19,851 - INFO - route_Worker Started for route 11
+2026-03-08 06:48:19,858 - INFO - route_Worker Started for route 15
+2026-03-08 06:48:27,053 - INFO - Route_manager received Cancellation signal
+2026-03-08 06:48:27,053 - INFO - Route Manger shutting down
+2026-03-08 06:49:00,917 - INFO - route_worker start for route 11
+2026-03-08 06:49:00,917 - INFO - route_worker start for route 15
+2026-03-08 06:49:01,293 - INFO - route_Worker Started for route 11
+2026-03-08 06:49:01,298 - INFO - route_Worker Started for route 15
+2026-03-08 06:49:06,894 - WARNING - No canonical mapping found for path PID-1, skipping.
+2026-03-08 06:49:06,894 - INFO - Mapped field mpi to path PID-3
+2026-03-08 06:49:06,895 - INFO - Mapped field family name to path PID-5.1
+2026-03-08 06:49:06,895 - INFO - Mapped field given name to path PID-5.2
+2026-03-08 06:49:06,895 - INFO - Mapped field birth date to path PID-7
+2026-03-08 06:49:06,895 - INFO - Mapped field gender to path PID-8
+2026-03-08 06:49:06,902 - WARNING - No canonical mapping found for path IN1-1, skipping.
+2026-03-08 06:49:06,903 - INFO - Mapped field policy number to path IN1-2
+2026-03-08 06:49:06,903 - INFO - Mapped field plan type to path IN1-15
+2026-03-08 06:52:15,685 - INFO - Route_manager received Cancellation signal
+2026-03-08 06:52:15,685 - INFO - Route Manger shutting down
+2026-03-08 06:52:35,896 - INFO - route_worker start for route 11
+2026-03-08 06:52:35,896 - INFO - route_worker start for route 15
+2026-03-08 06:52:36,397 - INFO - route_Worker Started for route 11
+2026-03-08 06:52:36,404 - INFO - route_Worker Started for route 15
+2026-03-08 06:52:44,379 - INFO - Route_manager received Cancellation signal
+2026-03-08 06:52:44,379 - INFO - Route Manger shutting down
+2026-03-08 06:54:16,854 - INFO - route_worker start for route 11
+2026-03-08 06:54:16,855 - INFO - route_worker start for route 15
+2026-03-08 06:54:17,259 - INFO - route_Worker Started for route 11
+2026-03-08 06:54:17,264 - INFO - route_Worker Started for route 15
+2026-03-08 06:54:34,862 - ERROR - segment not valid:    PID|1||23||saad^Muhammad ali||20041006|M|||||

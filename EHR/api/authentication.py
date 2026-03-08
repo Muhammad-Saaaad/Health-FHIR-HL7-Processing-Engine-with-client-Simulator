@@ -64,16 +64,16 @@ def login_doctor(doctor: schema.Login, db :Session = Depends(get_db)):
     try:
         is_valid_doc = db.query(model.Doctor).filter(
             model.Doctor.email == doctor.email).first()
-        
-        if not is_valid_doc:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="email not valid")
-        
-        if is_valid_doc.password != doctor.password:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="password not valid")
-        
-        return {"message": "login sucessfully"}
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
+        
+    if not is_valid_doc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="email not valid")
+    
+    if is_valid_doc.password != doctor.password:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="password not valid")
+    
+    return {"message": "login sucessfully"}
 
 @router.get("/get-doctor/{email}/{password}", status_code=status.HTTP_200_OK)
 def get_doctor(email: str, password: str, db: Session = Depends(get_db)):

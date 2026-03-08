@@ -7,7 +7,7 @@ from schemas import auth_schema as schema
 
 router = APIRouter(tags=["Authentication"])
 
-@router.post("/signup", response_model=schema.SystemUserDisplay, status_code=status.HTTP_201_CREATED, tags=["Users"])
+@router.post("/signup", response_model=schema.SystemUserDisplay, status_code=status.HTTP_201_CREATED)
 def signup_user(request: schema.SystemUserCreate, db: Session = Depends(get_db)):
     """
     Create a new user account (signup).
@@ -42,7 +42,7 @@ def signup_user(request: schema.SystemUserCreate, db: Session = Depends(get_db))
     db.refresh(new_user)
     return new_user
 
-@router.post("/login", status_code=status.HTTP_200_OK, tags=["Users"])
+@router.post("/login", status_code=status.HTTP_200_OK)
 def login_user(request: schema.LoginRequest, db: Session = Depends(get_db)):
     """
     Authenticate user and login.

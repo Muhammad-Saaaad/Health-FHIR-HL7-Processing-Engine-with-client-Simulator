@@ -1,5 +1,7 @@
+import os
 import re
 import logging
+from logging.handlers import RotatingFileHandler
 
 from fastapi import APIRouter, status, HTTPException, Depends
 from sqlalchemy.orm import Session
@@ -9,11 +11,22 @@ import models
 from database import get_db
 
 router = APIRouter(tags=["Endpoint"])
-logging.basicConfig(
-    level=logging.INFO,
-    filename="mapping.log",
-    format="%(asctime)s - %(levelname)s - %(message)s"
-)
+
+os.makedirs("logs", exist_ok=True)
+
+logger = logging.getLogger("mapping_logger")
+logger.setLevel(logging.INFO)
+
+formater = logging.Formatter("%(asctime)s- %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s")
+
+if not logger.handlers:
+    rotating_file_handler = RotatingFileHandler(
+        r"./logs/mapping.log",
+        maxBytes=20000, # 20KB
+        backupCount=1
+    )
+    rotating_file_handler.setFormatter(formater)
+    logger.addHandler(rotating_file_handler)
 
 canonical_paths = {
     # FHIR — Patient resource  (prefix = "Patient-")
@@ -42,7 +55,7 @@ canonical_paths = {
 
     # HL7 — IN1 segment
     "IN1-2": "policy number",
-    "IN1-4": "plan type"
+    "IN1-15": "plan type"
 }
 
 @router.get("/server-endpoint/{server_id}", status_code=status.HTTP_200_OK)
@@ -116,12 +129,19 @@ def add_endpoint(endpoint: AddEndpoint, db: Session = Depends(get_db)):
     - `400 Bad Request`: Failed to extract fields from the provided sample message
     """
     if not db.get(models.Server, endpoint.server_id):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Server does not exist")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Server does not exist")
 
     if db.query(models.Endpoints).filter(models.Endpoints.server_id == endpoint.server_id, 
                                             models.Endpoints.url == endpoint.url).first():
         
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="URL already exists")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="URL already exists")
+    
+    if endpoint.sample_msg in [None, "", {}]:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Sample message is required to extract endpoint fields")
+
+    if endpoint.server_protocol not in ["FHIR", "HL7"]:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Server Protocol is not FHIR or HL7")
 
     try:
         new_endpoint = models.Endpoints(
@@ -130,25 +150,24 @@ def add_endpoint(endpoint: AddEndpoint, db: Session = Depends(get_db)):
         )
         db.add(new_endpoint)
         db.flush()
-        db.refresh(new_endpoint)
+
+        success = True
+        if endpoint.server_protocol == "FHIR":
+            success = add_fhir_endpoint_fields(
+                endpoint_id=new_endpoint.endpoint_id,
+                sample_msg=endpoint.sample_msg, db=db
+            )
+        else: # if not FHIR then it should be HL7
+            success = add_hl7_endpoint_fields(endpoint_id=new_endpoint.endpoint_id, sample_msg=endpoint.sample_msg.strip(), db=db)
+        print(success)
+        if success != True:
+            db.rollback()
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"something went wrong: {success}")
+        db.commit()
+        return {"message": "Endpoint added successfully"}
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
-
-    if endpoint.server_protocol == "FHIR":
-        if add_fhir_endpoint_fields(endpoint_id=new_endpoint.endpoint_id, sample_msg=endpoint.sample_msg, db=db):
-            db.commit()
-        else:
-            db.rollback()
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to add endpoint FHIR fields from sample message")
-        
-    elif endpoint.server_protocol == "HL7":
-        if add_hl7_endpoint_fields(endpoint_id=new_endpoint.endpoint_id, sample_msg=endpoint.sample_msg, db=db):
-            db.commit()
-        else:
-            db.rollback()
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to add endpoint HL7 fields from sample message")
-    return {"message": "Endpoint added successfully"}
 
 
 @router.get("/endpoint_field_path/{endpoint_id}", status_code=status.HTTP_200_OK)
@@ -186,7 +205,7 @@ def endpoint_field_paths(endpoint_id: int, db:Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
 
 
-def add_fhir_endpoint_fields(endpoint_id: int, sample_msg: str,  db: Session): # uses the old session
+def add_fhir_endpoint_fields(endpoint_id: int, sample_msg: str,  db: Session) -> bool: # uses the old session
     """
     Internal helper: parse a FHIR sample message, extract field paths, map them to canonical
     names, and persist them as EndpointField records for the given endpoint.
@@ -206,8 +225,6 @@ def add_fhir_endpoint_fields(endpoint_id: int, sample_msg: str,  db: Session): #
         HTTPException (400): If any error occurs during path extraction or DB operations.
     """
     try:
-        global canonical_paths
-
         print(sample_msg)
         if sample_msg['resourceType'] != 'Bundle': 
             resource_type = sample_msg['resourceType']
@@ -223,9 +240,9 @@ def add_fhir_endpoint_fields(endpoint_id: int, sample_msg: str,  db: Session): #
                 if path in canonical_paths:
                     name = canonical_paths[path]
                     endpoint_fields[name] = path
-                    logging.info(f"Mapped field {name} to path {path}")
+                    logger.info(f"Mapped field {name} to path {path}")
                 else:
-                    logging.warning(f"No canonical mapping found for path {path}, skipping.")
+                    logger.warning(f"No canonical mapping found for path {path}, skipping.")
             
             new_fields = []
             for name, path in endpoint_fields.items():
@@ -253,9 +270,9 @@ def add_fhir_endpoint_fields(endpoint_id: int, sample_msg: str,  db: Session): #
                     if path in canonical_paths:
                         name = canonical_paths[path]
                         endpoint_fields[name] = path
-                        logging.info(f"Mapped field {name} to path {path}")
+                        logger.info(f"Mapped field {name} to path {path}")
                     else:
-                        logging.warning(f"No canonical mapping found for path {path}, skipping.")
+                        logger.warning(f"No canonical mapping found for path {path}, skipping.")
                 
                 new_fields = []
                 for name, path in endpoint_fields.items():
@@ -275,7 +292,7 @@ def add_fhir_endpoint_fields(endpoint_id: int, sample_msg: str,  db: Session): #
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
 
-def add_hl7_endpoint_fields(endpoint_id: int, sample_msg: str,  db: Session): # uses the old session
+def add_hl7_endpoint_fields(endpoint_id: int, sample_msg: str,  db: Session) -> bool: # uses the old session
     """
     Internal helper: parse an HL7 v2.x sample message, extract field paths per segment,
     map them to canonical names, and persist them as EndpointField records.
@@ -295,19 +312,22 @@ def add_hl7_endpoint_fields(endpoint_id: int, sample_msg: str,  db: Session): # 
         HTTPException (400): If any error occurs during parsing or DB operations.
     """
     try:
-        global canonical_paths
-
         print(sample_msg)
         for segment in sample_msg.split('\n')[1:]:
+            if segment[0:3].strip() == "":
+                logger.error(f"segment not valid: {segment}")
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"segment not valid: {segment}")
+            
             segment_type, paths = hl7_extract_paths(segment)
             endpoint_fields = {}
             for path in paths:
                 if path in canonical_paths:
                     name = canonical_paths[path]
                     endpoint_fields[name] = path
-                    logging.info(f"Mapped field {name} to path {path}")
+                    logger.info(f"Mapped field {name} to path {path}")
                 else:
-                    logging.warning(f"No canonical mapping found for path {path}, skipping.")
+                    logger.warning(f"No canonical mapping found for path {path}, skipping.")
+            
             new_fields = []
             for name, path in endpoint_fields.items():
                 field = models.EndpointFileds(

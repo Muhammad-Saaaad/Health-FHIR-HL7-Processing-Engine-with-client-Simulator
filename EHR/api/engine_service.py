@@ -27,4 +27,5 @@ def register_engine(data: dict):
 
     except Exception as exp:
         # Re-raise so the calling endpoint knows delivery failed
+        print(str(exp))
         raise

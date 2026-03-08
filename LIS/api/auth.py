@@ -61,9 +61,9 @@ def login(request: Login, db: Session = Depends(get_db)):
     """
     user = db.query(model.User).filter(model.User.email == request.email).first()
     if not user:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="email not exists")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="email not exists")
 
     if user.password != request.password:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="password not exists")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="password invalid")
     
     return {"message": "Login sucessfull"}

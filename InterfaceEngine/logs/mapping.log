@@ -1,0 +1,66 @@
+2026-03-08 00:40:12,097- WARNING - [endpoint.py:323] - No canonical mapping found for path PID-1, skipping.
+2026-03-08 00:40:12,097- INFO - [endpoint.py:321] - Mapped field mpi to path PID-3
+2026-03-08 00:40:12,101- INFO - [endpoint.py:321] - Mapped field family name to path PID-5.1
+2026-03-08 00:40:12,101- INFO - [endpoint.py:321] - Mapped field given name to path PID-5.2
+2026-03-08 00:40:12,101- INFO - [endpoint.py:321] - Mapped field birth date to path PID-7
+2026-03-08 00:40:12,101- INFO - [endpoint.py:321] - Mapped field gender to path PID-8
+2026-03-08 00:41:38,780- WARNING - [endpoint.py:323] - No canonical mapping found for path PID-1, skipping.
+2026-03-08 00:41:38,784- INFO - [endpoint.py:321] - Mapped field mpi to path PID-3
+2026-03-08 00:41:38,785- INFO - [endpoint.py:321] - Mapped field family name to path PID-5.1
+2026-03-08 00:41:38,786- INFO - [endpoint.py:321] - Mapped field given name to path PID-5.2
+2026-03-08 00:41:38,788- INFO - [endpoint.py:321] - Mapped field birth date to path PID-7
+2026-03-08 00:41:38,790- INFO - [endpoint.py:321] - Mapped field gender to path PID-8
+2026-03-08 01:35:45,346- WARNING - [endpoint.py:329] - No canonical mapping found for path     PID-1, skipping.
+2026-03-08 01:35:45,350- WARNING - [endpoint.py:329] - No canonical mapping found for path     PID-3, skipping.
+2026-03-08 01:35:45,354- WARNING - [endpoint.py:329] - No canonical mapping found for path     PID-5.1, skipping.
+2026-03-08 01:35:45,357- WARNING - [endpoint.py:329] - No canonical mapping found for path     PID-5.2, skipping.
+2026-03-08 01:35:45,359- WARNING - [endpoint.py:329] - No canonical mapping found for path     PID-7, skipping.
+2026-03-08 01:35:45,359- WARNING - [endpoint.py:329] - No canonical mapping found for path     PID-8, skipping.
+2026-03-08 01:35:45,361- WARNING - [endpoint.py:329] - No canonical mapping found for path     IN1-1, skipping.
+2026-03-08 01:35:45,369- WARNING - [endpoint.py:329] - No canonical mapping found for path     IN1-3, skipping.
+2026-03-08 01:35:45,371- WARNING - [endpoint.py:329] - No canonical mapping found for path     IN1-5, skipping.
+2026-03-08 06:07:18,913- WARNING - [endpoint.py:329] - No canonical mapping found for path     PID-1, skipping.
+2026-03-08 06:07:18,914- WARNING - [endpoint.py:329] - No canonical mapping found for path     PID-3, skipping.
+2026-03-08 06:07:18,914- WARNING - [endpoint.py:329] - No canonical mapping found for path     PID-5.1, skipping.
+2026-03-08 06:07:18,916- WARNING - [endpoint.py:329] - No canonical mapping found for path     PID-5.2, skipping.
+2026-03-08 06:07:18,917- WARNING - [endpoint.py:329] - No canonical mapping found for path     PID-7, skipping.
+2026-03-08 06:07:18,917- WARNING - [endpoint.py:329] - No canonical mapping found for path     PID-8, skipping.
+2026-03-08 06:07:18,918- WARNING - [endpoint.py:329] - No canonical mapping found for path     IN1-1, skipping.
+2026-03-08 06:07:18,918- WARNING - [endpoint.py:329] - No canonical mapping found for path     IN1-3, skipping.
+2026-03-08 06:07:18,919- WARNING - [endpoint.py:329] - No canonical mapping found for path     IN1-5, skipping.
+2026-03-08 06:08:22,695- WARNING - [endpoint.py:329] - No canonical mapping found for path PID-1, skipping.
+2026-03-08 06:08:22,695- INFO - [endpoint.py:327] - Mapped field mpi to path PID-3
+2026-03-08 06:08:22,696- INFO - [endpoint.py:327] - Mapped field family name to path PID-5.1
+2026-03-08 06:08:22,696- INFO - [endpoint.py:327] - Mapped field given name to path PID-5.2
+2026-03-08 06:08:22,696- INFO - [endpoint.py:327] - Mapped field birth date to path PID-7
+2026-03-08 06:08:22,697- INFO - [endpoint.py:327] - Mapped field gender to path PID-8
+2026-03-08 06:08:22,706- WARNING - [endpoint.py:329] - No canonical mapping found for path IN1-1, skipping.
+2026-03-08 06:08:22,707- WARNING - [endpoint.py:329] - No canonical mapping found for path IN1-3, skipping.
+2026-03-08 06:08:22,707- WARNING - [endpoint.py:329] - No canonical mapping found for path IN1-5, skipping.
+2026-03-08 06:39:47,444- WARNING - [endpoint.py:329] - No canonical mapping found for path PID-1, skipping.
+2026-03-08 06:39:47,445- INFO - [endpoint.py:327] - Mapped field mpi to path PID-3
+2026-03-08 06:39:47,446- INFO - [endpoint.py:327] - Mapped field family name to path PID-5.1
+2026-03-08 06:39:47,446- INFO - [endpoint.py:327] - Mapped field given name to path PID-5.2
+2026-03-08 06:39:47,447- INFO - [endpoint.py:327] - Mapped field birth date to path PID-7
+2026-03-08 06:39:47,447- INFO - [endpoint.py:327] - Mapped field gender to path PID-8
+2026-03-08 06:39:47,454- WARNING - [endpoint.py:329] - No canonical mapping found for path IN1-1, skipping.
+2026-03-08 06:39:47,454- INFO - [endpoint.py:327] - Mapped field policy number to path IN1-2
+2026-03-08 06:39:47,456- INFO - [endpoint.py:327] - Mapped field plan type to path IN1-15
+2026-03-08 06:41:11,341- WARNING - [endpoint.py:329] - No canonical mapping found for path PID-1, skipping.
+2026-03-08 06:41:11,342- INFO - [endpoint.py:327] - Mapped field mpi to path PID-3
+2026-03-08 06:41:11,342- INFO - [endpoint.py:327] - Mapped field family name to path PID-5.1
+2026-03-08 06:41:11,342- INFO - [endpoint.py:327] - Mapped field given name to path PID-5.2
+2026-03-08 06:41:11,343- INFO - [endpoint.py:327] - Mapped field birth date to path PID-7
+2026-03-08 06:41:11,343- INFO - [endpoint.py:327] - Mapped field gender to path PID-8
+2026-03-08 06:41:11,350- WARNING - [endpoint.py:329] - No canonical mapping found for path IN1-1, skipping.
+2026-03-08 06:41:11,350- INFO - [endpoint.py:327] - Mapped field policy number to path IN1-2
+2026-03-08 06:41:11,350- INFO - [endpoint.py:327] - Mapped field plan type to path IN1-15
+2026-03-08 06:49:06,894- WARNING - [endpoint.py:325] - No canonical mapping found for path PID-1, skipping.
+2026-03-08 06:49:06,894- INFO - [endpoint.py:323] - Mapped field mpi to path PID-3
+2026-03-08 06:49:06,895- INFO - [endpoint.py:323] - Mapped field family name to path PID-5.1
+2026-03-08 06:49:06,895- INFO - [endpoint.py:323] - Mapped field given name to path PID-5.2
+2026-03-08 06:49:06,895- INFO - [endpoint.py:323] - Mapped field birth date to path PID-7
+2026-03-08 06:49:06,895- INFO - [endpoint.py:323] - Mapped field gender to path PID-8
+2026-03-08 06:49:06,902- WARNING - [endpoint.py:325] - No canonical mapping found for path IN1-1, skipping.
+2026-03-08 06:49:06,903- INFO - [endpoint.py:323] - Mapped field policy number to path IN1-2
+2026-03-08 06:49:06,903- INFO - [endpoint.py:323] - Mapped field plan type to path IN1-15
