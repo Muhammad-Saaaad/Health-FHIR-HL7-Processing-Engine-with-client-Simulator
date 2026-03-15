@@ -9,7 +9,8 @@ from fastapi import FastAPI, status, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from api import server, route, endpoint
-from api.endpoint import get_fhir_value_by_path, get_hl7_value_by_path, fhir_extract_paths, hl7_extract_paths
+from validation.fhir_validation import validate_unknown_fhir_resource, get_fhir_value_by_path, fhir_extract_paths
+from validation.hl7_validation import get_hl7_value_by_path, hl7_extract_paths
 from database import engine, session_local
 import models
 
@@ -21,8 +22,8 @@ logging.basicConfig(
 
 @asynccontextmanager # handle lifespan events like startup or shutdown
 async def lifeSpan(app: FastAPI):
-    app.state.route_manager_task = asyncio.create_task(route_manager())
     app.state.check_server_status = asyncio.create_task(server.server_health())
+    app.state.route_manager_task = asyncio.create_task(route_manager())
 
     yield
     
@@ -49,7 +50,7 @@ app.include_router(endpoint.router, prefix="/endpoint")
 def check_health():
     return {"message": "✔ Interface Engine running"}
 
-active_route_listners = {} # consist of all the running routes lisning for a soruce endpoint
+active_route_listners = {} # consist of all the running routes|Channels lisning for a soruce endpoint
 route_queue = {} # consist of each route key with that route value that it gets from source endpoint
 
 async def route_manager():
@@ -68,8 +69,8 @@ async def route_manager():
                 for route in all_routes:
                     if route.route_id not in active_route_listners:
 
-                        route_queue[route.route_id] = asyncio.Queue() # make a async queue for a new route that is not lisning
-                        task = asyncio.create_task(route_worker(route))
+                        route_queue[route.route_id] = asyncio.Queue() # make a async queue for a new route that is not listning
+                        task = asyncio.create_task(route_worker(route)) # this start the listning the route.
                         active_route_listners[route.route_id] = task
                         logging.info(f"route_worker start for route {route.route_id}")
                 await asyncio.sleep(5)
@@ -118,9 +119,9 @@ async def route_worker(route):
         db.close()
 
         # lookup maps 
-        src_id_to_path = {f.endpoint_filed_id: f.path for f in src_endpoint_fields}
+        src_id_to_path = {f.endpoint_filed_id: f.path for f in src_endpoint_fields} # e.g. path = Patient-identifier[0].value
         dest_id_to_path = {f.endpoint_filed_id: f.path for f in dest_endpoint_fields}
-        dest_path_to_resource = {f.path: f.resource for f in dest_endpoint_fields}
+        dest_path_to_resource = {f.path: f.resource for f in dest_endpoint_fields} # use resource for making messages.
 
         logging.info(f"route_Worker Started for route {route.route_id}")
 
@@ -179,7 +180,7 @@ async def route_worker(route):
                         output_data[dest_path] = value
 
                 ################################## Concat Data ##################################
-                for dest_id , rules in concat_data.items():
+                for dest_id , rules in concat_data.items(): 
                     values = []
 
                     for rule in rules:
@@ -302,6 +303,10 @@ async def ingest(full_path: str, req: Request):
         # (either as text/plain bytes OR as a JSON-encoded string — we handle both).
         if server.protocol == "FHIR":
             payload = await req.json()  # dict
+
+            is_valid, message = validate_unknown_fhir_resource(fhir_data=payload) # validating fhir message
+            if not is_valid:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(message))
         else:
             # Try JSON first (EHR may wrap the HL7 string in JSON).
             # Fall back to raw bytes if the body is already plain text.
@@ -311,6 +316,7 @@ async def ingest(full_path: str, req: Request):
                     # Unexpected — treat whatever we got as a string
                     payload = str(payload)
             except Exception:
+                print("reading plain text as json was invalid, in the ingest function")
                 raw = await req.body()
                 payload = raw.decode("utf-8")
         
@@ -400,7 +406,6 @@ async def ingest(full_path: str, req: Request):
             )
         
         return {"message": "Successfully sent data to all destinations"}
-
     except HTTPException:
         raise  # re-raise HTTP exceptions as-is
     except Exception as exp:

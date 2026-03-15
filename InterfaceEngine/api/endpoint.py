@@ -9,6 +9,8 @@ from sqlalchemy.orm import Session
 from schemas.endpoint import AddEndpoint
 import models
 from database import get_db
+from validation.fhir_validation import validate_unknown_fhir_resource, fhir_extract_paths
+from validation.hl7_validation import hl7_extract_paths
 
 router = APIRouter(tags=["Endpoint"])
 
@@ -41,7 +43,7 @@ canonical_paths = {
 
     # FHIR — Coverage resource  (prefix = "Coverage-")
     "Coverage-identifier[0].value": "policy number",
-    "Coverage-type.text": "plan type",
+    "Coverage-type.coding[0].code": "plan type",
 
     # HL7 — PID segment
     "PID-3": "mpi",
@@ -151,18 +153,23 @@ def add_endpoint(endpoint: AddEndpoint, db: Session = Depends(get_db)):
         db.add(new_endpoint)
         db.flush()
 
-        success = True
         if endpoint.server_protocol == "FHIR":
-            success = add_fhir_endpoint_fields(
+            is_valid, message = validate_unknown_fhir_resource(endpoint.sample_msg)
+            if not is_valid:
+                logger.error("Invalid FHIR sample message: ",message)
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=message)
+            
+            add_fhir_endpoint_fields(
                 endpoint_id=new_endpoint.endpoint_id,
                 sample_msg=endpoint.sample_msg, db=db
             )
+            logger.info("FHIR endpoint fields added sucessfully")
         else: # if not FHIR then it should be HL7
-            success = add_hl7_endpoint_fields(endpoint_id=new_endpoint.endpoint_id, sample_msg=endpoint.sample_msg.strip(), db=db)
-        print(success)
-        if success != True:
-            db.rollback()
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"something went wrong: {success}")
+            add_hl7_endpoint_fields(
+                endpoint_id=new_endpoint.endpoint_id,
+                sample_msg=endpoint.sample_msg.strip(), db=db
+            )
+            logger.info("Hl7 endpoint fields added sucessfully")
         db.commit()
         return {"message": "Endpoint added successfully"}
     except Exception as e:
@@ -226,6 +233,7 @@ def add_fhir_endpoint_fields(endpoint_id: int, sample_msg: str,  db: Session) ->
     """
     try:
         print(sample_msg)
+        paths = []
         if sample_msg['resourceType'] != 'Bundle': 
             resource_type = sample_msg['resourceType']
             raw_paths = fhir_extract_paths(sample_msg)
@@ -234,10 +242,18 @@ def add_fhir_endpoint_fields(endpoint_id: int, sample_msg: str,  db: Session) ->
             # e.g. "identifier[0].value" → "Patient-identifier[0].value"
             paths = [f"{resource_type}-{p}" for p in raw_paths]
 
+        else:
+            for entry in sample_msg['entry']:
+                resource_type = entry['resource']['resourceType']
+                raw_paths = fhir_extract_paths(entry['resource'])
+                # Prefix with resource type for the same reason as above.
+                paths = [f"{resource_type}-{p}" for p in raw_paths]
+        
+        if len(paths) > 0:
             endpoint_fields = {}
             for path in paths:
 
-                if path in canonical_paths:
+                if path in canonical_paths: # if multiple fields map to same name the previous ones are overwritten
                     name = canonical_paths[path]
                     endpoint_fields[name] = path
                     logger.info(f"Mapped field {name} to path {path}")
@@ -256,38 +272,9 @@ def add_fhir_endpoint_fields(endpoint_id: int, sample_msg: str,  db: Session) ->
             
             db.add_all(new_fields)
             db.flush()
-
+            logger.info(f"All Endpoint field paths are added for endpoint id: {endpoint_id}")
         else:
-            for entry in sample_msg['entry']:
-                resource_type = entry['resource']['resourceType']
-                raw_paths = fhir_extract_paths(entry['resource'])
-                # Prefix with resource type for the same reason as above.
-                paths = [f"{resource_type}-{p}" for p in raw_paths]
-
-                endpoint_fields = {}
-                for path in paths:
-
-                    if path in canonical_paths:
-                        name = canonical_paths[path]
-                        endpoint_fields[name] = path
-                        logger.info(f"Mapped field {name} to path {path}")
-                    else:
-                        logger.warning(f"No canonical mapping found for path {path}, skipping.")
-                
-                new_fields = []
-                for name, path in endpoint_fields.items():
-                    field = models.EndpointFileds(
-                        endpoint_id=endpoint_id,
-                        resource=resource_type,
-                        path=path,
-                        name=name
-                    )
-                    new_fields.append(field)
-                
-                db.add_all(new_fields)
-                db.flush()
-        
-        return True
+            logger.warning("No endpoints extracted from fhir sample message")
 
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
@@ -344,165 +331,3 @@ def add_hl7_endpoint_fields(endpoint_id: int, sample_msg: str,  db: Session) -> 
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
-
-def hl7_extract_paths(segment):
-    """
-    Parse a single HL7 segment string and return all field/component/subcomponent paths.
-
-    Generates dot-notation paths such as:
-    - `PID-3` (simple field)
-    - `PID-5.1` (component within a field)
-    - `PID-5.1.2` (subcomponent within a component)
-
-    Args:
-        segment (str): A single HL7 segment string (e.g., "PID|1||12345^^^MR||Smith^John^A").
-
-    Returns:
-        tuple: (segment_type: str, paths: list[str])
-            - `segment_type`: e.g., "PID", "MSH"
-            - `paths`: list of dot-notation path strings for all non-empty fields
-    """
-    paths = []
-
-    # for segment in segments[1:]
-    fields = segment.split('|')
-    segment_type = fields[0] # PID etc.
-    for i , field in enumerate(fields[1:], start=1):
-        if field == '':
-            continue
-        if '^' in field:
-            components = field.split('^')
-            for j, component in enumerate(components, start=1):
-                if '&' in component:
-                    subcomponents = component.split('&')
-                    for k, subcomponent in enumerate(subcomponents, start=1):
-                        path = f"{segment_type}-{i}.{j}.{k}"
-                        paths.append(path)
-                else:
-                    path = f"{segment_type}-{i}.{j}"
-                    paths.append(path)
-        else:
-            path = f"{segment_type}-{i}"
-            paths.append(path)
-    return (segment_type, paths)
-
-def fhir_extract_paths(data, prefix=""):
-    """
-    Recursively traverse a FHIR JSON object and return all leaf-node paths in dot/bracket notation.
-
-    Generates paths such as:
-    - `"gender"` (simple scalar field)
-    - `"name[0].text"` (field inside a list item)
-    - `"name[0].given"` (list of strings — stored as the list path itself)
-
-    Args:
-        data (dict | list | scalar): The FHIR JSON object or sub-object to traverse.
-        prefix (str): The current accumulated path (used during recursion). Leave empty on first call.
-
-    Returns:
-        list[str]: All discovered leaf-level paths within the data structure.
-    """
-    paths = []
-
-    if isinstance(data, dict):
-        for key, value in data.items():
-            if key == 'resourceType':
-                continue
-            new_prefix = f"{prefix}.{key}" if prefix else key
-            paths.extend(fhir_extract_paths(value, new_prefix))
-
-    elif isinstance(data, list):
-        if len(data) > 0:
-            # if the all the items in the list are strings and length >1 then it means the data is like this ["saad", "ali"]
-            # so we add the just the entire list there
-            if all(isinstance(item, str) for item in data) and len(data) >1:
-                paths.append(prefix)
-            else:
-                for i, item in enumerate(data):
-                    paths.extend(fhir_extract_paths(item, f"{prefix}[{i}]"))
-
-    else:
-        paths.append(prefix)
-
-    return paths
-
-def get_hl7_value_by_path(hl7_message, paths): 
-    """
-    Extract values from an HL7 message for a given list of dot-notation field paths.
-
-    Iterates over all segments in the message and resolves each path. Handles field-level,
-    component-level (`^`), and subcomponent-level (`&`) access.
-
-    Args:
-        hl7_message (str): Full HL7 v2.x message string with segments separated by newlines.
-        paths (list[str]): List of paths to extract (e.g., ["PID-3", "PID-5.1"]).
-
-    Returns:
-        dict: A mapping of path -> extracted value (e.g., {"PID-3": "12345", "PID-5.1": "Smith"}).
-    """
-    segments = hl7_message.split('\n')[1:]
-    value = {}
-    for segment in segments:
-        for path in paths:
-            sp_path = re.split(r"-|\.", path) # [PID, 5, 2, 1]
-           
-            fields = segment.split("|")
-
-            if fields[0] == sp_path[0]:
-
-                if "^" in fields[int(sp_path[1])]:
-                    components = fields[int(sp_path[1])].split("^")
-                    
-                    if "&" in components[int(sp_path[2])-1]:
-                        sub_components = components[int(sp_path[2])-1].split("&")
-                        value[path] = sub_components[int(sp_path[3])-1]
-                    else:
-                        value[path] = components[int(sp_path[2])-1] 
-                else:
-                    value[path] = fields[int(sp_path[1])]
-        
-    return value
-
-def get_fhir_value_by_path(obj, path): # give the entire fhir msg and it will extract the value at that path
-    """
-    Extract a single value from a FHIR JSON object using a dot/bracket notation path.
-
-    Traverses the object step by step, handling both dict keys and list indices.
-
-    Args:
-        obj (dict): The root FHIR JSON object to traverse.
-        path (str): Dot/bracket notation path string (e.g., `"name[0].family"`, `"gender"`).
-
-    Returns:
-        The value at the specified path, or `None` if any key/index along the path is missing.
-
-    Example:
-        >>> get_fhir_value_by_path(fhir_patient, "name[0].text")
-        "John Smith"
-    """
-    # Strip the resource-type prefix before traversal.
-    # e.g. "Patient-name[0].text" → "name[0].text"
-    if "-" in path:
-        path = path.split("-", 1)[1]
-
-    # Split path by dots and brackets [ ]
-    # "name[0].family" -> ["name", "0", "", "family"]
-    #  "gender" -> ["gender"]
-    keys = re.split(r'\.|\[|\]', path)
-    keys = [k for k in keys if k]  # Remove empty strings
-    
-    current = obj
-    
-    for key in keys: 
-        # Checks if the current is a dictionary, if yes then take the key else take none. 
-        # checks if the key is a digit if yes, then it's means that the current is a list
-        #    and we take the index of it, that is the key in this case
-        if key.isdigit():  # Array index
-            current = current[int(key)]
-        else:  # Object key
-            current = current.get(key) if isinstance(current, dict) else None
-            
-        if current is None:
-            return None
-            
-    return current

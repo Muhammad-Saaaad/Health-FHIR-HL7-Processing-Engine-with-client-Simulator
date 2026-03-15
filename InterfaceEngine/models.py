@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, JSON
+from sqlalchemy import Column, Integer, String, ForeignKey, JSON, UniqueConstraint
 from sqlalchemy.orm import relationship
 from database import Base # Ensure your engine uses a shared or local Base
 
@@ -27,6 +27,10 @@ class Endpoints(Base):
     server = relationship("Server", back_populates="endpoints")
 
     endpoint_fileds = relationship("EndpointFileds", back_populates="endpoint")
+
+    __table_args__ = (
+        UniqueConstraint("server_id", "url", name="unique_server_endpoint"),
+    )
 
     src_route = relationship("Route", back_populates="src_endpoint", foreign_keys="[Route.src_endpoint_id]")
     dest_route = relationship("Route", back_populates="dest_endpoint", foreign_keys="[Route.dest_endpoint_id]")

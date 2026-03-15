@@ -199,7 +199,7 @@ async def server_health():
     """
     Background coroutine that continuously monitors all registered servers' health status.
 
-    Runs an infinite loop, sleeping 60 seconds between each check. On each iteration it:
+    Runs an infinite loop, sleeping 30 seconds between each check. On each iteration it:
     1. Queries all servers from the database.
     2. Hits `GET http://{ip}:{port}/health` for each server with a 5-second timeout.
     3. Updates each server's `status` to `"Active"` or `"Inactive"` if it changed.
