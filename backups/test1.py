@@ -1,31 +1,34 @@
-test = {
-    "resourceType": "Bundle",
-    "type": "message",
-    "entry": [
-        { 
-            "resource": {
-                "resourceType": "Patient",
-                "identifier": [{ "value": "23" }],
-                "name": [{ "text": "Muhammad saad" }],
-                "gender": "male",
-                "birthDate": "2004-10-06",
-                "address": [{ "text": "123 street, city, country" }],
-                "telecom" : [{"value" : "+33 (237) 998327"}]
-            }
-        },
-        {
-            "resource": {
-                "resourceType": "Coverage",
-                "identifier": [{ "value": 12 }],
-                "type": {"text": "Silver"}
-            }
-        }
-    ]
-}
+# test = {
+#     "resourceType": "Bundle",
+#     "type": "message",
+#     "entry": [
+#         { 
+#             "resource": {
+#                 "resourceType": "Patient",
+#                 "identifier": [{ "value": "23" }],
+#                 "name": [{ "text": "Muhammad saad" }],
+#                 "gender": "male",
+#                 "birthDate": "2004-10-06",
+#                 "address": [{ "text": "123 street, city, country" }],
+#                 "telecom" : [{"value" : "+33 (237) 998327"}]
+#             }
+#         },
+#         {
+#             "resource": {
+#                 "resourceType": "Coverage",
+#                 "identifier": [{ "value": 12 }],
+#                 "type": {"coding": [{"code": "Silver"}]}
+#             }
+#         }
+#     ]
+# }
 
 test = {
   "resourceType": "Patient",
-  "identifier": [{ "value": "23" }],
+  "identifier": [
+        { "type": { "coding": [{ "code": "MR" }]}, "value": 23 },
+        { "type": { "coding": [{ "code": "NI" }]}, "value": "37201-23123123"}
+    ],
   "name": [{ "family": ["saad"], "given": [] }],
   "gender": "male",
   "birthDate": "2004-10-06",
@@ -36,7 +39,7 @@ test = {
 }
 
 
-def hl7_extract_paths(segment) -> (str, list[str]):
+def hl7_extract_paths(segment) -> tuple[str, list[str]]:
     paths = []
 
     # for segment in segments[1:]:
@@ -61,19 +64,29 @@ def hl7_extract_paths(segment) -> (str, list[str]):
             paths.append(path)
     return (segment_type, paths)
 
-test = """
-MSH|^~\\&|EHR||LIS||20260203120000||ADT^A01|MSG00001|P|2.5
-PID|1||23||saad^Muhammad ali||20041006|M|||||
-ORM|2||12||Muhammad^ali||20041006|M|||123 street, city, country||+33 (237) 998327
-"""
-test = """
-MSH|^~\\&|EHR||payer||20260203120000||ADT^A01|MSG00001|P|2.5
-PID|1||23||saad^Muhammad ali||20041006|M|||||
-IN1|1|12|||||||||||||Silver
-"""
+# test = """
+# MSH|^~\\&|EHR||LIS||20260203120000||ADT^A01|MSG00001|P|2.5
+# PID|1||23||saad^Muhammad ali||20041006|M|||||
+# ORM|2||12||Muhammad^ali||20041006|M|||123 street, city, country||+33 (237) 998327
+# """
+# test = """
+# MSH|^~\\&|EHR||payer||20260203120000||ADT^A01|MSG00001|P|2.5
+# PID|1||23||saad^Muhammad&ali||20041006|M|||||
+# IN1|1|12|||||||||||||Silver
+# """
+# test1 = """
+# MSH|^~\\&|EHR||payer||20260203120000||ADT^A01|MSG00001|P|2.5
+# PID|1||23||saad^Muhammad||20041006|M|||||
+# IN1|1|12|||||||||||||Silver
+# """
 import re
 
-def get_hl7_value_by_path(hl7_message, paths): 
+def get_hl7_value_by_path(hl7_message, paths) -> dict: 
+    """
+        Issues: 
+            1. If hl7 expect 2 names but in the value there is only 1 name then it will add 1 name in both fields.
+                example: {... 'PID-5.1': 'saad', 'PID-5.2': 'saad', ...}
+    """
     segments = hl7_message.split('\n')[1:]
     value = {}
     for segment in segments:
@@ -81,6 +94,7 @@ def get_hl7_value_by_path(hl7_message, paths):
             sp_path = re.split(r"-|\.", path) # [PID, 5, 2, 1]
            
             fields = segment.split("|")
+
 
             if fields[0] == sp_path[0]:
 
@@ -97,10 +111,10 @@ def get_hl7_value_by_path(hl7_message, paths):
         
     return value
 
-for segment in test.split('\n')[1:]:
-    segment_type, paths = hl7_extract_paths(segment)
-    print(segment_type, paths)
-    print(get_hl7_value_by_path(test, paths))
+# for segment in test.split('\n')[1:]:
+#     segment_type, paths = hl7_extract_paths(segment)
+#     print(segment_type, paths)
+#     print(get_hl7_value_by_path(test1, paths))
 
 # def extract_paths(data, prefix=""):
 #     paths = []
@@ -197,11 +211,11 @@ def get_fhir_value_by_path(obj, path): # give the entire fhir msg and it will ex
             
     return current
 
-# resource_type = test['resourceType']
-# paths = fhir_extract_paths(test)
-# print(paths)
-# for path in paths:
+resource_type = test['resourceType']
+paths = fhir_extract_paths(test)
+print("All paths => ",paths)
+for path in paths:
 
-#     value = get_fhir_value_by_path(test, path)
-#     print(path)
-#     print(value)
+    value = get_fhir_value_by_path(test, path)
+    print("path => ",path)
+    print("value => ",value)
