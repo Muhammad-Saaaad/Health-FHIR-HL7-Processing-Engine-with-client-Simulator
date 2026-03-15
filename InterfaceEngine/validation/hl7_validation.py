@@ -21,9 +21,9 @@ def hl7_extract_paths(segment) -> list:
 
     # for segment in segments[1:]
     fields = segment.split('|')
-    segment_type = fields[0] # PID etc.
+    segment_type = fields[0].strip() # PID etc.
     for i , field in enumerate(fields[1:], start=1):
-        if field == '':
+        if not field:
             continue
         if '^' in field:
             components = field.split('^')
@@ -55,7 +55,11 @@ def get_hl7_value_by_path(hl7_message, paths):
     Returns:
         dict: A mapping of path -> extracted value (e.g., {"PID-3": "12345", "PID-5.1": "Smith"}).
     """
-    segments = hl7_message.split('\n')[1:]
+    normalised = hl7_message.replace("\r", "\n")
+    segments = [s for s in normalised.split("\n") if s.strip()]
+    if segments and segments[0].startswith("MSH"):
+        segments = segments[1:]
+        
     value = {}
     for segment in segments:
         for path in paths:
