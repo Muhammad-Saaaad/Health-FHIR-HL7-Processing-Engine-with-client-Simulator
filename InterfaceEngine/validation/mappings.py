@@ -2,6 +2,24 @@
 mappings.py
 ===========
 Canonical name dictionaries for the FHIR <-> HL7 interface engine.
+Targets FHIR R4B (v4.3.0).
+
+FHIR R4B vs R4 — what actually changed:
+    R4B changes are confined to the Medication Definition module and Substance
+    resource (MedicinalProduct family — none of which appear in this file).
+    Every resource in this file — Patient, Practitioner, Organization, Encounter,
+    Condition, Observation, DiagnosticReport, ServiceRequest, Coverage, Claim,
+    ExplanationOfBenefit, MedicationRequest, AllergyIntolerance, Immunization,
+    Procedure — is IDENTICAL between R4 and R4B.
+
+    Coverage-specific R4/R4B clarifications applied here:
+        - identifier   = Business Identifier for the coverage (Member ID /
+                         Certificate number). NOT the policy number.
+        - subscriberId = string, ID assigned to the subscriber (cardholder ID).
+        - type         = CodeableConcept, coverage CATEGORY (medical/dental/vision).
+                         NOT plan type (HMO/PPO). Named "coverage_category_code".
+        - kind         = R5+ ONLY (insurance|self-pay|other). Absent in R4/R4B.
+                         Removed from this file.
 
 Three exports:
     FHIR_EXACT_CANONICAL    — resource-specific exact path → canonical name
@@ -9,16 +27,18 @@ Three exports:
     HL7_EXACT_CANONICAL     — segment/field exact path → canonical name
 
 Collision rules enforced throughout:
-    - "ResourceType-id"               → "{resource}_fhir_id"   (internal server ID)
-    - "ResourceType-identifier[x].value" → "{resource}_identifier" (real-world ID)
-      EXCEPT where a clinically meaningful exact name exists:
-        Patient-identifier[0].value   → "mpi"
-        Coverage-identifier[0].value  → "policy_number"
-        Claim-identifier[0].value     → "claim_number"
-        etc.
-    - period.start / billablePeriod.start kept distinct ("period_start" vs "billing_period_start")
-    - All {resource} templates produce unique names per resource so no two paths
-      in the same resource ever map to the same canonical name.
+    - "ResourceType-id"                  → "{resource}_fhir_id"  (internal server ID)
+    - "ResourceType-identifier[x].value" → clinically meaningful name where known:
+        Patient-identifier[0].value      → "mpi"
+        Coverage-identifier[0].value     → "member_id"  (Member/Certificate ID)
+        Claim-identifier[0].value        → "claim_number"
+        all others                       → "{resource}_identifier"
+    - Coverage.type  → "coverage_category_code"  (medical|dental|vision, NOT HMO/PPO)
+    - IN1-2          → "health_plan_id"           (plan identifier, not patient's policy)
+    - IN1-36         → "policy_number"            (patient's individual policy number)
+    - period.start / billablePeriod.start kept distinct
+    - All {resource} templates produce unique names per resource — no two paths
+      in the same resource ever resolve to the same canonical name.
 """
 
 
@@ -155,11 +175,18 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
     "Encounter-period.end":                                          "encounter_end",
     "Encounter-length.value":                                        "encounter_length",
     "Encounter-length.unit":                                         "encounter_length_unit",
+    "Encounter-type[0].coding[0].code":                              "encounter_type",
+    "Encounter-type[0].coding[0].display":                           "encounter_type_name",
+    "Encounter-type[0].text":                                        "encounter_title",
     "Encounter-reasonCode[0].coding[0].code":                        "encounter_reason_code",
     "Encounter-reasonCode[0].coding[0].display":                     "encounter_reason",
+    "Encounter-reasonCode[0].text":                                  "encounter_complaint",
     "Encounter-diagnosis[0].condition.reference":                    "encounter_diagnosis",
+    "Encounter-diagnosis[0].condition.display":                      "encounter_diagnosis_display",
     "Encounter-diagnosis[0].use.coding[0].code":                     "encounter_diagnosis_use",
     "Encounter-diagnosis[0].rank":                                   "encounter_diagnosis_rank",
+    "Encounter-extension[0].url":                                    "encounter_notes_url",
+    "Encounter-extension[0].valueString":                            "encounter_notes",
     "Encounter-hospitalization.preAdmissionIdentifier.value":        "pre_admission_id",
     "Encounter-hospitalization.admitSource.coding[0].code":          "admit_source",
     "Encounter-hospitalization.dischargeDisposition.coding[0].code": "discharge_disposition",
@@ -304,37 +331,75 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
     "ServiceRequest-note[0].text":                            "order_notes",
     "ServiceRequest-patientInstruction":                      "order_patient_instruction",
 
-    # ── Coverage (Insurance Card) ─────────────────────────────────────────────
+    # ── Coverage (Insurance Card) — R4B v4.3.0 ───────────────────────────────
+    #
+    # Confirmed from hl7.org/fhir/R4B/coverage.html:
+    #   identifier  = "Business Identifier for the coverage" — this is the
+    #                 Member ID / Certificate number on the insurance card.
+    #                 NOT the policy number. Canonical name: member_id.
+    #   status      = active | cancelled | draft | entered-in-error
+    #   type        = "Coverage category such as medical or accident"
+    #                 (CodeableConcept — medical/dental/vision, NOT HMO/PPO)
+    #   subscriberId= string — "ID assigned to the subscriber" (cardholder ID)
+    #   class[]     = group/plan/subplan numbers live here
+    #   kind        = R5+ ONLY — does NOT exist in R4 or R4B. Not mapped here.
+
     "Coverage-id":                                            "coverage_fhir_id",
-    "Coverage-identifier[0].value":                           "policy_number",
-    "Coverage-identifier[0].type.coding[0].code":             "policy_number_type",
+
+    # identifier = Member ID / Certificate number (NOT policy number)
+    "Coverage-identifier[0].value":                           "member_id",
+    "Coverage-identifier[0].type.coding[0].code":             "member_id_type",
+    "Coverage-identifier[0].system":                          "member_id_system",
+
     "Coverage-status":                                        "coverage_status",
-    "Coverage-type.coding[0].code":                           "plan_type",
-    "Coverage-type.coding[0].display":                        "plan_type_name",
-    "Coverage-type.coding[0].system":                         "plan_type_system",
+
+    # type = coverage category: medical | dental | vision | accident (NOT HMO/PPO)
+    "Coverage-type.coding[0].code":                           "coverage_category_code",
+    "Coverage-type.coding[0].display":                        "coverage_category_name",
+    "Coverage-type.coding[0].system":                         "coverage_category_system",
+    "Coverage-type.text":                                     "coverage_type_text",
+
     "Coverage-policyHolder.reference":                        "policy_holder",
+
+    # subscriberId = insurer-assigned string ID for the subscriber / cardholder
     "Coverage-subscriberId":                                  "subscriber_id",
     "Coverage-subscriber.reference":                          "subscriber",
     "Coverage-beneficiary.reference":                         "coverage_patient",
     "Coverage-dependent":                                     "dependent_number",
     "Coverage-relationship.coding[0].code":                   "subscriber_relationship",
+    "Coverage-relationship.coding[0].display":                "subscriber_relationship_name",
+
     "Coverage-period.start":                                  "coverage_start",
     "Coverage-period.end":                                    "coverage_end",
+
     "Coverage-payor[0].reference":                            "insurance_company",
     "Coverage-payor[0].display":                              "insurance_company_name",
-    "Coverage-class[0].type.coding[0].code":                  "coverage_class_type",
+    "Coverage-payor[0].display":                              "insurance_company_name",
+
+    # class[] — group / plan / subplan numbers, confirmed in R4B spec
+    "Coverage-class[0].type.coding[0].code":                  "coverage_class_type",   # "group"
     "Coverage-class[0].value":                                "group_number",
     "Coverage-class[0].name":                                 "group_name",
-    "Coverage-class[1].type.coding[0].code":                  "coverage_plan_class_type",
-    "Coverage-class[1].value":                                "plan_number",
+
+    "Coverage-class[1].type.coding[0].code":                  "coverage_plan_type",    # "plan"
+    "Coverage-class[1].value":                                "plan_id",
     "Coverage-class[1].name":                                 "plan_name",
-    "Coverage-class[2].type.coding[0].code":                  "coverage_subplan_class_type",
-    "Coverage-class[2].value":                                "subplan_number",
+
+    "Coverage-class[2].type.coding[0].code":                  "coverage_subplan_type", # "subplan"
+    "Coverage-class[2].value":                                "subplan_id",
+    "Coverage-class[2].name":                                 "subplan_name",
+
     "Coverage-order":                                         "coverage_order",
     "Coverage-network":                                       "network_name",
-    "Coverage-costToBeneficiary[0].type.coding[0].code":      "cost_type",
-    "Coverage-costToBeneficiary[0].valueMoney.value":         "cost_amount",
-    "Coverage-costToBeneficiary[0].valueMoney.currency":      "cost_currency",
+    "Coverage-subrogation":                                   "coverage_subrogation",
+
+    # costToBeneficiary = patient cost-share details (copay, deductible, coinsurance)
+    "Coverage-costToBeneficiary[0].type.coding[0].code":      "cost_share_type",
+    "Coverage-costToBeneficiary[0].valueMoney.value":         "cost_share_amount",
+    "Coverage-costToBeneficiary[0].valueMoney.currency":      "cost_share_currency",
+    "Coverage-costToBeneficiary[0].valueQuantity.value":      "cost_share_pct",
+    "Coverage-costToBeneficiary[0].valueQuantity.unit":       "cost_share_pct_unit",
+
     "Coverage-contract[0].reference":                         "coverage_contract",
 
     # ── Claim (Billing to Insurance) ──────────────────────────────────────────
@@ -824,11 +889,23 @@ HL7_EXACT_CANONICAL: dict[str, str] = {
     "PV1-50":   "alternate_visit_id",
 
     # ── IN1 — Insurance ───────────────────────────────────────────────────────
+    #
+    # HL7 v2 field clarifications:
+    #   IN1-2  = Health Plan ID — identifies the PLAN itself, not the patient
+    #   IN1-3  = Insurance Company ID — the insurer's own identifier
+    #   IN1-8  = Group Number (employer group)
+    #   IN1-15 = Plan Type: HMO | PPO | EPO | POS etc.
+    #   IN1-36 = Policy Number — patient's INDIVIDUAL policy number (the real one)
+    #   IN1-53 = Patient Member Number (payer-assigned member ID)
+
     "IN1-1":    "insurance_set_id",
-    "IN1-2":    "insurance_plan_id",
-    "IN1-2.1":  "plan_number",
-    "IN1-2.2":  "plan_description",
-    "IN1-2.3":  "plan_coding_system",
+
+    # IN1-2 = Health Plan ID (plan identifier, NOT the patient's policy number)
+    "IN1-2":    "health_plan_id",
+    "IN1-2.1":  "health_plan_id",
+    "IN1-2.2":  "health_plan_description",
+    "IN1-2.3":  "health_plan_coding_system",
+
     "IN1-3":    "insurance_company_id",
     "IN1-3.1":  "insurance_company_id",
     "IN1-4":    "insurance_company_name",
@@ -848,11 +925,16 @@ HL7_EXACT_CANONICAL: dict[str, str] = {
     "IN1-13":   "plan_expiration_date",
     "IN1-14":   "authorization_info",
     "IN1-14.1": "preauth_number",
+
+    # IN1-15 = Plan Type: HMO, PPO, EPO, POS, etc.
     "IN1-15":   "plan_type",
+
+    # IN1-16 = Name of Insured (the subscriber / cardholder)
     "IN1-16":   "subscriber_name",
     "IN1-16.1": "subscriber_family_name",
     "IN1-16.2": "subscriber_given_name",
     "IN1-16.3": "subscriber_middle_name",
+
     "IN1-17":   "subscriber_dob",
     "IN1-18":   "subscriber_gender",
     "IN1-19":   "subscriber_address",
@@ -860,6 +942,8 @@ HL7_EXACT_CANONICAL: dict[str, str] = {
     "IN1-19.3": "subscriber_city",
     "IN1-19.4": "subscriber_state",
     "IN1-19.5": "subscriber_postal_code",
+    "IN1-20":   "assignment_of_benefits",
+    "IN1-21":   "coordination_of_benefits_priority",
     "IN1-22":   "coverage_order",
     "IN1-23":   "coordination_of_benefits",
     "IN1-25":   "authorization_expires",
@@ -868,7 +952,10 @@ HL7_EXACT_CANONICAL: dict[str, str] = {
     "IN1-28":   "coverage_end_date",
     "IN1-29":   "policy_type",
     "IN1-35":   "coverage_type",
+
+    # IN1-36 = Policy Number — patient's individual policy number
     "IN1-36":   "policy_number",
+
     "IN1-39":   "deductible",
     "IN1-40":   "deductible_paid",
     "IN1-41":   "copay",
@@ -1123,4 +1210,11 @@ HL7_EXACT_CANONICAL: dict[str, str] = {
     "GT1-21":   "guarantor_org_name",
     "GT1-22":   "guarantor_billing_hold",
     "GT1-35":   "guarantor_race",
+
+    # ── NTE — Notes ───────────────────────────────────────────────────────────
+    # Used for Encounter notes, consultation notes, and other comments
+    "NTE-1":    "note_set_id",
+    "NTE-2":    "note_source_type",
+    "NTE-3":    "note_text",
+    "NTE-4":    "note_classification",
 }

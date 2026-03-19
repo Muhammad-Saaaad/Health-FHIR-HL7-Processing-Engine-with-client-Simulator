@@ -1,6 +1,7 @@
 import re
+from uuid import uuid4
 
-from fhir.resources import get_fhir_model_class
+from fhir.resources.R4B import get_fhir_model_class
 from pydantic import ValidationError
 
 def validate_unknown_fhir_resource(fhir_data: dict): # validation of any fhir message
@@ -15,7 +16,7 @@ def validate_unknown_fhir_resource(fhir_data: dict): # validation of any fhir me
         
         # 3. Instantiate to trigger validation
         # If the data doesn't match the FHIR spec, a ValidationError is raised
-        resource_instance = resource_class(**fhir_data)
+        resource_class(**fhir_data)
         print(resource_type)
         
         return True, f"Success: {resource_type} is valid."
@@ -24,7 +25,7 @@ def validate_unknown_fhir_resource(fhir_data: dict): # validation of any fhir me
         return False, f"Error: '{resource_type}' is not a recognized FHIR resource."
     except ValidationError as e:
         # Returns a detailed list of what failed validation
-        return False, f"Validation Failed: {e.json(indent=2)}"
+        return False, f"Validation Failed: {str(e)}"
     except Exception as e:
         return False, f"Unexpected Error: {str(e)}"
 
@@ -112,15 +113,199 @@ def get_fhir_value_by_path(obj, path): # give the entire fhir msg and it will ex
             
     return current
 
+def _set_nested(obj: dict, keys: list, value) -> None:
+    """
+    Recursively create nested dicts/lists and set value at the leaf.
+    input data: 
+        obj -> Patient
+        keys -> ["name", "0", "", "family"]
+        value -> Saad
+
+    """
+    key = keys[0]
+
+    if len(keys) == 1:
+        if key.isdigit():
+            # obj is actually a list — caller should handle list growth
+            pass
+        else:
+            obj[key] = value
+        return
+
+    next_key = keys[1]
+
+    if key.isdigit():
+        return  # handled by parent
+
+    # Determine what container the next level needs
+    if next_key.isdigit():
+        # Next level is a list index
+        idx = int(next_key)
+        if key not in obj or not isinstance(obj[key], list):
+            obj[key] = []
+        lst = obj[key]
+        while len(lst) <= idx:
+            lst.append({})
+        _set_nested(lst[idx], keys[2:], value)
+    else:
+        if key not in obj or not isinstance(obj[key], dict):
+            obj[key] = {}
+        _set_nested(obj[key], keys[1:], value)
+
+
+def build_fhir_message(output_data: dict[str, str],
+                       dest_path_to_resource: dict[str, str]) -> dict:
+    """
+    Reconstruct a proper FHIR JSON object (or Bundle) from a flat
+    {dest_path: value} mapping produced by the route worker.
+
+    Each dest_path has the form "ResourceType-dot.bracket[0].path".
+    If multiple resource types are present a FHIR Bundle is returned;
+    otherwise a single resource object is returned.
+
+    Args:
+        output_data          : {full_prefixed_path: value}
+        dest_path_to_resource: {full_prefixed_path: resource_type}
+
+    Returns:
+        FHIR-compliant dict (single resource or Bundle).
+    """
+    # Group paths by resource type
+    resources: dict[str, dict] = {}
+
+    for path, value in output_data.items():
+        resource_type = dest_path_to_resource.get(path)
+        if not resource_type: # if no resource_type then continue to the next resource
+            continue
+
+        if resource_type not in resources: # if the resource is not present then only make a resource.
+            resources[resource_type] = {"resourceType": resource_type}
+
+        # Strip "ResourceType-" prefix, then tokenise
+        suffix = path.split("-", 1)[1] if "-" in path else path # the 1 in the .split() means that max_split = 1
+
+        # Split path by dots and brackets [ ]
+        # "name[0].family" -> ["name", "0", "", "family"]
+        #  "gender" -> ["gender"]
+        keys = [k for k in re.split(r"\[|\]|\.", suffix) if k]
+        _set_nested(resources[resource_type], keys, value)
+
+    # Single resource — return it directly
+    if len(resources) == 1:
+        return next(iter(resources.values()))
+
+    # Multiple resources — wrap in a Bundle
+    return {
+        "resourceType": "Bundle",
+        "id": str(uuid4()),
+        "type": "message",
+        "entry": [
+            {
+                "resource": res,
+            }
+            for res in resources.values()
+        ],
+    }
+
+# async def build_fhir_json(output_data, dest_path_to_resource):
+#     resources = {}
+
+#     for path, value in output_data.items():
+#         resource = dest_path_to_resource[path]
+
+#         resources.setdefault(resource, {})
+#         resources[resource][path] = value
+    
+#     return resources
+
 if __name__ == "__main__":
     # Usage Example:
 
-    incoming_msg = {
-        "resourceType": "Patient",
-        "id": "example",
-        "active": True,
-        "name": [{"family": "Doe", "given": ["John"]}]
+    patient_registration = {
+        "resourceType": "Bundle",
+        "type": "message",
+        "entry": [
+            { 
+                "resource": {
+                    "resourceType": "Patient",
+                    "identifier": [
+                        { "type": { "coding": [{ "code": "MR" }]}, "value": "23" },
+                        { "type": { "coding": [{ "code": "NI" }]}, "value": "37201-23123123"}
+                    ],
+                    "name": [{ "text": "Muhammad Saad" }],
+                    "gender": "male",
+                    "birthDate": "2004-10-06",
+                    "address": [{ "text": "123 street, city, country" }],
+                    "telecom" : [{
+                        "value" : "+33 (237) 998327"
+                    }]
+                }
+            },
+            {
+                "resource": {
+                    "resourceType": "Coverage",
+                    "id": "COV001",  # Required by FHIR spec
+                    "identifier": [
+                        {
+                            "value": "COV-2024-001"  # Primary key from EHR
+                        }
+                    ],
+                    "status": "active",
+                    "type": {
+                        "text": "Silver"
+                    },
+                    "beneficiary": {
+                        "reference": "Patient/23"
+                    },
+                    "payor": [
+                        {
+                            "reference": "Organization/insurance-company-001"
+                        }
+                    ]
+                }
+            }
+        ]
     }
 
-    is_valid, message = validate_unknown_fhir_resource(incoming_msg)
+    encounter = {
+        "resourceType": "Encounter",
+        "id": "ENC00123",  # Logical ID - use to reference this encounter
+        "identifier": [
+            {
+                "value": "ENC-2024-12345"  # Primary key from EHR - send to PHR
+            }
+        ],
+        "status": "in-progress",
+        "class": {
+            "code": "AMB"  # AMB=Ambulatory, IMP=Inpatient, EMER=Emergency, VR=Virtual
+        },
+        # 1. ENCOUNTER TITLE
+        "type": [
+            {
+                "text": "General Consultation"
+            }
+        ],
+        # 2. PATIENT COMPLAINT
+        "reasonCode": [
+            {
+                "text": "Patient experiencing severe headache and dizziness"
+            }
+        ],
+        # 3. DIAGNOSIS - display field shows the disease name (no separate Condition resource needed)
+        "diagnosis": [
+            {
+                "condition": {
+                    "display": "Migraine"  # display shows the disease name
+                }
+            }
+        ],
+        # 4. CONSULTATION NOTES
+        "extension": [{
+                "url": "http://example.org/fhir/StructureDefinition/encounter-consultation-notes",
+                "valueString": "Patient responded well to medication. Follow-up advised in 2 weeks."
+            }
+        ]
+    }
+
+    is_valid, message = validate_unknown_fhir_resource(patient_registration)
     print(message)

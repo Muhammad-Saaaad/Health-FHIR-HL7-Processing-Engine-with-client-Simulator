@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from schemas.endpoint import AddEndpoint
 import models
 from database import get_db
+from validation.mappings import FHIR_EXACT_CANONICAL, FHIR_PATTERN_CANONICAL, HL7_EXACT_CANONICAL
 from validation.fhir_validation import validate_unknown_fhir_resource, fhir_extract_paths
 from validation.hl7_validation import hl7_extract_paths
 
@@ -30,35 +31,35 @@ if not logger.handlers:
     rotating_file_handler.setFormatter(formater)
     logger.addHandler(rotating_file_handler)
 
-canonical_paths = {
-    # FHIR — Patient resource  (prefix = "Patient-")
-    "Patient-identifier[0].value": "mpi",
-    "Patient-name[0].text": "fullname",
-    "Patient-name[0].given": "given name",
-    "Patient-name[0].family[0]": "family name",
-    "Patient-gender": "gender",
-    "Patient-birthDate": "birth date",
-    "Patient-telecom[0].value": "phone number",
-    "Patient-address[0].text": "address",
+# canonical_paths = {
+#     # FHIR — Patient resource  (prefix = "Patient-")
+#     "Patient-identifier[0].value": "mpi",
+#     "Patient-name[0].text": "fullname",
+#     "Patient-name[0].given": "given name",
+#     "Patient-name[0].family[0]": "family name",
+#     "Patient-gender": "gender",
+#     "Patient-birthDate": "birth date",
+#     "Patient-telecom[0].value": "phone number",
+#     "Patient-address[0].text": "address",
 
-    # FHIR — Coverage resource  (prefix = "Coverage-")
-    "Coverage-identifier[0].value": "policy number",
-    "Coverage-type.coding[0].code": "plan type",
+#     # FHIR — Coverage resource  (prefix = "Coverage-")
+#     "Coverage-identifier[0].value": "policy number",
+#     "Coverage-type.coding[0].code": "plan type",
 
-    # HL7 — PID segment
-    "PID-3": "mpi",
-    "PID-5": "fullname",
-    "PID-5.1": "family name",
-    "PID-5.2": "given name",
-    "PID-7": "birth date",
-    "PID-8": "gender",
-    "PID-11": "address",
-    "PID-13": "phone number",
+#     # HL7 — PID segment
+#     "PID-3": "mpi",
+#     "PID-5": "fullname",
+#     "PID-5.1": "family name",
+#     "PID-5.2": "given name",
+#     "PID-7": "birth date",
+#     "PID-8": "gender",
+#     "PID-11": "address",
+#     "PID-13": "phone number",
 
-    # HL7 — IN1 segment
-    "IN1-2": "policy number",
-    "IN1-15": "plan type"
-}
+#     # HL7 — IN1 segment
+#     "IN1-2": "policy number",
+#     "IN1-15": "plan type"
+# }
 
 @router.get("/server-endpoint/{server_id}", status_code=status.HTTP_200_OK)
 def server_endpoint(server_id: int, db:Session = Depends(get_db)):
@@ -156,7 +157,7 @@ def add_endpoint(endpoint: AddEndpoint, db: Session = Depends(get_db)):
         if endpoint.server_protocol == "FHIR":
             is_valid, message = validate_unknown_fhir_resource(endpoint.sample_msg)
             if not is_valid:
-                logger.error("Invalid FHIR sample message: ",message)
+                logger.error(f"Invalid FHIR sample message: {message}")
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=message)
             
             add_fhir_endpoint_fields(
@@ -253,12 +254,11 @@ def add_fhir_endpoint_fields(endpoint_id: int, sample_msg: str,  db: Session) ->
             endpoint_fields = {}
             for path in paths:
 
-                if path in canonical_paths: # if multiple fields map to same name the previous ones are overwritten
-                    name = canonical_paths[path]
-                    endpoint_fields[name] = path
-                    logger.info(f"Mapped field {name} to path {path}")
-                else:
-                    logger.warning(f"No canonical mapping found for path {path}, skipping.")
+                name = resolve_canonical_name(full_path=path)
+                if not name:
+                    continue
+                endpoint_fields[name] = path
+                logger.info(f"Mapped field {name} to path {path}")
             
             new_fields = []
             for name, path in endpoint_fields.items():
@@ -308,13 +308,13 @@ def add_hl7_endpoint_fields(endpoint_id: int, sample_msg: str,  db: Session) -> 
             segment_type, paths = hl7_extract_paths(segment)
             endpoint_fields = {}
             for path in paths:
-                if path in canonical_paths:
-                    name = canonical_paths[path]
-                    endpoint_fields[name] = path
-                    logger.info(f"Mapped field {name} to path {path}")
-                else:
-                    logger.warning(f"No canonical mapping found for path {path}, skipping.")
-            
+                    
+                name = resolve_canonical_name(full_path=path)
+                if not name:
+                    continue
+                endpoint_fields[name] = path
+                logger.info(f"Mapped field {name} to path {path}")
+               
             new_fields = []
             for name, path in endpoint_fields.items():
                 field = models.EndpointFileds(
@@ -331,3 +331,33 @@ def add_hl7_endpoint_fields(endpoint_id: int, sample_msg: str,  db: Session) -> 
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
+
+def resolve_canonical_name(full_path: str) -> str | None:
+    """
+    Resolve a full prefixed path to a canonical name using two layers:
+
+    Layer 1 — Exact match in FHIR_EXACT_CANONICAL or HL7_EXACT_CANONICAL.
+    Layer 2 — Suffix pattern match in FHIR_PATTERN_CANONICAL (FHIR only).
+
+    Args:
+        full_path: e.g. "Patient-name[0].family"  or  "PID-5.1"
+
+    Returns:
+        Canonical name string, or None if no mapping found.
+    """
+    # ── Layer 1: exact match ─────────────────────────────────────────────────
+    if full_path in FHIR_EXACT_CANONICAL:
+        return FHIR_EXACT_CANONICAL[full_path]
+
+    if full_path in HL7_EXACT_CANONICAL:
+        return HL7_EXACT_CANONICAL[full_path]
+
+    # ── Layer 2: FHIR suffix pattern ─────────────────────────────────────────
+    if "-" in full_path:
+        resource_type, suffix = full_path.split("-", 1)
+        for pattern, name_template in FHIR_PATTERN_CANONICAL:
+            if suffix == pattern:
+                return name_template.replace("{resource}", resource_type.lower())
+
+    logger.warning(f"No canonical mapping found for path {full_path}, skipping.")
+    return None  # truly unknown — caller decides whether to skip or store raw

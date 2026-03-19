@@ -64,3 +64,123 @@
 2026-03-08 06:49:06,902- WARNING - [endpoint.py:325] - No canonical mapping found for path IN1-1, skipping.
 2026-03-08 06:49:06,903- INFO - [endpoint.py:323] - Mapped field policy number to path IN1-2
 2026-03-08 06:49:06,903- INFO - [endpoint.py:323] - Mapped field plan type to path IN1-15
+2026-03-15 12:44:21,985- WARNING - [endpoint.py:261] - No canonical mapping found for path Patient-identifier[0].type.coding[0].code, skipping.
+2026-03-15 12:44:21,987- INFO - [endpoint.py:259] - Mapped field mpi to path Patient-identifier[0].value
+2026-03-15 12:44:21,989- WARNING - [endpoint.py:261] - No canonical mapping found for path Patient-identifier[1].type.coding[0].code, skipping.
+2026-03-15 12:44:21,989- WARNING - [endpoint.py:261] - No canonical mapping found for path Patient-identifier[1].value, skipping.
+2026-03-15 12:44:21,991- INFO - [endpoint.py:259] - Mapped field fullname to path Patient-name[0].text
+2026-03-15 12:44:21,993- INFO - [endpoint.py:259] - Mapped field gender to path Patient-gender
+2026-03-15 12:44:21,993- INFO - [endpoint.py:259] - Mapped field birth date to path Patient-birthDate
+2026-03-15 12:44:21,993- INFO - [endpoint.py:259] - Mapped field address to path Patient-address[0].text
+2026-03-15 12:44:21,993- INFO - [endpoint.py:259] - Mapped field phone number to path Patient-telecom[0].value
+2026-03-15 12:44:22,017- INFO - [endpoint.py:275] - All Endpoint field paths are added for endpoint id: 69
+2026-03-15 12:44:22,017- INFO - [endpoint.py:166] - FHIR endpoint fields added sucessfully
+2026-03-15 13:22:47,524- INFO - [endpoint.py:262] - Mapped field mpi_type to path Patient-identifier[0].type.coding[0].code
+2026-03-15 13:22:47,524- INFO - [endpoint.py:262] - Mapped field mpi to path Patient-identifier[0].value
+2026-03-15 13:22:47,530- INFO - [endpoint.py:262] - Mapped field nic_type to path Patient-identifier[1].type.coding[0].code
+2026-03-15 13:22:47,532- INFO - [endpoint.py:262] - Mapped field nic to path Patient-identifier[1].value
+2026-03-15 13:22:47,532- INFO - [endpoint.py:262] - Mapped field fullname to path Patient-name[0].text
+2026-03-15 13:22:47,532- INFO - [endpoint.py:262] - Mapped field gender to path Patient-gender
+2026-03-15 13:22:47,532- INFO - [endpoint.py:262] - Mapped field birth_date to path Patient-birthDate
+2026-03-15 13:22:47,534- INFO - [endpoint.py:262] - Mapped field address to path Patient-address[0].text
+2026-03-15 13:22:47,536- INFO - [endpoint.py:262] - Mapped field phone to path Patient-telecom[0].value
+2026-03-15 13:22:47,555- INFO - [endpoint.py:276] - All Endpoint field paths are added for endpoint id: 76
+2026-03-15 13:22:47,555- INFO - [endpoint.py:168] - FHIR endpoint fields added sucessfully
+2026-03-17 16:01:15,362- ERROR - [endpoint.py:160] - Invalid FHIR sample message: Validation Failed: [
+  {
+    "type": "string_type",
+    "loc": [
+      "entry",
+      0,
+      "resource",
+      "identifier",
+      0,
+      "value"
+    ],
+    "msg": "Input should be a valid string",
+    "input": 23,
+    "url": "https://errors.pydantic.dev/2.12/v/string_type"
+  },
+  {
+    "type": "string_type",
+    "loc": [
+      "entry",
+      0,
+      "resource",
+      "name",
+      0,
+      "family"
+    ],
+    "msg": "Input should be a valid string",
+    "input": [
+      "saad"
+    ],
+    "url": "https://errors.pydantic.dev/2.12/v/string_type"
+  },
+  {
+    "type": "missing",
+    "loc": [
+      "entry",
+      1,
+      "resource",
+      "beneficiary"
+    ],
+    "msg": "Field required",
+    "input": {
+      "identifier": [
+        {
+          "value": 12
+        }
+      ],
+      "type": {
+        "coding": [
+          {
+            "code": "Silver"
+          }
+        ]
+      }
+    },
+    "url": "https://errors.pydantic.dev/2.12/v/missing"
+  },
+  {
+    "type": "string_type",
+    "loc": [
+      "entry",
+      1,
+      "resource",
+      "identifier",
+      0,
+      "value"
+    ],
+    "msg": "Input should be a valid string",
+    "input": 12,
+    "url": "https://errors.pydantic.dev/2.12/v/string_type"
+  }
+]
+2026-03-17 16:04:36,379- ERROR - [endpoint.py:160] - Invalid FHIR sample message: Validation Failed: [
+  {
+    "type": "missing",
+    "loc": [
+      "entry",
+      1,
+      "resource",
+      "beneficiary"
+    ],
+    "msg": "Field required",
+    "input": {
+      "identifier": [
+        {
+          "value": "12"
+        }
+      ],
+      "type": {
+        "coding": [
+          {
+            "code": "Silver"
+          }
+        ]
+      }
+    },
+    "url": "https://errors.pydantic.dev/2.12/v/missing"
+  }
+]

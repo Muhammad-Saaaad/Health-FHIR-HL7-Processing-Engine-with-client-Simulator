@@ -66,7 +66,7 @@ Sample Message:
 {
   "resourceType": "Patient",
   "identifier": [
-        { "type": { "coding": [{ "code": "MR" }]}, "value": 23 },
+        { "type": { "coding": [{ "code": "MR" }]}, "value": "23" },
         { "type": { "coding": [{ "code": "NI" }]}, "value": "37201-23123123"}
     ],
   "name": [{"text": "Muhammad Saad"}],

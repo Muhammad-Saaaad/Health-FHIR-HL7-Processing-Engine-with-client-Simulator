@@ -22,7 +22,7 @@ app.add_middleware(
     allow_headers=["*"],
     allow_methods=["*"]
 )
-model.Base.metadata.create_all(bind=engine)
+model.Base.metadata.create_all(bind=engine) # once you run the server, then you should comment this, so this won't do issue with testing.
 
 app.include_router(authentication.router)
 app.include_router(lab.router)

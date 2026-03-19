@@ -1,7 +1,6 @@
 import asyncio
 from datetime import datetime
 import logging
-import uuid
 
 from contextlib import asynccontextmanager
 import httpx
@@ -10,7 +9,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from api import server, route, endpoint
 from validation.fhir_validation import validate_unknown_fhir_resource, get_fhir_value_by_path, fhir_extract_paths
+from validation.fhir_validation import build_fhir_message
 from validation.hl7_validation import get_hl7_value_by_path, hl7_extract_paths
+from validation.hl7_validation import build_hl7_message
 from database import engine, session_local
 import models
 
@@ -247,10 +248,10 @@ async def route_worker(route):
 
                 # BUILD MESSAGE
                 if dest_server.protocol == "FHIR":
-                    msg = await build_fhir_json(output_data, dest_path_to_resource) # make a fhir message with the data
+                    msg = build_fhir_message(output_data, dest_path_to_resource) # make a fhir message with the data
 
                 else:
-                    msg = await build_hl7_message(output_data=output_data, src=src_server.name,
+                    msg = build_hl7_message(output_data=output_data, src=src_server.name,
                                                    dest=dest_server.name, msg_type=route.msg_type)
 
                 # DELIVER — resolve the future so ingest() knows the result
@@ -412,51 +413,6 @@ async def ingest(full_path: str, req: Request):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
 
 
-async def build_hl7_message(output_data, src, dest, msg_type):
-    segments = {}
-    date = datetime.now()
-    dt = datetime.strptime(str(date), "%Y-%m-%d %H:%M:%S.%f")
-    date = dt.strftime("%Y%m%d%H%M%S")
-
-    header = f"MSH|^~\&|{src}||{dest}||{date}||{msg_type}|MSG{str(uuid.uuid4())}|P|2.5"
-    for path, value in output_data.items():
-        # example: PID-5.1
-        segment = path.split("-")[0]
-        field = int(path.split("-")[1].split(".")[0])
-        comp = int(path.split(".")[1]) if "." in path else None
-
-        segments.setdefault(segment, [])
-
-        while len(segments[segment]) < field:
-            segments[segment].append("")
-
-        if comp:
-            comps = segments[segment][field-1].split("^")
-            while len(comps) < comp:
-                comps.append("")
-            comps[comp-1] = str(value)
-            segments[segment][field-1] = "^".join(comps)
-        else:
-            segments[segment][field-1] = str(value)
-
-    msg = ""
-    for seg, fields in segments.items():
-        msg += seg + "|" + "|".join(fields) + "\n"
-    msg = header+"\n"+msg
-    return msg
-
-async def build_fhir_json(output_data, dest_path_to_resource):
-    resources = {}
-
-    for path, value in output_data.items():
-        resource = dest_path_to_resource[path]
-
-        resources.setdefault(resource, {})
-        resources[resource][path] = value
-    
-    return resources
-
 if "__main__" == __name__:
     import uvicorn
     uvicorn.run("main:app", port=9000, reload=True, host="0.0.0.0")
-    
