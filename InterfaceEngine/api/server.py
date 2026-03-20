@@ -52,13 +52,32 @@ async def add_server(server: AddUpdateServer, db: Session = Depends(get_db)):
         if not await server_health_check(client, server.ip, server.port):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Server is not reachable or unhealthy")
 
+    config = {
+        "date_format": "%Y-%m-%d",
+        "name_style": "split",
+        "gender_code": {"male": "male", "female": "female"},
+        "status_code": {
+            "active": "active", "inactive": "inactive",
+            "final": "final", "pending": "pending"
+        },
+        "boolean": {"true": "true", "false": "false"}
+    }
+
+    if server.protocol != "FHIR":
+        config["date_format"] = "%Y%m%d"
+        config["name_style"] = "full"
+        config["gender_code"] = {"male": "M", "female": "F"}
+        config["status_code"] = {"active": "A", "inactive": "I", "final": "F", "pending": "P" }
+        config["boolean"] = {"true": "Y", "false": "N"}
+
     try:
         new_server = models.Server(
             name=server.name,
             ip=server.ip,
             port=server.port,
             protocol=server.protocol,
-            status ="Active"
+            status ="Active",
+            profile=config
         )
         db.add(new_server)
         db.commit()

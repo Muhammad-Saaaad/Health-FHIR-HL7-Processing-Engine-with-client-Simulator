@@ -1,6 +1,7 @@
 import asyncio
 from datetime import datetime
 import logging
+import os
 
 from contextlib import asynccontextmanager
 import httpx
@@ -15,8 +16,10 @@ from validation.hl7_validation import build_hl7_message
 from database import engine, session_local
 import models
 
+os.makedirs("logs", exist_ok=True)
+
 logging.basicConfig(
-    filename="message.log",
+    filename="logs/message.log",
     level=logging.INFO,
     format= "%(asctime)s - %(levelname)s - %(message)s"
 )

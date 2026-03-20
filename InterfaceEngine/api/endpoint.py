@@ -1,5 +1,3 @@
-import os
-import re
 import logging
 from logging.handlers import RotatingFileHandler
 
@@ -15,8 +13,6 @@ from validation.hl7_validation import hl7_extract_paths
 
 router = APIRouter(tags=["Endpoint"])
 
-os.makedirs("logs", exist_ok=True)
-
 logger = logging.getLogger("mapping_logger")
 logger.setLevel(logging.INFO)
 
@@ -30,36 +26,6 @@ if not logger.handlers:
     )
     rotating_file_handler.setFormatter(formater)
     logger.addHandler(rotating_file_handler)
-
-# canonical_paths = {
-#     # FHIR — Patient resource  (prefix = "Patient-")
-#     "Patient-identifier[0].value": "mpi",
-#     "Patient-name[0].text": "fullname",
-#     "Patient-name[0].given": "given name",
-#     "Patient-name[0].family[0]": "family name",
-#     "Patient-gender": "gender",
-#     "Patient-birthDate": "birth date",
-#     "Patient-telecom[0].value": "phone number",
-#     "Patient-address[0].text": "address",
-
-#     # FHIR — Coverage resource  (prefix = "Coverage-")
-#     "Coverage-identifier[0].value": "policy number",
-#     "Coverage-type.coding[0].code": "plan type",
-
-#     # HL7 — PID segment
-#     "PID-3": "mpi",
-#     "PID-5": "fullname",
-#     "PID-5.1": "family name",
-#     "PID-5.2": "given name",
-#     "PID-7": "birth date",
-#     "PID-8": "gender",
-#     "PID-11": "address",
-#     "PID-13": "phone number",
-
-#     # HL7 — IN1 segment
-#     "IN1-2": "policy number",
-#     "IN1-15": "plan type"
-# }
 
 @router.get("/server-endpoint/{server_id}", status_code=status.HTTP_200_OK)
 def server_endpoint(server_id: int, db:Session = Depends(get_db)):
@@ -92,7 +58,7 @@ def server_endpoint(server_id: int, db:Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
 
 @router.post("/add-endpoint", status_code=status.HTTP_201_CREATED)
-def add_endpoint(endpoint: AddEndpoint, db: Session = Depends(get_db)):
+async def add_endpoint(endpoint: AddEndpoint, db: Session = Depends(get_db)):
     """
     Register a new endpoint for a server and auto-extract its field mappings from a sample message.
 
@@ -155,14 +121,15 @@ def add_endpoint(endpoint: AddEndpoint, db: Session = Depends(get_db)):
         db.flush()
 
         if endpoint.server_protocol == "FHIR":
-            is_valid, message = validate_unknown_fhir_resource(endpoint.sample_msg)
+            sample_msg = endpoint.sample_msg
+            is_valid, message = validate_unknown_fhir_resource(sample_msg)
             if not is_valid:
                 logger.error(f"Invalid FHIR sample message: {message}")
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=message)
             
             add_fhir_endpoint_fields(
                 endpoint_id=new_endpoint.endpoint_id,
-                sample_msg=endpoint.sample_msg, db=db
+                sample_msg=sample_msg, db=db
             )
             logger.info("FHIR endpoint fields added sucessfully")
         else: # if not FHIR then it should be HL7
@@ -248,8 +215,8 @@ def add_fhir_endpoint_fields(endpoint_id: int, sample_msg: str,  db: Session) ->
                 resource_type = entry['resource']['resourceType']
                 raw_paths = fhir_extract_paths(entry['resource'])
                 # Prefix with resource type for the same reason as above.
-                paths = [f"{resource_type}-{p}" for p in raw_paths]
-        
+                paths.extend([f"{resource_type}-{p}" for p in raw_paths]
+        )
         if len(paths) > 0:
             endpoint_fields = {}
             for path in paths:
@@ -264,7 +231,7 @@ def add_fhir_endpoint_fields(endpoint_id: int, sample_msg: str,  db: Session) ->
             for name, path in endpoint_fields.items():
                 field = models.EndpointFileds(
                     endpoint_id=endpoint_id,
-                    resource=resource_type,
+                    resource=path.split("-")[0].strip(), # resource type is the prefix before the first dash
                     path=path,
                     name=name
                 )

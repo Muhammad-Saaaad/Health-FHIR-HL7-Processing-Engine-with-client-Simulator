@@ -85,11 +85,11 @@ def hl7_extract_paths(segment) -> tuple[str, list[str]]:
 # PID|1||23||saad^Muhammad&ali||20041006|M|||||
 # IN1|1|12|||||||||||||Silver
 # """
-# test1 = """
-# MSH|^~\\&|EHR||payer||20260203120000||ADT^A01|MSG00001|P|2.5
-# PID|1||23||saad^Muhammad||20041006|M|||||
-# IN1|1|12|||||||||||||Silver
-# """
+test1 = """
+MSH|^~\\&|EHR||payer||20260203120000||ADT^A01|MSG00001|P|2.5
+PID|1||23||saad^Muhammad||20041006|M|||||
+IN1|||||||||||||||Silver|||||||||||||||||||||||||||||||||||||9
+"""
 import re
 
 def get_hl7_value_by_path(hl7_message, paths) -> dict: 

@@ -184,3 +184,49 @@
     "url": "https://errors.pydantic.dev/2.12/v/missing"
   }
 ]
+2026-03-20 16:40:29,056- INFO - [endpoint.py:239] - Mapped field patient_member_number to path Coverage-identifier[0].value
+2026-03-20 16:40:29,056- INFO - [endpoint.py:239] - Mapped field coverage_status to path Coverage-status
+2026-03-20 16:40:29,057- INFO - [endpoint.py:239] - Mapped field coverage_type_text to path Coverage-type.text
+2026-03-20 16:40:29,057- INFO - [endpoint.py:239] - Mapped field coverage_patient to path Coverage-beneficiary.reference
+2026-03-20 16:40:29,058- INFO - [endpoint.py:239] - Mapped field insurance_company_id to path Coverage-payor[0].reference
+2026-03-20 16:40:29,081- INFO - [endpoint.py:253] - All Endpoint field paths are added for endpoint id: 105
+2026-03-20 16:40:29,082- INFO - [endpoint.py:145] - FHIR endpoint fields added sucessfully
+2026-03-20 17:22:31,173- INFO - [endpoint.py:231] - Mapped field patient_member_number to path Coverage-identifier[0].value
+2026-03-20 17:22:31,181- INFO - [endpoint.py:231] - Mapped field coverage_status to path Coverage-status
+2026-03-20 17:22:31,183- INFO - [endpoint.py:231] - Mapped field coverage_type_text to path Coverage-type.text
+2026-03-20 17:22:31,183- INFO - [endpoint.py:231] - Mapped field coverage_patient to path Coverage-beneficiary.reference
+2026-03-20 17:22:31,185- INFO - [endpoint.py:231] - Mapped field insurance_company_id to path Coverage-payor[0].reference
+2026-03-20 17:22:31,239- INFO - [endpoint.py:245] - All Endpoint field paths are added for endpoint id: 106
+2026-03-20 17:22:31,241- INFO - [endpoint.py:137] - FHIR endpoint fields added sucessfully
+2026-03-20 17:28:23,826- INFO - [endpoint.py:231] - Mapped field mpi_type to path Patient-identifier[0].type.coding[0].code
+2026-03-20 17:28:23,827- INFO - [endpoint.py:231] - Mapped field mpi to path Patient-identifier[0].value
+2026-03-20 17:28:23,827- INFO - [endpoint.py:231] - Mapped field nic_type to path Patient-identifier[1].type.coding[0].code
+2026-03-20 17:28:23,828- INFO - [endpoint.py:231] - Mapped field nic to path Patient-identifier[1].value
+2026-03-20 17:28:23,828- INFO - [endpoint.py:231] - Mapped field fullname to path Patient-name[0].text
+2026-03-20 17:28:23,828- INFO - [endpoint.py:231] - Mapped field gender to path Patient-gender
+2026-03-20 17:28:23,829- INFO - [endpoint.py:231] - Mapped field birth_date to path Patient-birthDate
+2026-03-20 17:28:23,830- INFO - [endpoint.py:231] - Mapped field address to path Patient-address[0].text
+2026-03-20 17:28:23,830- INFO - [endpoint.py:231] - Mapped field phone to path Patient-telecom[0].value
+2026-03-20 17:28:23,830- INFO - [endpoint.py:231] - Mapped field patient_member_number to path Coverage-identifier[0].value
+2026-03-20 17:28:23,831- INFO - [endpoint.py:231] - Mapped field coverage_status to path Coverage-status
+2026-03-20 17:28:23,831- INFO - [endpoint.py:231] - Mapped field coverage_type_text to path Coverage-type.text
+2026-03-20 17:28:23,832- INFO - [endpoint.py:231] - Mapped field coverage_patient to path Coverage-beneficiary.reference
+2026-03-20 17:28:23,832- INFO - [endpoint.py:231] - Mapped field insurance_company_id to path Coverage-payor[0].reference
+2026-03-20 17:28:23,847- INFO - [endpoint.py:245] - All Endpoint field paths are added for endpoint id: 107
+2026-03-20 17:28:23,847- INFO - [endpoint.py:137] - FHIR endpoint fields added sucessfully
+2026-03-20 17:47:01,836- INFO - [endpoint.py:231] - Mapped field mpi_type to path Patient-identifier[0].type.coding[0].code
+2026-03-20 17:47:01,836- INFO - [endpoint.py:231] - Mapped field mpi to path Patient-identifier[0].value
+2026-03-20 17:47:01,837- INFO - [endpoint.py:231] - Mapped field nic_type to path Patient-identifier[1].type.coding[0].code
+2026-03-20 17:47:01,838- INFO - [endpoint.py:231] - Mapped field nic to path Patient-identifier[1].value
+2026-03-20 17:47:01,838- INFO - [endpoint.py:231] - Mapped field fullname to path Patient-name[0].text
+2026-03-20 17:47:01,838- INFO - [endpoint.py:231] - Mapped field gender to path Patient-gender
+2026-03-20 17:47:01,839- INFO - [endpoint.py:231] - Mapped field birth_date to path Patient-birthDate
+2026-03-20 17:47:01,839- INFO - [endpoint.py:231] - Mapped field address to path Patient-address[0].text
+2026-03-20 17:47:01,840- INFO - [endpoint.py:231] - Mapped field phone to path Patient-telecom[0].value
+2026-03-20 17:47:01,840- INFO - [endpoint.py:231] - Mapped field patient_member_number to path Coverage-identifier[0].value
+2026-03-20 17:47:01,840- INFO - [endpoint.py:231] - Mapped field coverage_status to path Coverage-status
+2026-03-20 17:47:01,841- INFO - [endpoint.py:231] - Mapped field coverage_type_text to path Coverage-type.text
+2026-03-20 17:47:01,842- INFO - [endpoint.py:231] - Mapped field coverage_patient to path Coverage-beneficiary.reference
+2026-03-20 17:47:01,842- INFO - [endpoint.py:231] - Mapped field insurance_company_id to path Coverage-payor[0].reference
+2026-03-20 17:47:01,857- INFO - [endpoint.py:246] - All Endpoint field paths are added for endpoint id: 110
+2026-03-20 17:47:01,857- INFO - [endpoint.py:137] - FHIR endpoint fields added sucessfully

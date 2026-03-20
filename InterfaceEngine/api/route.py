@@ -1,3 +1,6 @@
+import logging
+from logging.handlers import RotatingFileHandler
+
 from fastapi import APIRouter, status, HTTPException, Depends
 from sqlalchemy.orm import Session
 
@@ -6,6 +9,14 @@ import models
 from database import get_db
 
 router = APIRouter(tags=["Route"])
+
+logger = logging.getLogger("route_logger")
+logger.setLevel(logging.INFO)
+
+handler = RotatingFileHandler("logs/route.log", maxBytes=1000000, backupCount=5)
+handler.setFormatter(logging.Formatter("%(asctime)s- %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s"))
+logger.addHandler(handler)
+
 
 @router.get("/all-routes", status_code=status.HTTP_200_OK, response_model=list[GetRoute])
 def all_routes(db: Session = Depends(get_db)):
@@ -41,6 +52,8 @@ def all_routes(db: Session = Depends(get_db)):
     **Error Responses:**
     - `400 Bad Request`: Unexpected database error
     """
+    logger.info("All routes request received")
+
     try:
         routes = db.query(models.Route).all()
         response = [
@@ -54,8 +67,10 @@ def all_routes(db: Session = Depends(get_db)):
                 "msg_type": route.msg_type
             } for route in routes
         ]
+        logger.info(f"All routes fetched successfully: total_routes={len(response)}")
         return response
     except Exception as e:
+        logger.error(f"Error retrieving routes: {str(e)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
 
 @router.get("/mapping_rules/{route_id}", status_code=status.HTTP_200_OK)
@@ -114,8 +129,10 @@ def get_rules(route_id: int, db: Session = Depends(get_db)):
     - `404 Not Found`: No route exists with the given `route_id`
     - `400 Bad Request`: Unexpected database error
     """
+    logger.info(f"Mapping rules request received for route_id={route_id}")
 
     if not db.get(models.Route, route_id):
+        logger.warning(f"Route id {route_id} not found when fetching mapping rules")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Route id {route_id} does not exists")
 
     try:
@@ -229,9 +246,13 @@ def get_rules(route_id: int, db: Session = Depends(get_db)):
 
         mapping_data.extend(split_data)
         mapping_data.extend(concat_data)
+        logger.info(
+            f"Mapping rules fetched successfully for route_id={route_id}: total_rules={len(mapping_data)}"
+        )
         return mapping_data
 
     except Exception as exp:
+        logger.error(f"Error retrieving mapping rules for route id {route_id}: {str(exp)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
 
 
@@ -291,23 +312,37 @@ def add_route(data: AddRoute, db: Session = Depends(get_db)):
     - `403 Forbidden`: A single rule has both multiple src_paths and multiple dest_paths
     - `400 Bad Request`: Invalid transform type, or unexpected database error
     """
+    logger.info(
+        f"Add route request received: name={data.name}, src_endpoint_id={data.src_endpoint_id}, "
+        f"dest_endpoint_id={data.dest_endpoint_id}, msg_type={data.msg_type}"
+    )
+
     if db.query(models.Route).filter(models.Route.name == data.name).first():
+        logger.warning(f"Add route rejected: duplicate route name '{data.name}'")
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Route name already exists")
     
     if db.query(models.Route).filter(models.Route.src_endpoint_id == data.src_endpoint_id, 
                                         models.Route.dest_endpoint_id == data.dest_endpoint_id).first():
+        logger.warning(
+            f"Add route rejected: duplicate src/dest endpoint pair "
+            f"src_endpoint_id={data.src_endpoint_id}, dest_endpoint_id={data.dest_endpoint_id}"
+        )
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="This same route with different name already exists")
     
     if not db.get(models.Server, data.src_server_id):
+        logger.warning(f"Add route rejected: src server id {data.src_server_id} not found")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="src server id not found")
     
     if not db.get(models.Server, data.dest_server_id):
+        logger.warning(f"Add route rejected: dest server id {data.dest_server_id} not found")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="dest server id not found")
             
     if not db.get(models.Endpoints, data.src_endpoint_id):
+        logger.warning(f"Add route rejected: src endpoint id {data.src_endpoint_id} not found")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="src endpoint id not found")
     
     if not db.get(models.Endpoints, data.dest_endpoint_id):
+        logger.warning(f"Add route rejected: dest endpoint id {data.dest_endpoint_id} not found")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="dest endpoint id not found")
         
     try:
@@ -323,14 +358,20 @@ def add_route(data: AddRoute, db: Session = Depends(get_db)):
         db.add(route)
         db.flush()
         db.refresh(route)
+        logger.info(f"Route created and flushed successfully with route_id={route.route_id}")
     except Exception as exp:
         db.rollback()
+        logger.error(f"Add route failed while creating route header: {str(exp)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
     
     # Takes the mapping part of the data.
     for rule in data.rules['mappings']:
         if len(rule['src_paths']) > 1 and len(rule['dest_paths']) > 1: # if there are multiple src and destination mapping
             db.rollback()
+            logger.warning(
+                f"Add route rejected: invalid mapping rule has multiple source and destination fields "
+                f"for route_id={route.route_id}"
+            )
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="cannot give 2 src and destination in a single rule")
         
         rules = []
@@ -365,10 +406,16 @@ def add_route(data: AddRoute, db: Session = Depends(get_db)):
         
         else:
             db.rollback()
+            logger.warning(
+                f"Add route rejected: invalid transform type '{rule['transform']}' for route_id={route.route_id}"
+            )
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='transform type not valid')
 
         db.add_all(rules)
     db.commit() # this is added outside the loop so all the mapping_rules are added permentlly at the same time.
+    logger.info(
+        f"Add route completed successfully: route_id={route.route_id}, total_mapping_rules={len(data.rules['mappings'])}"
+    )
     return {"message": "Sucessfully done"}
 
 @router.delete("/delete-route/{route_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -386,14 +433,19 @@ def delete_route(route_id: int, db: Session = Depends(get_db)):
     - `404 Not Found`: No route exists with the given `route_id`
     - `400 Bad Request`: Unexpected database error
     """
+    logger.info(f"Delete route request received: route_id={route_id}")
+
     route = db.get(models.Route, route_id)
     if not route:
+        logger.warning(f"Delete route rejected: route id {route_id} does not exist")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Route id {route_id} does not exists")
     
     try:
         db.query(models.MappingRule).filter(models.MappingRule.route_id == route_id).delete()
         db.delete(route)
         db.commit()
+        logger.info(f"Delete route completed successfully: route_id={route_id}")
     except Exception as exp:
         db.rollback()
+        logger.error(f"Delete route failed for route_id={route_id}: {str(exp)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
