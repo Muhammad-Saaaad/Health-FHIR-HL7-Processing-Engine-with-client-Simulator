@@ -13,7 +13,7 @@ router = APIRouter(tags=["Route"])
 logger = logging.getLogger("route_logger")
 logger.setLevel(logging.INFO)
 
-handler = RotatingFileHandler("logs/route.log", maxBytes=1000000, backupCount=5)
+handler = RotatingFileHandler("logs/route.log", maxBytes=20000, backupCount=1)
 handler.setFormatter(logging.Formatter("%(asctime)s- %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s"))
 logger.addHandler(handler)
 
@@ -277,11 +277,14 @@ def add_route(data: AddRoute, db: Session = Depends(get_db)):
       {
         "mappings": [
           {
-            "src_paths": [<endpoint_field_id>],
-            "dest_paths": [<endpoint_field_id>],
-            "transform": "copy | map | format | split | concat",
-            "config": {}
-          }
+            "src_paths": [<endpoint_field obj>],
+            "dest_paths": [<endpoint_field obj>],
+          },
+          {
+            "src_paths": [<endpoint_field obj>],
+            "dest_paths": [<endpoint_field obj>],
+          },
+          ...
         ]
       }
       ```
@@ -322,7 +325,7 @@ def add_route(data: AddRoute, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Route name already exists")
     
     if db.query(models.Route).filter(models.Route.src_endpoint_id == data.src_endpoint_id, 
-                                        models.Route.dest_endpoint_id == data.dest_endpoint_id).first():
+                                    models.Route.dest_endpoint_id == data.dest_endpoint_id).first():
         logger.warning(
             f"Add route rejected: duplicate src/dest endpoint pair "
             f"src_endpoint_id={data.src_endpoint_id}, dest_endpoint_id={data.dest_endpoint_id}"

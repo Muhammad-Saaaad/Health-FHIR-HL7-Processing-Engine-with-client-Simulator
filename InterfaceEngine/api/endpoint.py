@@ -49,12 +49,14 @@ def server_endpoint(server_id: int, db:Session = Depends(get_db)):
     - `400 Bad Request`: Unexpected database error
     """
     if not db.get(models.Server, server_id):
+        logger.warning(f"Server endpoint list rejected: server id {server_id} does not exist")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"server id {server_id} does not exists")
     try:
         data = db.query(models.Endpoints).filter(models.Endpoints.server_id == server_id).all()
         return data
 
     except Exception as exp:
+        logger.error(f"Server endpoint list failed for server_id={server_id}: {str(exp)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
 
 @router.post("/add-endpoint", status_code=status.HTTP_201_CREATED)
@@ -97,19 +99,29 @@ async def add_endpoint(endpoint: AddEndpoint, db: Session = Depends(get_db)):
     - `400 Bad Request`: URL already exists for this server
     - `400 Bad Request`: Failed to extract fields from the provided sample message
     """
+    logger.info(
+        f"Add endpoint request received: server_id={endpoint.server_id}, url={endpoint.url}, "
+        f"server_protocol={endpoint.server_protocol}"
+    )
+
     if not db.get(models.Server, endpoint.server_id):
+        logger.warning(f"Add endpoint rejected: server id {endpoint.server_id} does not exist")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Server does not exist")
 
     if db.query(models.Endpoints).filter(models.Endpoints.server_id == endpoint.server_id, 
                                             models.Endpoints.url == endpoint.url).first():
-        
+        logger.warning(
+            f"Add endpoint rejected: duplicate URL for server_id={endpoint.server_id}, url={endpoint.url}"
+        )
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="URL already exists")
     
     if endpoint.sample_msg in [None, "", {}]:
+        logger.warning("Add endpoint rejected: sample message is missing")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="Sample message is required to extract endpoint fields")
 
     if endpoint.server_protocol not in ["FHIR", "HL7"]:
+        logger.warning(f"Add endpoint rejected: unsupported server protocol '{endpoint.server_protocol}'")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Server Protocol is not FHIR or HL7")
 
     try:
@@ -119,6 +131,7 @@ async def add_endpoint(endpoint: AddEndpoint, db: Session = Depends(get_db)):
         )
         db.add(new_endpoint)
         db.flush()
+        logger.info(f"Endpoint created and flushed successfully: endpoint_id={new_endpoint.endpoint_id}")
 
         if endpoint.server_protocol == "FHIR":
             sample_msg = endpoint.sample_msg
@@ -131,17 +144,18 @@ async def add_endpoint(endpoint: AddEndpoint, db: Session = Depends(get_db)):
                 endpoint_id=new_endpoint.endpoint_id,
                 sample_msg=sample_msg, db=db
             )
-            logger.info("FHIR endpoint fields added sucessfully")
+            logger.info(f"FHIR endpoint fields added successfully for endpoint_id={new_endpoint.endpoint_id}")
         else: # if not FHIR then it should be HL7
             add_hl7_endpoint_fields(
                 endpoint_id=new_endpoint.endpoint_id,
                 sample_msg=endpoint.sample_msg.strip(), db=db
             )
-            logger.info("Hl7 endpoint fields added sucessfully")
+            logger.info(f"HL7 endpoint fields added successfully for endpoint_id={new_endpoint.endpoint_id}")
         db.commit()
         return {"message": "Endpoint added successfully"}
     except Exception as e:
         db.rollback()
+        logger.error(f"Add endpoint failed for url={endpoint.url}: {str(e)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
 
 
@@ -170,6 +184,7 @@ def endpoint_field_paths(endpoint_id: int, db:Session = Depends(get_db)):
     - `400 Bad Request`: Unexpected database error
     """
     if not db.get(models.Endpoints, endpoint_id):
+        logger.warning(f"Endpoint field paths rejected: endpoint id {endpoint_id} does not exist")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"endpoint id {endpoint_id} does not exists")
 
     try:    
@@ -177,6 +192,7 @@ def endpoint_field_paths(endpoint_id: int, db:Session = Depends(get_db)):
         return data
 
     except Exception as exp:
+        logger.error(f"Endpoint field paths failed for endpoint_id={endpoint_id}: {str(exp)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
 
 
@@ -200,7 +216,7 @@ def add_fhir_endpoint_fields(endpoint_id: int, sample_msg: str,  db: Session) ->
         HTTPException (400): If any error occurs during path extraction or DB operations.
     """
     try:
-        print(sample_msg)
+        logger.info(f"FHIR field extraction started for endpoint_id={endpoint_id}")
         paths = []
         if sample_msg['resourceType'] != 'Bundle': 
             resource_type = sample_msg['resourceType']
@@ -239,11 +255,14 @@ def add_fhir_endpoint_fields(endpoint_id: int, sample_msg: str,  db: Session) ->
             
             db.add_all(new_fields)
             db.flush()
-            logger.info(f"All Endpoint field paths are added for endpoint id: {endpoint_id}")
+            logger.info(
+                f"FHIR field extraction completed for endpoint_id={endpoint_id}, total_fields_added={len(new_fields)}"
+            )
         else:
-            logger.warning("No endpoints extracted from fhir sample message")
+            logger.warning(f"No endpoint fields extracted from FHIR sample for endpoint_id={endpoint_id}")
 
     except Exception as e:
+        logger.error(f"FHIR field extraction failed for endpoint_id={endpoint_id}: {str(e)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
 
 def add_hl7_endpoint_fields(endpoint_id: int, sample_msg: str,  db: Session) -> bool: # uses the old session
@@ -266,7 +285,8 @@ def add_hl7_endpoint_fields(endpoint_id: int, sample_msg: str,  db: Session) -> 
         HTTPException (400): If any error occurs during parsing or DB operations.
     """
     try:
-        print(sample_msg)
+        logger.info(f"HL7 field extraction started for endpoint_id={endpoint_id}")
+        total_fields_added = 0
         for segment in sample_msg.split('\n')[1:]:
             if segment[0:3].strip() == "":
                 logger.error(f"segment not valid: {segment}")
@@ -291,11 +311,16 @@ def add_hl7_endpoint_fields(endpoint_id: int, sample_msg: str,  db: Session) -> 
                     name=name
                 )
                 new_fields.append(field)
+            total_fields_added += len(new_fields)
             db.add_all(new_fields)
             db.flush()
+        logger.info(
+            f"HL7 field extraction completed for endpoint_id={endpoint_id}, total_fields_added={total_fields_added}"
+        )
         return True
 
     except Exception as e:
+        logger.error(f"HL7 field extraction failed for endpoint_id={endpoint_id}: {str(e)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
