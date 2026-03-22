@@ -173,7 +173,7 @@ def endpoint_field_paths(endpoint_id: int, db:Session = Depends(get_db)):
 
     **Response (200 OK):**
     Returns a list of endpoint field objects. Each item includes:
-    - `endpoint_filed_id`: Unique field identifier (used as `src_paths` / `dest_paths` in route rules)
+    - `endpoint_field_id`: Unique field identifier (used as `src_paths` / `dest_paths` in route rules)
     - `endpoint_id`: The parent endpoint's ID
     - `resource`: The FHIR resource type or HL7 segment (e.g., "Patient", "PID")
     - `path`: The field path in dot/bracket notation (e.g., "name[0].text", "PID-5.1")
@@ -188,7 +188,7 @@ def endpoint_field_paths(endpoint_id: int, db:Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"endpoint id {endpoint_id} does not exists")
 
     try:    
-        data = db.query(models.EndpointFileds).filter(models.EndpointFileds.endpoint_id == endpoint_id).all()
+        data = db.query(models.EndpointFields).filter(models.EndpointFields.endpoint_id == endpoint_id).all()
         return data
 
     except Exception as exp:
@@ -245,7 +245,7 @@ def add_fhir_endpoint_fields(endpoint_id: int, sample_msg: str,  db: Session) ->
             
             new_fields = []
             for name, path in endpoint_fields.items():
-                field = models.EndpointFileds(
+                field = models.EndpointFields(
                     endpoint_id=endpoint_id,
                     resource=path.split("-")[0].strip(), # resource type is the prefix before the first dash
                     path=path,
@@ -304,7 +304,7 @@ def add_hl7_endpoint_fields(endpoint_id: int, sample_msg: str,  db: Session) -> 
                
             new_fields = []
             for name, path in endpoint_fields.items():
-                field = models.EndpointFileds(
+                field = models.EndpointFields(
                     endpoint_id=endpoint_id,
                     resource=segment_type,
                     path=path,

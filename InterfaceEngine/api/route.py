@@ -91,8 +91,8 @@ def get_rules(route_id: int, db: Session = Depends(get_db)):
     - **copy / map / format** — one-to-one field mapping:
       ```json
       {
-        "src_field": { "endpoint_filed_id": 45, "resource": "Patient", "path": "identifier[0].value", "name": "mpi" },
-        "dest_field": { "endpoint_filed_id": 49, "resource": "PID", "path": "PID-3", "name": "mpi" },
+        "src_field": { "endpoint_field_id": 45, "resource": "Patient", "path": "identifier[0].value", "name": "mpi" },
+        "dest_field": { "endpoint_field_id": 49, "resource": "PID", "path": "PID-3", "name": "mpi" },
         "mapping_rule_id": 17,
         "transform_type": "copy",
         "config": {}
@@ -146,13 +146,13 @@ def get_rules(route_id: int, db: Session = Depends(get_db)):
             if rule.transform_type in ['copy', 'map', 'format']:
                 mapping = {
                     "src_field" : {
-                        "endpoint_filed_id": rule.src_field_id,
+                        "endpoint_field_id": rule.src_field_id,
                         "resource": rule.src_field.resource,
                         "path": rule.src_field.path,
                         "name": rule.src_field.name
                     },
                     "dest_field" : {
-                        "endpoint_filed_id": rule.dest_field_id,
+                        "endpoint_field_id": rule.dest_field_id,
                         "resource": rule.dest_field.resource,
                         "path": rule.dest_field.path,
                         "name": rule.dest_field.name
@@ -169,10 +169,10 @@ def get_rules(route_id: int, db: Session = Depends(get_db)):
                 #  with destination. If not then add a new data in the list
                 exists = False 
                 for data in split_data: # if the split_data is empty then then stil the below if will execute
-                    if data['src_field']['endpoint_filed_id'] == rule.src_field_id:
+                    if data['src_field']['endpoint_field_id'] == rule.src_field_id:
                         data['dest_field'].append(
                             {
-                                "endpoint_filed_id": rule.dest_field_id,
+                                "endpoint_field_id": rule.dest_field_id,
                                 "resource": rule.dest_field.resource,
                                 "path": rule.dest_field.path,
                                 "name": rule.dest_field.name
@@ -186,14 +186,14 @@ def get_rules(route_id: int, db: Session = Depends(get_db)):
                     split_data.append(
                         {
                             "src_field" : {
-                                "endpoint_filed_id": rule.src_field_id,
+                                "endpoint_field_id": rule.src_field_id,
                                 "resource": rule.src_field.resource,
                                 "path": rule.src_field.path,
                                 "name": rule.src_field.name
                             },
                             "dest_field" : [
                                 {
-                                    "endpoint_filed_id": rule.dest_field_id,
+                                    "endpoint_field_id": rule.dest_field_id,
                                     "resource": rule.dest_field.resource,
                                     "path": rule.dest_field.path,
                                     "name": rule.dest_field.name
@@ -209,10 +209,10 @@ def get_rules(route_id: int, db: Session = Depends(get_db)):
 
                 exists = False 
                 for data in concat_data: # if the split_data is empty then then stil the below if will execute
-                    if data['dest_field']['endpoint_filed_id'] == rule.dest_field_id:
+                    if data['dest_field']['endpoint_field_id'] == rule.dest_field_id:
                         data['src_field'].append(
                             {
-                                "endpoint_filed_id": rule.src_field_id,
+                                "endpoint_field_id": rule.src_field_id,
                                 "resource": rule.src_field.resource,
                                 "path": rule.src_field.path,
                                 "name": rule.src_field.name
@@ -227,14 +227,14 @@ def get_rules(route_id: int, db: Session = Depends(get_db)):
                         {
                             "src_field" : [
                                 {
-                                    "endpoint_filed_id": rule.src_field_id,
+                                    "endpoint_field_id": rule.src_field_id,
                                     "resource": rule.src_field.resource,
                                     "path": rule.src_field.path,
                                     "name": rule.src_field.name
                                 }
                             ],
                             "dest_field" :{
-                                    "endpoint_filed_id": rule.dest_field_id,
+                                    "endpoint_field_id": rule.dest_field_id,
                                     "resource": rule.dest_field.resource,
                                     "path": rule.dest_field.path,
                                     "name": rule.dest_field.name
@@ -277,8 +277,8 @@ def mapping_suggestion(data: MappingSuggestion, db: Session = Depends(get_db)):
         src_server = db.get(models.Server, data.src_server_id).first()
         dest_server = db.get(models.Server, data.dest_server_id).first()
 
-        src_fields = db.query(models.EndpointFileds).filter(models.EndpointFileds.endpoint_id.in_(data.src_field_ids)).all()
-        dest_fields = db.query(models.EndpointFileds).filter(models.EndpointFileds.endpoint_id.in_(data.dest_field_ids)).all()
+        src_fields = db.query(models.EndpointFields).filter(models.EndpointFields.endpoint_id.in_(data.src_field_ids)).all()
+        dest_fields = db.query(models.EndpointFields).filter(models.EndpointFields.endpoint_id.in_(data.dest_field_ids)).all()
 
         suggestion = generate_single_suggestion( # geneating 1 by 1 suggestion
             src_server= src_server,
