@@ -4,9 +4,10 @@ from logging.handlers import RotatingFileHandler
 from fastapi import APIRouter, status, HTTPException, Depends
 from sqlalchemy.orm import Session
 
-from schemas.route import GetRoute, AddRoute
-import models
 from database import get_db
+from schemas.route import GetRoute, AddRoute, MappingSuggestion
+import models
+from validation.suggestion import generate_single_suggestion
 
 router = APIRouter(tags=["Route"])
 
@@ -255,6 +256,48 @@ def get_rules(route_id: int, db: Session = Depends(get_db)):
         logger.error(f"Error retrieving mapping rules for route id {route_id}: {str(exp)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
 
+@router.get("/mapping_suggestion", status_code=status.HTTP_200_OK)
+def mapping_suggestion(data: MappingSuggestion, db: Session = Depends(get_db)):
+
+    if len(data.src_field_ids)>=1 and len(data.dest_field_ids) >=1 :
+        logger.warning(
+            f"Mapping suggestion rejected: cannot give 2 src and destination in a single rule "
+            f"src_field_ids={data.src_field_ids}, dest_field_ids={data.dest_field_ids}"
+        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="cannot give 2 src and destination in a single rule")
+
+    if len(data.src_field_ids) == 0 or len(data.dest_field_ids) == 0:
+        logger.warning(
+            f"Mapping suggestion rejected: src or destination field id must be provided "
+            f"src_field_ids={data.src_field_ids}, dest_field_ids={data.dest_field_ids}"
+        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="src or destination field id must be provided")
+
+    try:
+        src_server = db.get(models.Server, data.src_server_id).first()
+        dest_server = db.get(models.Server, data.dest_server_id).first()
+
+        src_fields = db.query(models.EndpointFileds).filter(models.EndpointFileds.endpoint_id.in_(data.src_field_ids)).all()
+        dest_fields = db.query(models.EndpointFileds).filter(models.EndpointFileds.endpoint_id.in_(data.dest_field_ids)).all()
+
+        suggestion = generate_single_suggestion( # geneating 1 by 1 suggestion
+            src_server= src_server,
+            dest_server= dest_server,
+            src_canonical_name= src_fields[0].name,
+            dest_canonical_name= dest_fields[0].name
+        )
+        return {
+            "src_field_id":    data.src_field_id,
+            "dest_field_id":   data.dest_field_id,
+            "src_name":        src_fields[0].name,
+            "dest_name":       dest_fields[0].name,
+            "transform_type":  suggestion["transform"],
+            "config":          suggestion["config"],
+            # "is_auto":         True   # flag so frontend shows [auto] badge
+        }
+    except Exception as exp:
+        logger.error(f"Error retrieving mapping suggestion: {str(exp)}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
 
 @router.post("/add-route", status_code=status.HTTP_201_CREATED)
 def add_route(data: AddRoute, db: Session = Depends(get_db)):
@@ -277,14 +320,11 @@ def add_route(data: AddRoute, db: Session = Depends(get_db)):
       {
         "mappings": [
           {
-            "src_paths": [<endpoint_field obj>],
-            "dest_paths": [<endpoint_field obj>],
-          },
-          {
-            "src_paths": [<endpoint_field obj>],
-            "dest_paths": [<endpoint_field obj>],
-          },
-          ...
+            "src_paths": [<endpoint_field_id>],
+            "dest_paths": [<endpoint_field_id>],
+            "transform": "copy | map | format | split | concat",
+            "config": {}
+          }
         ]
       }
       ```
@@ -325,7 +365,7 @@ def add_route(data: AddRoute, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Route name already exists")
     
     if db.query(models.Route).filter(models.Route.src_endpoint_id == data.src_endpoint_id, 
-                                    models.Route.dest_endpoint_id == data.dest_endpoint_id).first():
+                                        models.Route.dest_endpoint_id == data.dest_endpoint_id).first():
         logger.warning(
             f"Add route rejected: duplicate src/dest endpoint pair "
             f"src_endpoint_id={data.src_endpoint_id}, dest_endpoint_id={data.dest_endpoint_id}"

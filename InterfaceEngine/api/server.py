@@ -54,6 +54,7 @@ async def add_server(server: AddUpdateServer, db: Session = Depends(get_db)):
 
     config = {
         "date_format": "%Y-%m-%d",
+        "date_time_format": "%Y-%m-%dT%H:%M:%S",
         "name_style": "split",
         "gender_code": {"male": "male", "female": "female"},
         "status_code": {
@@ -65,6 +66,7 @@ async def add_server(server: AddUpdateServer, db: Session = Depends(get_db)):
 
     if server.protocol != "FHIR":
         config["date_format"] = "%Y%m%d"
+        config["date_time_format"] = "%Y%m%d%H%M%S"
         config["name_style"] = "full"
         config["gender_code"] = {"male": "M", "female": "F"}
         config["status_code"] = {"active": "A", "inactive": "I", "final": "F", "pending": "P" }
