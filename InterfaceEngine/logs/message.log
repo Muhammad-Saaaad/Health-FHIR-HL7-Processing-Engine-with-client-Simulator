@@ -147,3 +147,60 @@
 2026-03-23 12:01:42,688 - INFO - All routes fetched successfully: total_routes=0
 2026-03-23 12:01:50,790 - INFO - All routes request received
 2026-03-23 12:01:50,792 - INFO - All routes fetched successfully: total_routes=0
+2026-03-23 12:08:35,159 - INFO - Add route request received: name=ehr-to-lis, src_endpoint_id=110, dest_endpoint_id=112, msg_type=ADT
+2026-03-23 12:08:35,182 - INFO - Route created and flushed successfully with route_id=1019
+2026-03-23 12:08:35,197 - INFO - Add route completed successfully: route_id=1019, total_mapping_rules=4
+2026-03-23 12:08:35,504 - INFO - route_worker start for route 1019
+2026-03-23 12:08:35,510 - INFO - route_Worker Started for route 1019
+2026-03-23 12:08:36,335 - INFO - All routes request received
+2026-03-23 12:08:36,345 - INFO - All routes fetched successfully: total_routes=1
+2026-03-23 12:08:37,862 - INFO - Mapping rules request received for route_id=1019
+2026-03-23 12:08:37,876 - INFO - Mapping rules fetched successfully for route_id=1019: total_rules=4
+2026-03-23 12:09:07,443 - INFO - Mapping rules request received for route_id=1019
+2026-03-23 12:09:07,484 - INFO - Mapping rules fetched successfully for route_id=1019: total_rules=4
+2026-03-23 12:09:19,260 - INFO - Mapping rules request received for route_id=1019
+2026-03-23 12:09:19,278 - INFO - Mapping rules fetched successfully for route_id=1019: total_rules=4
+2026-03-23 12:09:19,627 - INFO - Mapping rules request received for route_id=1019
+2026-03-23 12:09:19,636 - INFO - Mapping rules fetched successfully for route_id=1019: total_rules=4
+2026-03-23 12:09:24,254 - INFO - Mapping rules request received for route_id=1019
+2026-03-23 12:09:24,270 - INFO - Mapping rules fetched successfully for route_id=1019: total_rules=4
+2026-03-23 12:09:26,186 - INFO - Delete route request received: route_id=1019
+2026-03-23 12:09:26,194 - INFO - Delete route completed successfully: route_id=1019
+2026-03-23 12:09:27,057 - INFO - All routes request received
+2026-03-23 12:09:27,059 - INFO - All routes fetched successfully: total_routes=0
+2026-03-23 12:12:46,812 - INFO - All routes request received
+2026-03-23 12:12:46,814 - INFO - All routes fetched successfully: total_routes=0
+2026-03-23 12:13:50,349 - INFO - Add endpoint request received: server_id=10, url=/get/registed_patient, server_protocol=HL7
+2026-03-23 12:13:50,361 - INFO - Endpoint created and flushed successfully: endpoint_id=113
+2026-03-23 12:13:50,362 - INFO - HL7 field extraction started for endpoint_id=113
+2026-03-23 12:13:50,362 - WARNING - No canonical mapping found for path PID-1, skipping.
+2026-03-23 12:13:50,363 - INFO - Mapped field mpi to path PID-3
+2026-03-23 12:13:50,363 - INFO - Mapped field family_name to path PID-5.1
+2026-03-23 12:13:50,363 - INFO - Mapped field given_name to path PID-5.2
+2026-03-23 12:13:50,364 - INFO - Mapped field birth_date to path PID-7
+2026-03-23 12:13:50,364 - INFO - Mapped field gender to path PID-8
+2026-03-23 12:13:50,374 - INFO - Mapped field plan_type to path IN1-15
+2026-03-23 12:13:50,374 - INFO - Mapped field copay_limit_days to path IN1-52
+2026-03-23 12:13:50,380 - INFO - HL7 field extraction completed for endpoint_id=113, total_fields_added=7
+2026-03-23 12:13:50,380 - INFO - HL7 endpoint fields added successfully for endpoint_id=113
+2026-03-23 12:13:52,272 - INFO - All routes request received
+2026-03-23 12:13:52,274 - INFO - All routes fetched successfully: total_routes=0
+2026-03-23 12:24:44,939 - WARNING - Endpoint field paths rejected: endpoint id 113 does not exist
+2026-03-23 12:24:45,960 - WARNING - Endpoint field paths rejected: endpoint id 113 does not exist
+2026-03-23 12:24:47,984 - WARNING - Endpoint field paths rejected: endpoint id 113 does not exist
+2026-03-23 12:25:01,651 - WARNING - Endpoint field paths rejected: endpoint id 113 does not exist
+2026-03-23 12:25:13,250 - INFO - Add endpoint request received: server_id=10, url=/get/registed_patient, server_protocol=HL7
+2026-03-23 12:25:13,256 - INFO - Endpoint created and flushed successfully: endpoint_id=114
+2026-03-23 12:25:13,256 - INFO - HL7 field extraction started for endpoint_id=114
+2026-03-23 12:25:13,256 - WARNING - No canonical mapping found for path PID-1, skipping.
+2026-03-23 12:25:13,257 - INFO - Mapped field mpi to path PID-3
+2026-03-23 12:25:13,257 - INFO - Mapped field family_name to path PID-5.1
+2026-03-23 12:25:13,258 - INFO - Mapped field given_name to path PID-5.2
+2026-03-23 12:25:13,258 - INFO - Mapped field birth_date to path PID-7
+2026-03-23 12:25:13,258 - INFO - Mapped field gender to path PID-8
+2026-03-23 12:25:13,265 - INFO - Mapped field plan_type to path IN1-15
+2026-03-23 12:25:13,265 - INFO - Mapped field policy_number to path IN1-36
+2026-03-23 12:25:13,270 - INFO - HL7 field extraction completed for endpoint_id=114, total_fields_added=7
+2026-03-23 12:25:13,271 - INFO - HL7 endpoint fields added successfully for endpoint_id=114
+2026-03-23 12:25:16,558 - INFO - All routes request received
+2026-03-23 12:25:16,562 - INFO - All routes fetched successfully: total_routes=0
