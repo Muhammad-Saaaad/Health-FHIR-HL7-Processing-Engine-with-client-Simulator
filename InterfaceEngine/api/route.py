@@ -2,10 +2,11 @@ import logging
 from logging.handlers import RotatingFileHandler
 
 from fastapi import APIRouter, status, HTTPException, Depends
+from fastapi.params import Query
 from sqlalchemy.orm import Session
 
 from database import get_db
-from schemas.route import GetRoute, AddRoute, MappingSuggestion
+from schemas.route import GetRoute, AddRoute
 import models
 from validation.suggestion import generate_single_suggestion
 
@@ -256,45 +257,71 @@ def get_rules(route_id: int, db: Session = Depends(get_db)):
         logger.error(f"Error retrieving mapping rules for route id {route_id}: {str(exp)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
 
-@router.get("/mapping_suggestion", status_code=status.HTTP_200_OK)
-def mapping_suggestion(data: MappingSuggestion, db: Session = Depends(get_db)):
+@router.get("/mapping_suggestion/src_server_id/{src_server_id}/dest_server_id/{dest_server_id}", status_code=status.HTTP_200_OK)
+def mapping_suggestion(
+    src_server_id: int,
+    dest_server_id: int,
+    src_field_ids: list[int] = Query(...), # Now a query param: ?src_field_ids=1&src_field_ids=2
+    dest_field_ids: list[int] = Query(...), # Now a query param: ?dest_field_ids=1&dest_field_ids=2
+    db: Session = Depends(get_db)):
 
-    if len(data.src_field_ids)>=1 and len(data.dest_field_ids) >=1 :
+    if len(src_field_ids)>1 and len(dest_field_ids) >1 :
         logger.warning(
             f"Mapping suggestion rejected: cannot give 2 src and destination in a single rule "
-            f"src_field_ids={data.src_field_ids}, dest_field_ids={data.dest_field_ids}"
+            f"src_field_ids={src_field_ids}, dest_field_ids={dest_field_ids}"
         )
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="cannot give 2 src and destination in a single rule")
 
-    if len(data.src_field_ids) == 0 or len(data.dest_field_ids) == 0:
+    if len(src_field_ids) == 0 or len(dest_field_ids) == 0:
         logger.warning(
             f"Mapping suggestion rejected: src or destination field id must be provided "
-            f"src_field_ids={data.src_field_ids}, dest_field_ids={data.dest_field_ids}"
+            f"src_field_ids={src_field_ids}, dest_field_ids={dest_field_ids}"
         )
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="src or destination field id must be provided")
 
+    src_server = db.get(models.Server, src_server_id)
+    dest_server = db.get(models.Server, dest_server_id)
+
+    if not src_server or not dest_server:
+        logger.warning(
+            f"Mapping suggestion rejected: src or destination server id not found "
+            f"src_server_id={src_server_id}, dest_server_id={dest_server_id}"
+        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="src or destination server id not found")
+
+    src_fields = db.query(models.EndpointFields).filter(models.EndpointFields.endpoint_field_id.in_(src_field_ids)).all()
+    dest_fields = db.query(models.EndpointFields).filter(models.EndpointFields.endpoint_field_id.in_(dest_field_ids)).all()
+
+    if not src_fields or not dest_fields:
+        logger.warning(
+            f"Mapping suggestion rejected: src or destination field id not found "
+            f"src_field_ids={src_field_ids}, dest_field_ids={dest_field_ids}"
+        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="src or destination field id not found")
+    
     try:
-        src_server = db.get(models.Server, data.src_server_id).first()
-        dest_server = db.get(models.Server, data.dest_server_id).first()
+        # check if the mapping your doing is not wrong mapping.
+        src_names = [field.name for field in src_fields]
+        dest_names = [field.name for field in dest_fields]
 
-        src_fields = db.query(models.EndpointFields).filter(models.EndpointFields.endpoint_id.in_(data.src_field_ids)).all()
-        dest_fields = db.query(models.EndpointFields).filter(models.EndpointFields.endpoint_id.in_(data.dest_field_ids)).all()
-
-        suggestion = generate_single_suggestion( # geneating 1 by 1 suggestion
+        suggestion = generate_single_suggestion(
             src_server= src_server,
             dest_server= dest_server,
-            src_canonical_name= src_fields[0].name,
-            dest_canonical_name= dest_fields[0].name
+            src_canonical_names= src_names,
+            dest_canonical_names= dest_names
         )
         return {
-            "src_field_id":    data.src_field_id,
-            "dest_field_id":   data.dest_field_id,
-            "src_name":        src_fields[0].name,
-            "dest_name":       dest_fields[0].name,
+            "src_field_ids":    [field.endpoint_field_id for field in src_fields],
+            "dest_field_ids":   [field.endpoint_field_id for field in dest_fields],
+            "src_names":        src_names,
+            "dest_names":       dest_names,
             "transform_type":  suggestion["transform"],
             "config":          suggestion["config"],
             # "is_auto":         True   # flag so frontend shows [auto] badge
         }
+    except ValueError as ve:
+        logger.warning(f"Mapping suggestion rejected due to validation error: {str(ve)}")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(ve))
     except Exception as exp:
         logger.error(f"Error retrieving mapping suggestion: {str(exp)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
@@ -340,7 +367,7 @@ def add_route(data: AddRoute, db: Session = Depends(get_db)):
 
     **Response (201 Created):**
     Returns a confirmation message:
-    - `message`: "Sucessfully done"
+    - `message`: "Successfully done"
 
     **Constraints:**
     - Route name must be unique.

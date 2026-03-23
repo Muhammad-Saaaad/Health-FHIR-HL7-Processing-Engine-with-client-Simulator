@@ -1,7 +1,9 @@
 import asyncio
 from datetime import datetime
 import logging
+from logging.handlers import TimedRotatingFileHandler
 import os
+import time
 
 from contextlib import asynccontextmanager
 import httpx
@@ -18,11 +20,38 @@ import models
 
 os.makedirs("logs", exist_ok=True)
 
-logging.basicConfig(
+class MidnightSingleFileHandler(TimedRotatingFileHandler):
+    """
+    A TimedRotatingFileHandler variant that clears the same file at midnight.
+    This keeps exactly one log file on disk.
+    """
+    def doRollover(self):
+        if self.stream:
+            self.stream.close()
+            self.stream = None
+
+        # Reopen in write mode to wipe previous day's logs.
+        self.mode = "w"
+        self.stream = self._open()
+        self.mode = "a"
+
+        current_time = int(time.time())
+        self.rolloverAt = self.computeRollover(current_time)
+
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+logger.handlers.clear()
+
+log_handler = MidnightSingleFileHandler(
     filename="logs/message.log",
-    level=logging.INFO,
-    format= "%(asctime)s - %(levelname)s - %(message)s"
+    when="midnight",
+    interval=1,
+    backupCount=0,
+    encoding="utf-8",
 )
+log_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
+logger.addHandler(log_handler)
 
 @asynccontextmanager # handle lifespan events like startup or shutdown
 async def lifeSpan(app: FastAPI):

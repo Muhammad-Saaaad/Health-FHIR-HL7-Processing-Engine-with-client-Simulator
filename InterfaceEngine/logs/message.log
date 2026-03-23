@@ -1,0 +1,149 @@
+2026-03-23 09:01:47,282 - INFO - All routes request received
+2026-03-23 09:01:47,282 - INFO - All routes fetched successfully: total_routes=0
+2026-03-23 09:06:58,110 - INFO - Route_manager received Cancellation signal
+2026-03-23 09:06:58,110 - INFO - Route Manger shutting down
+2026-03-23 09:32:54,649 - WARNING - Endpoint field paths rejected: endpoint id 111 does not exist
+2026-03-23 09:32:55,693 - WARNING - Endpoint field paths rejected: endpoint id 111 does not exist
+2026-03-23 09:32:57,709 - WARNING - Endpoint field paths rejected: endpoint id 111 does not exist
+2026-03-23 09:33:47,557 - INFO - Add endpoint request received: server_id=8, url=/get/new-patient, server_protocol=HL7
+2026-03-23 09:33:47,591 - INFO - Endpoint created and flushed successfully: endpoint_id=112
+2026-03-23 09:33:47,591 - INFO - HL7 field extraction started for endpoint_id=112
+2026-03-23 09:33:47,593 - WARNING - No canonical mapping found for path PID-1, skipping.
+2026-03-23 09:33:47,593 - INFO - Mapped field mpi to path PID-3
+2026-03-23 09:33:47,593 - INFO - Mapped field family_name to path PID-5.1
+2026-03-23 09:33:47,597 - INFO - Mapped field given_name to path PID-5.2
+2026-03-23 09:33:47,598 - INFO - Mapped field birth_date to path PID-7
+2026-03-23 09:33:47,600 - INFO - Mapped field gender to path PID-8
+2026-03-23 09:33:47,618 - INFO - HL7 field extraction completed for endpoint_id=112, total_fields_added=5
+2026-03-23 09:33:47,618 - INFO - HL7 endpoint fields added successfully for endpoint_id=112
+2026-03-23 09:33:50,232 - INFO - All routes request received
+2026-03-23 09:33:50,233 - INFO - All routes fetched successfully: total_routes=0
+2026-03-23 09:42:24,751 - INFO - Route_manager received Cancellation signal
+2026-03-23 09:42:24,752 - INFO - Route Manger shutting down
+2026-03-23 09:43:03,041 - INFO - All routes request received
+2026-03-23 09:43:03,042 - INFO - All routes fetched successfully: total_routes=0
+2026-03-23 09:43:19,407 - ERROR - Error retrieving mapping suggestion: Type mismatch between fullname (name_full) and family_name (name_part)
+2026-03-23 09:43:20,457 - ERROR - Error retrieving mapping suggestion: Type mismatch between fullname (name_full) and family_name (name_part)
+2026-03-23 09:43:22,506 - ERROR - Error retrieving mapping suggestion: Type mismatch between fullname (name_full) and family_name (name_part)
+2026-03-23 09:43:27,318 - ERROR - Error retrieving mapping suggestion: Type mismatch between fullname (name_full) and family_name (name_part)
+2026-03-23 09:51:00,750 - ERROR - Error retrieving mapping suggestion: Type mismatch between fullname (name_full) and family_name (name_part)
+2026-03-23 09:51:01,793 - ERROR - Error retrieving mapping suggestion: Type mismatch between fullname (name_full) and family_name (name_part)
+2026-03-23 09:51:03,811 - ERROR - Error retrieving mapping suggestion: Type mismatch between fullname (name_full) and family_name (name_part)
+2026-03-23 09:51:07,871 - ERROR - Error retrieving mapping suggestion: Type mismatch between fullname (name_full) and family_name (name_part)
+2026-03-23 10:01:19,463 - INFO - Route_manager received Cancellation signal
+2026-03-23 10:01:19,463 - INFO - Route Manger shutting down
+2026-03-23 10:43:19,674 - INFO - All routes request received
+2026-03-23 10:43:19,683 - INFO - All routes fetched successfully: total_routes=0
+2026-03-23 10:43:55,083 - INFO - Route_manager received Cancellation signal
+2026-03-23 10:43:55,083 - INFO - Route Manger shutting down
+2026-03-23 10:44:49,053 - WARNING - Mapping suggestion rejected due to validation error: Type mismatch between birth_date (date) and family_name (name_part)
+2026-03-23 10:44:50,104 - WARNING - Mapping suggestion rejected due to validation error: Type mismatch between birth_date (date) and family_name (name_part)
+2026-03-23 10:44:52,153 - WARNING - Mapping suggestion rejected due to validation error: Type mismatch between birth_date (date) and family_name (name_part)
+2026-03-23 10:44:56,204 - WARNING - Mapping suggestion rejected due to validation error: Type mismatch between birth_date (date) and family_name (name_part)
+2026-03-23 10:51:58,176 - WARNING - Mapping suggestion rejected due to validation error: Type mismatch between nic (string) and gender (gender_code)
+2026-03-23 10:51:59,215 - WARNING - Mapping suggestion rejected due to validation error: Type mismatch between nic (string) and gender (gender_code)
+2026-03-23 10:52:01,261 - WARNING - Mapping suggestion rejected due to validation error: Type mismatch between nic (string) and gender (gender_code)
+2026-03-23 10:52:05,314 - WARNING - Mapping suggestion rejected due to validation error: Type mismatch between nic (string) and gender (gender_code)
+2026-03-23 11:15:40,082 - INFO - Route_manager received Cancellation signal
+2026-03-23 11:15:40,082 - INFO - Route Manger shutting down
+2026-03-23 11:15:59,254 - WARNING - Mapping suggestion rejected due to validation error: Type mismatch between mpi (string) and family_name (name_part)
+2026-03-23 11:16:00,316 - WARNING - Mapping suggestion rejected due to validation error: Type mismatch between mpi (string) and family_name (name_part)
+2026-03-23 11:16:02,392 - WARNING - Mapping suggestion rejected due to validation error: Type mismatch between mpi (string) and family_name (name_part)
+2026-03-23 11:16:06,450 - WARNING - Mapping suggestion rejected due to validation error: Type mismatch between mpi (string) and family_name (name_part)
+2026-03-23 11:16:56,655 - WARNING - Mapping suggestion rejected due to validation error: Type mismatch between fullname (name_full) and birth_date (date)
+2026-03-23 11:16:57,686 - WARNING - Mapping suggestion rejected due to validation error: Type mismatch between fullname (name_full) and birth_date (date)
+2026-03-23 11:16:59,722 - WARNING - Mapping suggestion rejected due to validation error: Type mismatch between fullname (name_full) and birth_date (date)
+2026-03-23 11:17:03,775 - WARNING - Mapping suggestion rejected due to validation error: Type mismatch between fullname (name_full) and birth_date (date)
+2026-03-23 11:22:34,915 - INFO - Add route request received: name=ehr-to-lis, src_endpoint_id=110, dest_endpoint_id=112, msg_type=ADT
+2026-03-23 11:22:34,958 - INFO - Route created and flushed successfully with route_id=1018
+2026-03-23 11:22:34,974 - INFO - Add route completed successfully: route_id=1018, total_mapping_rules=4
+2026-03-23 11:22:36,008 - INFO - All routes request received
+2026-03-23 11:22:36,022 - INFO - All routes fetched successfully: total_routes=1
+2026-03-23 11:22:36,065 - INFO - route_worker start for route 1018
+2026-03-23 11:22:36,075 - INFO - route_Worker Started for route 1018
+2026-03-23 11:22:38,234 - INFO - Mapping rules request received for route_id=1018
+2026-03-23 11:22:38,252 - INFO - Mapping rules fetched successfully for route_id=1018: total_rules=4
+2026-03-23 11:22:45,481 - INFO - All routes request received
+2026-03-23 11:22:45,487 - INFO - All routes fetched successfully: total_routes=1
+2026-03-23 11:23:18,854 - INFO - All routes request received
+2026-03-23 11:23:18,867 - INFO - All routes fetched successfully: total_routes=1
+2026-03-23 11:26:42,592 - INFO - All routes request received
+2026-03-23 11:26:42,608 - INFO - All routes fetched successfully: total_routes=1
+2026-03-23 11:28:07,352 - INFO - All routes request received
+2026-03-23 11:28:07,363 - INFO - All routes fetched successfully: total_routes=1
+2026-03-23 11:28:08,105 - INFO - Mapping rules request received for route_id=1018
+2026-03-23 11:28:08,122 - INFO - Mapping rules fetched successfully for route_id=1018: total_rules=4
+2026-03-23 11:28:10,525 - INFO - All routes request received
+2026-03-23 11:28:10,532 - INFO - All routes fetched successfully: total_routes=1
+2026-03-23 11:35:24,874 - INFO - Route_manager received Cancellation signal
+2026-03-23 11:35:24,874 - INFO - Route Manger shutting down
+2026-03-23 11:35:28,323 - INFO - route_worker start for route 1018
+2026-03-23 11:35:28,340 - INFO - route_Worker Started for route 1018
+2026-03-23 11:43:40,435 - INFO - Route_manager received Cancellation signal
+2026-03-23 11:43:40,435 - INFO - Route Manger shutting down
+2026-03-23 11:43:43,500 - INFO - route_worker start for route 1018
+2026-03-23 11:43:43,520 - INFO - route_Worker Started for route 1018
+2026-03-23 11:44:39,895 - INFO - Route_manager received Cancellation signal
+2026-03-23 11:44:39,895 - INFO - Route Manger shutting down
+2026-03-23 11:44:42,721 - INFO - route_worker start for route 1018
+2026-03-23 11:44:42,735 - INFO - route_Worker Started for route 1018
+2026-03-23 11:46:03,970 - INFO - Route_manager received Cancellation signal
+2026-03-23 11:46:03,970 - INFO - Route Manger shutting down
+2026-03-23 11:46:24,119 - INFO - route_worker start for route 1018
+2026-03-23 11:46:24,135 - INFO - route_Worker Started for route 1018
+2026-03-23 11:47:51,723 - INFO - Route_manager received Cancellation signal
+2026-03-23 11:47:51,724 - INFO - Route Manger shutting down
+2026-03-23 11:47:54,618 - INFO - route_worker start for route 1018
+2026-03-23 11:47:54,636 - INFO - route_Worker Started for route 1018
+2026-03-23 11:49:50,622 - INFO - Route_manager received Cancellation signal
+2026-03-23 11:49:50,623 - INFO - Route Manger shutting down
+2026-03-23 11:50:07,251 - INFO - route_worker start for route 1018
+2026-03-23 11:50:07,267 - INFO - route_Worker Started for route 1018
+2026-03-23 11:50:32,669 - INFO - All routes request received
+2026-03-23 11:50:32,680 - INFO - All routes fetched successfully: total_routes=1
+2026-03-23 11:50:36,113 - INFO - All routes request received
+2026-03-23 11:50:36,120 - INFO - All routes fetched successfully: total_routes=1
+2026-03-23 11:50:36,858 - INFO - Mapping rules request received for route_id=1018
+2026-03-23 11:50:36,880 - INFO - Mapping rules fetched successfully for route_id=1018: total_rules=4
+2026-03-23 11:50:42,465 - INFO - Mapping rules request received for route_id=1018
+2026-03-23 11:50:42,490 - INFO - Mapping rules fetched successfully for route_id=1018: total_rules=4
+2026-03-23 11:51:05,342 - INFO - Delete route request received: route_id=1018
+2026-03-23 11:51:05,359 - INFO - Delete route completed successfully: route_id=1018
+2026-03-23 11:51:13,243 - INFO - Mapping rules request received for route_id=1018
+2026-03-23 11:51:13,245 - WARNING - Route id 1018 not found when fetching mapping rules
+2026-03-23 11:51:14,421 - INFO - Mapping rules request received for route_id=1018
+2026-03-23 11:51:14,424 - WARNING - Route id 1018 not found when fetching mapping rules
+2026-03-23 11:51:15,950 - INFO - Mapping rules request received for route_id=1018
+2026-03-23 11:51:15,951 - WARNING - Route id 1018 not found when fetching mapping rules
+2026-03-23 11:51:16,224 - INFO - All routes request received
+2026-03-23 11:51:16,227 - INFO - All routes fetched successfully: total_routes=0
+2026-03-23 11:51:34,718 - INFO - All routes request received
+2026-03-23 11:51:34,720 - INFO - All routes fetched successfully: total_routes=0
+2026-03-23 11:53:04,584 - INFO - All routes request received
+2026-03-23 11:53:04,585 - INFO - All routes fetched successfully: total_routes=0
+2026-03-23 11:53:08,583 - INFO - All routes request received
+2026-03-23 11:53:08,586 - INFO - All routes fetched successfully: total_routes=0
+2026-03-23 11:53:11,582 - INFO - All routes request received
+2026-03-23 11:53:11,585 - INFO - All routes fetched successfully: total_routes=0
+2026-03-23 11:53:14,576 - INFO - All routes request received
+2026-03-23 11:53:14,577 - INFO - All routes fetched successfully: total_routes=0
+2026-03-23 11:57:17,764 - INFO - All routes request received
+2026-03-23 11:57:17,766 - INFO - All routes fetched successfully: total_routes=0
+2026-03-23 12:00:24,793 - INFO - All routes request received
+2026-03-23 12:00:24,795 - INFO - All routes fetched successfully: total_routes=0
+2026-03-23 12:00:47,186 - INFO - All routes request received
+2026-03-23 12:00:47,193 - INFO - All routes fetched successfully: total_routes=0
+2026-03-23 12:00:49,304 - INFO - All routes request received
+2026-03-23 12:00:49,305 - INFO - All routes fetched successfully: total_routes=0
+2026-03-23 12:01:21,586 - INFO - All routes request received
+2026-03-23 12:01:21,587 - INFO - All routes fetched successfully: total_routes=0
+2026-03-23 12:01:24,581 - INFO - All routes request received
+2026-03-23 12:01:24,582 - INFO - All routes fetched successfully: total_routes=0
+2026-03-23 12:01:29,556 - INFO - All routes request received
+2026-03-23 12:01:29,558 - INFO - All routes fetched successfully: total_routes=0
+2026-03-23 12:01:39,449 - INFO - All routes request received
+2026-03-23 12:01:39,451 - INFO - All routes fetched successfully: total_routes=0
+2026-03-23 12:01:42,687 - INFO - All routes request received
+2026-03-23 12:01:42,688 - INFO - All routes fetched successfully: total_routes=0
+2026-03-23 12:01:50,790 - INFO - All routes request received
+2026-03-23 12:01:50,792 - INFO - All routes fetched successfully: total_routes=0

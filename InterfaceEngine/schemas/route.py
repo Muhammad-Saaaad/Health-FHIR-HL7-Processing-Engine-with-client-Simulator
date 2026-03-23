@@ -49,9 +49,3 @@ class AddRoute(BaseModel):
 # dest_paths: list[int]
 # transform: str
 # config: dict
-
-class MappingSuggestion(BaseModel):
-    src_server_id: int
-    src_field_ids: list
-    dest_server_id: int
-    dest_field_ids: list
