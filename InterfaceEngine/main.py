@@ -1,6 +1,9 @@
 import asyncio
 from datetime import datetime
 import logging
+from logging.handlers import TimedRotatingFileHandler
+import os
+import time
 
 from contextlib import asynccontextmanager
 import httpx
@@ -15,11 +18,40 @@ from validation.hl7_validation import build_hl7_message
 from database import engine, session_local
 import models
 
-logging.basicConfig(
-    filename="message.log",
-    level=logging.INFO,
-    format= "%(asctime)s - %(levelname)s - %(message)s"
+os.makedirs("logs", exist_ok=True)
+
+class MidnightSingleFileHandler(TimedRotatingFileHandler):
+    """
+    A TimedRotatingFileHandler variant that clears the same file at midnight.
+    This keeps exactly one log file on disk.
+    """
+    def doRollover(self):
+        if self.stream:
+            self.stream.close()
+            self.stream = None
+
+        # Reopen in write mode to wipe previous day's logs.
+        self.mode = "w"
+        self.stream = self._open()
+        self.mode = "a"
+
+        current_time = int(time.time())
+        self.rolloverAt = self.computeRollover(current_time)
+
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+logger.handlers.clear()
+
+log_handler = MidnightSingleFileHandler(
+    filename="logs/message.log",
+    when="midnight",
+    interval=1,
+    backupCount=0,
+    encoding="utf-8",
 )
+log_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
+logger.addHandler(log_handler)
 
 @asynccontextmanager # handle lifespan events like startup or shutdown
 async def lifeSpan(app: FastAPI):
@@ -108,11 +140,11 @@ async def route_worker(route):
         dest_server = db.get(models.Server, route.dest_server_id)
         src_server = db.get(models.Server, route.src_server_id)
 
-        src_endpoint_fields = db.query(models.EndpointFileds) \
-            .filter(models.EndpointFileds.endpoint_id == route.src_endpoint_id).all()
+        src_endpoint_fields = db.query(models.EndpointFields) \
+            .filter(models.EndpointFields.endpoint_id == route.src_endpoint_id).all()
         
-        dest_endpoint_fields = db.query(models.EndpointFileds) \
-            .filter(models.EndpointFileds.endpoint_id == route.dest_endpoint_id).all()
+        dest_endpoint_fields = db.query(models.EndpointFields) \
+            .filter(models.EndpointFields.endpoint_id == route.dest_endpoint_id).all()
         
         mapping_rules_for_specific_route = db.query(models.MappingRule) \
             .filter(models.MappingRule.route_id == route.route_id).all()
@@ -120,8 +152,8 @@ async def route_worker(route):
         db.close()
 
         # lookup maps 
-        src_id_to_path = {f.endpoint_filed_id: f.path for f in src_endpoint_fields} # e.g. path = Patient-identifier[0].value
-        dest_id_to_path = {f.endpoint_filed_id: f.path for f in dest_endpoint_fields}
+        src_id_to_path = {f.endpoint_field_id: f.path for f in src_endpoint_fields} # e.g. path = Patient-identifier[0].value
+        dest_id_to_path = {f.endpoint_field_id: f.path for f in dest_endpoint_fields}
         dest_path_to_resource = {f.path: f.resource for f in dest_endpoint_fields} # use resource for making messages.
 
         logging.info(f"route_Worker Started for route {route.route_id}")
@@ -132,9 +164,9 @@ async def route_worker(route):
             # Each queue item is a (data, future) tuple.
             # The future lets ingest() know whether delivery succeeded or failed.
             src_path_to_value, result_future = await route_queue[route.route_id].get()
-            output_data = {} # contains the output fileds with value
-            concat_data = {} # contains single dest filed id, and multiple mapping rule that concate multiple src into a single destination.
-            split_data = {} # contain single src filed id, and multiple mapping rule that split that single src into multiple destination.
+            output_data = {} # contains the output fields with value
+            concat_data = {} # contains single dest field id, and multiple mapping rule that concate multiple src into a single destination.
+            split_data = {} # contain single src field id, and multiple mapping rule that split that single src into multiple destination.
 
             try:
                 for rule in mapping_rules_for_specific_route:
@@ -161,7 +193,8 @@ async def route_worker(route):
 
                         if rule.transform_type == 'map': # here if there is no mapping then by default we consider the same value
                             # here the first value will give me the map value, if the mapping value is not found then return the default value
-                            value = rule.config.get(str(value), value) 
+                            value = rule.config.get(str(value).lower(), value) 
+                            print("value ---> ", value)
 
                         elif rule.transform_type == 'format':
                             try: # 2004-10-06 → 20041006 vice versa
@@ -186,7 +219,7 @@ async def route_worker(route):
 
                     for rule in rules:
                         if rule.src_field_id not in src_id_to_path:
-                            logging.error(f"""While Concatnation, The src_filed id in rule {rule.src_field_id}
+                            logging.error(f"""While Concatnation, The src_field id in rule {rule.src_field_id}
                                         does not exists in the src_id_to_path {src_id_to_path}
                                         There must be a issue when you input data in database.""")
                             continue
@@ -216,7 +249,7 @@ async def route_worker(route):
                 for src_id, rules in split_data.items():
 
                     if src_id not in src_id_to_path:
-                        logging.error(f"""While Spliting, The src_filed_id from route
+                        logging.error(f"""While Spliting, The src_field_id from route
                                         does not exists in the src_id_to_path {src_id_to_path}
                                         There must be a issue when you input data in database.""")
                         continue
@@ -292,7 +325,7 @@ async def ingest(full_path: str, req: Request):
             db.close()
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'The endpoint url: /{full_path} is not valid')
         
-        endpoint_fields = db.query(models.EndpointFileds).filter(models.EndpointFileds.endpoint_id == endpoint.endpoint_id).all()
+        endpoint_fields = db.query(models.EndpointFields).filter(models.EndpointFields.endpoint_id == endpoint.endpoint_id).all()
         
         # getting all the routes with this endpoint as src endpoint.
         routes = db.query(models.Route).filter(models.Route.src_endpoint_id == endpoint.endpoint_id).all()

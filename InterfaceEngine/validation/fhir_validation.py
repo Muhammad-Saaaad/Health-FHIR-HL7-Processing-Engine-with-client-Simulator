@@ -1,11 +1,11 @@
 import re
-from uuid import uuid4
 
 from fhir.resources.R4B import get_fhir_model_class
 from pydantic import ValidationError
 
 def validate_unknown_fhir_resource(fhir_data: dict): # validation of any fhir message
     # 1. Identify the resource type
+    
     resource_type = fhir_data.get("resourceType")
     if not resource_type:
         return False, "Error: JSON is missing 'resourceType' field."
@@ -197,7 +197,6 @@ def build_fhir_message(output_data: dict[str, str],
     # Multiple resources — wrap in a Bundle
     return {
         "resourceType": "Bundle",
-        "id": str(uuid4()),
         "type": "message",
         "entry": [
             {
@@ -244,22 +243,25 @@ if __name__ == "__main__":
             {
                 "resource": {
                     "resourceType": "Coverage",
-                    "id": "COV001",  # Required by FHIR spec
                     "identifier": [
                         {
-                            "value": "COV-2024-001"  # Primary key from EHR
-                        }
+                            "value": "3"  # plan id.
+                        }   
                     ],
                     "status": "active",
-                    "type": {
-                        "text": "Silver"
-                    },
+                    "class": [
+                        {
+                            "type": { "coding": [{"code": "plan"}] },
+                            "value": "Gold",
+                        }
+                    ],
                     "beneficiary": {
-                        "reference": "Patient/23"
+                        "reference": "23" # patient mpi
                     },
+                    "subscriberId": "21", # policy number
                     "payor": [
                         {
-                            "reference": "Organization/insurance-company-001"
+                            "reference": "Organization/insurance-company-001" # insurance company id
                         }
                     ]
                 }
@@ -269,10 +271,9 @@ if __name__ == "__main__":
 
     encounter = {
         "resourceType": "Encounter",
-        "id": "ENC00123",  # Logical ID - use to reference this encounter
         "identifier": [
             {
-                "value": "ENC-2024-12345"  # Primary key from EHR - send to PHR
+                "value": "VID-2024-12345"  # Primary key from EHR - send to PHR
             }
         ],
         "status": "in-progress",

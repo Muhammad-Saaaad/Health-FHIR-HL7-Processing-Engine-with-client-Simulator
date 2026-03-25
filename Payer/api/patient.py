@@ -22,7 +22,7 @@ def register_patient(request: schema.PatientCreate, db: Session = Depends(get_db
 
     **Side Effects:**
     - Automatically creates an `InsurancePolicy` record linked to the new patient with:
-        - `Gold`  → total coverage of 1,000,000
+        - `Gold, Golden`  → total coverage of 1,000,000
         - `Silver` → total coverage of 500,000
         - `Bronze` → total coverage of 200,000
 
@@ -40,16 +40,34 @@ def register_patient(request: schema.PatientCreate, db: Session = Depends(get_db
     - `500 Internal Server Error`: Database or unexpected error during creation
     - `422 Unprocessable Entity`: Invalid data format or missing required fields
     """
-    is_user = db.query(models.SystemUser).filter(models.SystemUser.user_id == request.user_id).first()
+    # user_id 0 means that it is inserted by the engine. 
+    if request.user_id != 0:
+        is_user = db.query(models.SystemUser).filter(models.SystemUser.user_id == request.user_id).first()
 
-    if not is_user:
-        raise HTTPException(status_code=404, detail="Invalid user id")
+        if not is_user:
+            raise HTTPException(status_code=404, detail="Invalid user id")
+    else:
+        is_engine_user = db.query(models.SystemUser).filter(models.SystemUser.email == "engine@gmail.com").first()
+        if not is_engine_user:
+            engine_user = models.SystemUser(
+                user_name="Engine",
+                email="engine@gmail.com",
+                password="1234"
+            )
+            db.add(engine_user)
+            db.commit()
+            db.refresh(engine_user)
+            request.user_id = engine_user.user_id
+        else:            
+            request.user_id = is_engine_user.user_id
     
-    if db.query(models.Patient).filter(models.Patient.phone_no == request.phone_no).first():
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Patient already exists")
+    if db.query(models.Patient).filter(
+            models.Patient.phone_no == request.phone_no,                            
+            models.Patient.date_of_birth == request.date_of_birth,
+            models.Patient.name == request.name).first():
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="This Patient already exists")
 
     try:
-        print("Enter in the patient registration function")
         new_patient = models.Patient(
             u_id=request.user_id,
             name=request.name,
@@ -62,11 +80,11 @@ def register_patient(request: schema.PatientCreate, db: Session = Depends(get_db
         db.refresh(new_patient)
 
         total_coverage = 0
-        if request.insurance_type in ("Gold"):
+        if request.insurance_type in ("Gold", "Golden", "golden", "gold"):
             total_coverage = 1000000
-        elif request.insurance_type in ("Silver"):
+        elif request.insurance_type in ("Silver", "silver"):
             total_coverage = 500000
-        elif request.insurance_type in ("Bronze"):
+        elif request.insurance_type in ("Bronze", "bronze"):
             total_coverage = 200000
 
         print(f"Total coverage for {request.insurance_type} is {total_coverage}")

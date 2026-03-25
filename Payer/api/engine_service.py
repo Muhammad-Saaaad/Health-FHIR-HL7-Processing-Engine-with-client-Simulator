@@ -2,6 +2,8 @@ from datetime import datetime
 import re
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import JSONResponse
+import httpx
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -9,7 +11,11 @@ import models
 
 router = APIRouter(tags=["Engine"])
 
-@router.post("/get/registed_patient", status_code=status.HTTP_200_OK)
+# MSH|^~\\&|EHR||payer||20260203120000||ADT^A01|MSG00001|P|2.5
+# PID|1||23||saad^Muhammad||20041006|M|||||
+# IN1|||||||||||||||Silver|||||||||||||||||||||9||||||||||||||||
+
+@router.post("/get/registed_patient")
 async def get_registed_patient(req: Request, db: Session = Depends(get_db)):
     """
     Internal engine endpoint to receive a patient from an HL7 v2.x message (plain text).
@@ -27,7 +33,8 @@ async def get_registed_patient(req: Request, db: Session = Depends(get_db)):
     - `PID-8`: Gender — used to match existing patient
 
     **IN1 fields used:**
-    - `IN1-3` (or `IN1-2` as fallback): Policy number — used to match the existing InsurancePolicy record
+    - `IN1-36` (or `IN1-2` as fallback): Policy number — used to match the existing InsurancePolicy record
+    - `IN1-15` (or `IN1-3` as fallback): Plan type — used to match the existing InsurancePolicy record
 
     **Upsert Logic:**
     - Looks up an existing Patient by gender + date_of_birth + policy_id match.
@@ -58,7 +65,7 @@ async def get_registed_patient(req: Request, db: Session = Depends(get_db)):
         # --- Extract from PID ---
         dt = datetime.strptime(all_values['PID-7'], "%Y%m%d")
         date_of_birth = dt.strftime("%Y-%m-%d")
-        gender = "Male" if all_values.get('PID-8') == "M" else "Female"
+        gender = "Male" if str(all_values.get('PID-8')).strip() == "M" else "Female"
 
         if 'PID-5.1' in all_values or 'PID-5.2' in all_values: # hl7 cannot have a full name you should always break it down.
             fname = all_values.get('PID-5.1', '')
@@ -66,22 +73,26 @@ async def get_registed_patient(req: Request, db: Session = Depends(get_db)):
             name = f"{fname} {lname}".strip()
         else:
             name = all_values.get('PID-5', '')
+        
+        phone_no = all_values.get('PID-13') or all_values.get('PID-14') or None
 
     except Exception as exp:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
 
     # --- Upsert logic ---
     # Match on gender + date_of_birth (from PID) + policy_id (from IN1)
-    # policy_number from IN1 maps to InsurancePolicy.policy_id
-    policy_number = all_values.get('IN1-3') or all_values.get('IN1-2')
+    # policy_id from IN1 maps to InsurancePolicy.policy_id
+    policy_id = all_values.get('IN1-36') or all_values.get('IN1-2')
+    plan_type = all_values.get('IN1-15') or all_values.get('IN1-3')
 
     existing_patient = (
         db.query(models.Patient)
-        .join(models.InsurancePolicy, models.InsurancePolicy.pid == models.Patient.pid)
+        .join(models.InsurancePolicy, models.InsurancePolicy.policy_id == int(str(policy_id).strip()))
         .filter(
             models.Patient.gender == gender,
             models.Patient.date_of_birth == date_of_birth,
-            models.InsurancePolicy.policy_id == int(policy_number)
+            models.InsurancePolicy.policy_id == int(str(policy_id).strip()),
+            models.InsurancePolicy.category_name == str(plan_type).strip()
         )
         .first()
     )
@@ -91,9 +102,35 @@ async def get_registed_patient(req: Request, db: Session = Depends(get_db)):
         existing_patient.mpi = all_values['PID-3']
         db.commit()
         db.refresh(existing_patient)
-        return {"message": "Patient MPI updated successfully"}
+        # return {"message": "Patient MPI updated successfully"}
+        return JSONResponse(content={"message": "Patient MPI updated successfully"}, status_code=status.HTTP_200_OK)
     else:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found")
+        # raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found")
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                "http://localhost:8003/reg_patient",
+                json={
+                    "name": name,
+                    "phone_no": phone_no,
+                    "gender": gender,
+                    "date_of_birth": date_of_birth,
+                    "user_id": 0, # since we don't have a user_id here, we can set it to 0 or any default value. The reg_patient endpoint should handle this accordingly.
+                    "insurance_type": plan_type
+                }
+            )
+            if response.status_code == 201:
+                return JSONResponse(
+                    content={"message": "Patient not found, but registration endpoint was called to create a new patient."},
+                    status_code=status.HTTP_200_OK
+                )
+            else:
+                return JSONResponse(
+                    content={"message": "Patient not found, and registration endpoint failed to create a new patient. error: " + response.text},
+                    status_code=status.HTTP_404_NOT_FOUND
+                )
+            
+                
+
 
 
 def hl7_extract_paths(segment):

@@ -1,6 +1,5 @@
 import logging
 from logging.handlers import RotatingFileHandler
-import os
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
@@ -10,8 +9,6 @@ from database import get_db
 import model
 
 router = APIRouter(tags=["Engine-Service"])
-
-os.makedirs("logs", exist_ok=True)
 
 logger = logging.getLogger("get_data")
 formater = logging.Formatter("%(asctime)s- %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s")
@@ -31,6 +28,8 @@ async def add_patient(req: Request, db: Session = Depends(get_db)):
     
     try:
         json_data = await req.json()
+
+        logger.info(f"Recieved FHIR Data: {json_data}")
 
         resource_type = json_data['resourceType']
         db_data = {}
@@ -53,8 +52,20 @@ async def add_patient(req: Request, db: Session = Depends(get_db)):
 
                     value = get_fhir_value_by_path(json_data, path)
                     db_data[path] = value
-        
-        print(db_data)
+                    
+        patient = model.Patient(
+            nic = db_data["identifier[1].value"], # NIC
+            mpi = db_data["identifier[0].value"], # MPI
+            name = db_data["name[0].text"],
+            gender = db_data["gender"],
+            date_of_birth = db_data["birthDate"],
+            address = db_data["address[0].text"],
+            phone_no = db_data["telecom[0].value"]
+        )
+        db.add(patient)
+        db.commit()
+
+        logger.info("Patient added to DB with MPI: {patient.mpi}")
         return {"message": db_data}
 
     except Exception as e:

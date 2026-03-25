@@ -20,3 +20,52 @@
 2026-03-23 12:25:13,265- INFO - [endpoint.py:303] - Mapped field policy_number to path IN1-36
 2026-03-23 12:25:13,270- INFO - [endpoint.py:317] - HL7 field extraction completed for endpoint_id=114, total_fields_added=7
 2026-03-23 12:25:13,271- INFO - [endpoint.py:153] - HL7 endpoint fields added successfully for endpoint_id=114
+2026-03-24 10:42:50,260- INFO - [endpoint.py:102] - Add endpoint request received: server_id=7, url=/fhir/add-patient, server_protocol=FHIR
+2026-03-24 10:42:50,310- INFO - [endpoint.py:134] - Endpoint created and flushed successfully: endpoint_id=115
+2026-03-24 10:42:50,733- INFO - [endpoint.py:219] - FHIR field extraction started for endpoint_id=115
+2026-03-24 10:42:50,733- INFO - [endpoint.py:244] - Mapped field mpi_type to path Patient-identifier[0].type.coding[0].code
+2026-03-24 10:42:50,735- INFO - [endpoint.py:244] - Mapped field mpi to path Patient-identifier[0].value
+2026-03-24 10:42:50,735- INFO - [endpoint.py:244] - Mapped field nic_type to path Patient-identifier[1].type.coding[0].code
+2026-03-24 10:42:50,737- INFO - [endpoint.py:244] - Mapped field nic to path Patient-identifier[1].value
+2026-03-24 10:42:50,737- INFO - [endpoint.py:244] - Mapped field fullname to path Patient-name[0].text
+2026-03-24 10:42:50,739- INFO - [endpoint.py:244] - Mapped field gender to path Patient-gender
+2026-03-24 10:42:50,739- INFO - [endpoint.py:244] - Mapped field birth_date to path Patient-birthDate
+2026-03-24 10:42:50,741- INFO - [endpoint.py:244] - Mapped field address to path Patient-address[0].text
+2026-03-24 10:42:50,741- INFO - [endpoint.py:244] - Mapped field phone to path Patient-telecom[0].value
+2026-03-24 10:42:50,741- INFO - [endpoint.py:244] - Mapped field patient_member_number to path Coverage-identifier[0].value
+2026-03-24 10:42:50,741- INFO - [endpoint.py:244] - Mapped field coverage_status to path Coverage-status
+2026-03-24 10:42:50,741- INFO - [endpoint.py:244] - Mapped field plan_type_code to path Coverage-class[0].type.coding[0].code
+2026-03-24 10:42:50,741- INFO - [endpoint.py:244] - Mapped field plan_type to path Coverage-class[0].value
+2026-03-24 10:42:50,741- INFO - [endpoint.py:244] - Mapped field coverage_patient to path Coverage-beneficiary.reference
+2026-03-24 10:42:50,741- INFO - [endpoint.py:244] - Mapped field policy_number to path Coverage-subscriberId
+2026-03-24 10:42:50,741- INFO - [endpoint.py:244] - Mapped field insurance_company_id to path Coverage-payor[0].reference
+2026-03-24 10:42:50,783- INFO - [endpoint.py:258] - FHIR field extraction completed for endpoint_id=115, total_fields_added=16
+2026-03-24 10:42:50,783- INFO - [endpoint.py:147] - FHIR endpoint fields added successfully for endpoint_id=115
+2026-03-24 11:08:49,180- INFO - [endpoint.py:102] - Add endpoint request received: server_id=9, url=/add/patient, server_protocol=FHIR
+2026-03-24 11:08:49,193- INFO - [endpoint.py:134] - Endpoint created and flushed successfully: endpoint_id=116
+2026-03-24 11:08:49,195- INFO - [endpoint.py:219] - FHIR field extraction started for endpoint_id=116
+2026-03-24 11:08:49,195- INFO - [endpoint.py:244] - Mapped field mpi_type to path Patient-identifier[0].type.coding[0].code
+2026-03-24 11:08:49,196- INFO - [endpoint.py:244] - Mapped field mpi to path Patient-identifier[0].value
+2026-03-24 11:08:49,196- INFO - [endpoint.py:244] - Mapped field nic_type to path Patient-identifier[1].type.coding[0].code
+2026-03-24 11:08:49,197- INFO - [endpoint.py:244] - Mapped field nic to path Patient-identifier[1].value
+2026-03-24 11:08:49,197- INFO - [endpoint.py:244] - Mapped field fullname to path Patient-name[0].text
+2026-03-24 11:08:49,197- INFO - [endpoint.py:244] - Mapped field gender to path Patient-gender
+2026-03-24 11:08:49,198- INFO - [endpoint.py:244] - Mapped field birth_date to path Patient-birthDate
+2026-03-24 11:08:49,198- INFO - [endpoint.py:244] - Mapped field address to path Patient-address[0].text
+2026-03-24 11:08:49,199- INFO - [endpoint.py:244] - Mapped field phone to path Patient-telecom[0].value
+2026-03-24 11:08:49,208- INFO - [endpoint.py:258] - FHIR field extraction completed for endpoint_id=116, total_fields_added=9
+2026-03-24 11:08:49,209- INFO - [endpoint.py:147] - FHIR endpoint fields added successfully for endpoint_id=116
+2026-03-24 15:56:04,691- INFO - [endpoint.py:102] - Add endpoint request received: server_id=10, url=/get/registed_patient, server_protocol=HL7
+2026-03-24 15:56:04,709- INFO - [endpoint.py:134] - Endpoint created and flushed successfully: endpoint_id=117
+2026-03-24 15:56:04,709- INFO - [endpoint.py:288] - HL7 field extraction started for endpoint_id=117
+2026-03-24 15:56:04,711- WARNING - [endpoint.py:354] - No canonical mapping found for path PID-1, skipping.
+2026-03-24 15:56:04,711- INFO - [endpoint.py:303] - Mapped field mpi to path PID-3
+2026-03-24 15:56:04,712- INFO - [endpoint.py:303] - Mapped field family_name to path PID-5.1
+2026-03-24 15:56:04,712- INFO - [endpoint.py:303] - Mapped field given_name to path PID-5.2
+2026-03-24 15:56:04,712- INFO - [endpoint.py:303] - Mapped field birth_date to path PID-7
+2026-03-24 15:56:04,713- INFO - [endpoint.py:303] - Mapped field gender to path PID-8
+2026-03-24 15:56:04,713- INFO - [endpoint.py:303] - Mapped field phone to path PID-13
+2026-03-24 15:56:04,726- INFO - [endpoint.py:303] - Mapped field plan_type to path IN1-15
+2026-03-24 15:56:04,726- INFO - [endpoint.py:303] - Mapped field policy_number to path IN1-36
+2026-03-24 15:56:04,731- INFO - [endpoint.py:317] - HL7 field extraction completed for endpoint_id=117, total_fields_added=8
+2026-03-24 15:56:04,731- INFO - [endpoint.py:153] - HL7 endpoint fields added successfully for endpoint_id=117

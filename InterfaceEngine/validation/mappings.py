@@ -161,7 +161,7 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
     "Encounter-identifier[0].value":                                 "encounter_number",
     "Encounter-identifier[0].type.coding[0].code":                   "encounter_number_type",
     "Encounter-status":                                              "encounter_status",
-    "Encounter-class.code":                                          "encounter_class",
+    "Encounter-class.code":                                          "patient_class",
     "Encounter-class.display":                                       "encounter_class_name",
     "Encounter-class.system":                                        "encounter_class_system",
     "Encounter-type[0].coding[0].code":                              "encounter_type",
@@ -171,8 +171,8 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
     "Encounter-subject.reference":                                   "encounter_patient",
     "Encounter-participant[0].type[0].coding[0].code":               "encounter_participant_type",
     "Encounter-participant[0].individual.reference":                 "encounter_provider",
-    "Encounter-period.start":                                        "encounter_start",
-    "Encounter-period.end":                                          "encounter_end",
+    "Encounter-period.start":                                        "admit_datetime",
+    "Encounter-period.end":                                          "discharge_datetime",
     "Encounter-length.value":                                        "encounter_length",
     "Encounter-length.unit":                                         "encounter_length_unit",
     "Encounter-type[0].coding[0].code":                              "encounter_type",
@@ -196,49 +196,51 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
     "Encounter-partOf.reference":                                    "parent_encounter",
 
     # ── Condition (Diagnosis) ─────────────────────────────────────────────────
+    # Aligned with DG1 segment canonical names for auto-matching
     "Condition-id":                                       "condition_fhir_id",
-    "Condition-identifier[0].value":                      "condition_identifier",
+    "Condition-identifier[0].value":                      "diagnosis_identifier",
     "Condition-identifier[0].type.coding[0].code":        "condition_identifier_type",
     "Condition-clinicalStatus.coding[0].code":            "condition_status",
     "Condition-verificationStatus.coding[0].code":        "condition_verification",
-    "Condition-category[0].coding[0].code":               "condition_category",
+    "Condition-category[0].coding[0].code":               "diagnosis_classification",
     "Condition-category[0].coding[0].display":            "condition_category_name",
     "Condition-severity.coding[0].code":                  "condition_severity",
     "Condition-severity.coding[0].display":               "condition_severity_name",
     "Condition-code.coding[0].code":                      "diagnosis_code",
     "Condition-code.coding[0].display":                   "diagnosis_name",
-    "Condition-code.coding[0].system":                    "diagnosis_system",
-    "Condition-code.text":                                "diagnosis_text",
+    "Condition-code.coding[0].system":                    "diagnosis_coding_system",
+    "Condition-code.text":                                "diagnosis_description",
     "Condition-subject.reference":                        "condition_patient",
     "Condition-encounter.reference":                      "condition_encounter",
     "Condition-onsetDateTime":                            "condition_onset",
     "Condition-onsetPeriod.start":                        "condition_onset_start",
     "Condition-abatementDateTime":                        "condition_end",
-    "Condition-recordedDate":                             "condition_recorded",
+    "Condition-recordedDate":                             "diagnosis_datetime",
     "Condition-recorder.reference":                       "condition_recorder",
-    "Condition-asserter.reference":                       "condition_asserter",
+    "Condition-asserter.reference":                       "diagnosing_clinician",
     "Condition-stage[0].summary.coding[0].code":          "condition_stage_code",
     "Condition-stage[0].summary.coding[0].display":       "condition_stage",
     "Condition-note[0].text":                             "condition_notes",
 
     # ── Observation (Lab Results / Vitals) ────────────────────────────────────
+    # Aligned with OBX segment canonical names for auto-matching
     "Observation-id":                                         "observation_fhir_id",
     "Observation-identifier[0].value":                        "observation_identifier",
     "Observation-identifier[0].type.coding[0].code":          "observation_identifier_type",
-    "Observation-status":                                     "observation_status",
+    "Observation-status":                                     "observation_result_status",
     "Observation-category[0].coding[0].code":                 "observation_category",
     "Observation-category[0].coding[0].display":              "observation_category_name",
     "Observation-code.coding[0].code":                        "observation_code",
     "Observation-code.coding[0].display":                     "observation_name",
-    "Observation-code.coding[0].system":                      "observation_system",
+    "Observation-code.coding[0].system":                      "observation_coding_system",
     "Observation-code.text":                                  "observation_code_text",
     "Observation-subject.reference":                          "observation_patient",
     "Observation-encounter.reference":                        "observation_encounter",
-    "Observation-effectiveDateTime":                          "observation_date",
+    "Observation-effectiveDateTime":                          "observation_datetime",
     "Observation-effectivePeriod.start":                      "observation_start",
     "Observation-effectivePeriod.end":                        "observation_end",
     "Observation-issued":                                     "observation_issued",
-    "Observation-performer[0].reference":                     "observation_performer",
+    "Observation-performer[0].reference":                     "responsible_observer",
     "Observation-valueQuantity.value":                        "result_value",
     "Observation-valueQuantity.unit":                         "result_unit",
     "Observation-valueQuantity.system":                       "result_unit_system",
@@ -250,19 +252,19 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
     "Observation-valueCodeableConcept.coding[0].code":        "result_code",
     "Observation-valueCodeableConcept.coding[0].display":     "result_code_name",
     "Observation-dataAbsentReason.coding[0].code":            "result_absent_reason",
-    "Observation-interpretation[0].coding[0].code":           "result_interpretation",
+    "Observation-interpretation[0].coding[0].code":           "abnormal_flags",
     "Observation-interpretation[0].coding[0].display":        "result_interpretation_name",
     "Observation-note[0].text":                               "observation_notes",
     "Observation-bodySite.coding[0].code":                    "body_site_code",
     "Observation-bodySite.coding[0].display":                 "body_site",
     "Observation-method.coding[0].code":                      "observation_method",
     "Observation-specimen.reference":                         "observation_specimen",
-    "Observation-device.reference":                           "observation_device",
+    "Observation-device.reference":                           "equipment_id",
     "Observation-referenceRange[0].low.value":                "ref_range_low",
     "Observation-referenceRange[0].low.unit":                 "ref_range_low_unit",
     "Observation-referenceRange[0].high.value":               "ref_range_high",
     "Observation-referenceRange[0].high.unit":                "ref_range_high_unit",
-    "Observation-referenceRange[0].text":                     "ref_range_text",
+    "Observation-referenceRange[0].text":                     "reference_range",
     "Observation-hasMember[0].reference":                     "observation_member",
     "Observation-component[0].code.coding[0].code":           "component_code",
     "Observation-component[0].code.coding[0].display":        "component_name",
@@ -299,8 +301,9 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
     "DiagnosticReport-presentedForm[0].contentType":          "report_pdf_type",
 
     # ── ServiceRequest (Lab Order / Referral) ─────────────────────────────────
+    # Aligned with OBR segment canonical names for auto-matching
     "ServiceRequest-id":                                      "order_fhir_id",
-    "ServiceRequest-identifier[0].value":                     "order_identifier",
+    "ServiceRequest-identifier[0].value":                     "placer_order_number",
     "ServiceRequest-identifier[0].type.coding[0].code":       "order_identifier_type",
     "ServiceRequest-basedOn[0].reference":                    "order_based_on",
     "ServiceRequest-status":                                  "order_status",
@@ -311,21 +314,21 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
     "ServiceRequest-doNotPerform":                            "order_do_not_perform",
     "ServiceRequest-code.coding[0].code":                     "order_code",
     "ServiceRequest-code.coding[0].display":                  "order_name",
-    "ServiceRequest-code.coding[0].system":                   "order_system",
+    "ServiceRequest-code.coding[0].system":                   "order_coding_system",
     "ServiceRequest-subject.reference":                       "order_patient",
     "ServiceRequest-encounter.reference":                     "order_encounter",
-    "ServiceRequest-occurrenceDateTime":                      "order_date",
+    "ServiceRequest-occurrenceDateTime":                      "observation_start_datetime",
     "ServiceRequest-occurrencePeriod.start":                  "order_start",
     "ServiceRequest-occurrencePeriod.end":                    "order_end",
-    "ServiceRequest-authoredOn":                              "order_authored",
-    "ServiceRequest-requester.reference":                     "order_requester",
+    "ServiceRequest-authoredOn":                              "requested_datetime",
+    "ServiceRequest-requester.reference":                     "ordering_provider",
     "ServiceRequest-performer[0].reference":                  "order_performer",
     "ServiceRequest-performerType.coding[0].code":            "order_performer_type",
     "ServiceRequest-locationReference[0].reference":          "order_location",
-    "ServiceRequest-reasonCode[0].coding[0].code":            "order_reason_code",
-    "ServiceRequest-reasonCode[0].coding[0].display":         "order_reason",
+    "ServiceRequest-reasonCode[0].coding[0].code":            "reason_code",
+    "ServiceRequest-reasonCode[0].coding[0].display":         "reason_name",
     "ServiceRequest-insurance[0].reference":                  "order_insurance",
-    "ServiceRequest-supportingInfo[0].reference":             "order_supporting_info",
+    "ServiceRequest-supportingInfo[0].reference":             "relevant_clinical_info",
     "ServiceRequest-specimen[0].reference":                   "order_specimen",
     "ServiceRequest-bodySite[0].coding[0].code":              "order_body_site",
     "ServiceRequest-note[0].text":                            "order_notes",
@@ -333,59 +336,68 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
 
     # ── Coverage (Insurance Card) — R4B v4.3.0 ───────────────────────────────
     #
-    # Confirmed from hl7.org/fhir/R4B/coverage.html:
-    #   identifier  = "Business Identifier for the coverage" — this is the
-    #                 Member ID / Certificate number on the insurance card.
-    #                 NOT the policy number. Canonical name: member_id.
-    #   status      = active | cancelled | draft | entered-in-error
-    #   type        = "Coverage category such as medical or accident"
-    #                 (CodeableConcept — medical/dental/vision, NOT HMO/PPO)
-    #   subscriberId= string — "ID assigned to the subscriber" (cardholder ID)
-    #   class[]     = group/plan/subplan numbers live here
-    #   kind        = R5+ ONLY — does NOT exist in R4 or R4B. Not mapped here.
+    # Canonical names deliberately aligned with IN1 HL7 segment so that
+    # Coverage ↔ IN1 fields auto-match on the frontend mapping screen.
+    #
+    # FHIR ↔ HL7 alignment table:
+    #   Coverage-identifier[0].value       ↔ IN1-53  "patient_member_number"
+    #   Coverage-subscriberId              ↔ IN1-36  "policy_number"  (cardholder policy ID)
+    #   Coverage-type.coding[0].code       ↔ IN1-35  "coverage_type"
+    #   Coverage-period.start              ↔ IN1-27  "coverage_start_date"
+    #   Coverage-period.end                ↔ IN1-28  "coverage_end_date"
+    #   Coverage-payor display             ↔ IN1-4   "insurance_company_name"
+    #   Coverage-class[0].value (group)    ↔ IN1-8   "group_number"
+    #   Coverage-class[0].name  (group)    ↔ IN1-9   "group_name"
+    #   Coverage-class[1].value (plan)     ↔ IN1-2   "health_plan_id"
+    #   Coverage-relationship              ↔ IN1-26  "subscriber_relationship"
+    #   Coverage-costToBeneficiary copay   ↔ IN1-41  "copay"
+    #   Coverage-costToBeneficiary ded     ↔ IN1-39  "deductible"
 
     "Coverage-id":                                            "coverage_fhir_id",
 
-    # identifier = Member ID / Certificate number (NOT policy number)
-    "Coverage-identifier[0].value":                           "member_id",
-    "Coverage-identifier[0].type.coding[0].code":             "member_id_type",
-    "Coverage-identifier[0].system":                          "member_id_system",
+    # identifier = Member ID / Certificate number — aligns with IN1-53
+    "Coverage-identifier[0].value":                           "patient_member_number",
+    "Coverage-identifier[0].type.coding[0].code":             "patient_member_number_type",
+    "Coverage-identifier[0].system":                          "patient_member_number_system",
 
     "Coverage-status":                                        "coverage_status",
 
-    # type = coverage category: medical | dental | vision | accident (NOT HMO/PPO)
-    "Coverage-type.coding[0].code":                           "coverage_category_code",
-    "Coverage-type.coding[0].display":                        "coverage_category_name",
-    "Coverage-type.coding[0].system":                         "coverage_category_system",
+    # type = coverage category (medical/dental/vision) — aligns with IN1-35
+    "Coverage-type.coding[0].code":                           "coverage_type",
+    "Coverage-type.coding[0].display":                        "coverage_type_name",
+    "Coverage-type.coding[0].system":                         "coverage_type_system",
     "Coverage-type.text":                                     "coverage_type_text",
 
     "Coverage-policyHolder.reference":                        "policy_holder",
 
-    # subscriberId = insurer-assigned string ID for the subscriber / cardholder
-    "Coverage-subscriberId":                                  "subscriber_id",
+    # subscriberId = cardholder's policy ID — aligns with IN1-36
+    "Coverage-subscriberId":                                  "policy_number",
     "Coverage-subscriber.reference":                          "subscriber",
     "Coverage-beneficiary.reference":                         "coverage_patient",
     "Coverage-dependent":                                     "dependent_number",
     "Coverage-relationship.coding[0].code":                   "subscriber_relationship",
     "Coverage-relationship.coding[0].display":                "subscriber_relationship_name",
 
-    "Coverage-period.start":                                  "coverage_start",
-    "Coverage-period.end":                                    "coverage_end",
+    # period — aligns with IN1-27 / IN1-28
+    "Coverage-period.start":                                  "coverage_start_date",
+    "Coverage-period.end":                                    "coverage_end_date",
 
-    "Coverage-payor[0].reference":                            "insurance_company",
+    # payor — aligns with IN1-3 / IN1-4
+    "Coverage-payor[0].reference":                            "insurance_company_id",
     "Coverage-payor[0].display":                              "insurance_company_name",
-    "Coverage-payor[0].display":                              "insurance_company_name",
 
-    # class[] — group / plan / subplan numbers, confirmed in R4B spec
-    "Coverage-class[0].type.coding[0].code":                  "coverage_class_type",   # "group"
-    "Coverage-class[0].value":                                "group_number",
-    "Coverage-class[0].name":                                 "group_name",
+    # class[group] — aligns with IN1-8 / IN1-9
+    # "Coverage-class[0].type.coding[0].code":                  "coverage_class_type",
+    # "Coverage-class[0].value":                                "group_number",
+    # "Coverage-class[0].name":                                 "group_name",
 
-    "Coverage-class[1].type.coding[0].code":                  "coverage_plan_type",    # "plan"
-    "Coverage-class[1].value":                                "plan_id",
-    "Coverage-class[1].name":                                 "plan_name",
+    # class[plan] — aligns with IN1-2 health_plan_id
+    "Coverage-class[0].type.coding[0].code":                  "plan_type_code",
+    "Coverage-class[0].value":                                "plan_type",
+    "Coverage-class[0].name":                                 "health_plan_description",
 
-    "Coverage-class[2].type.coding[0].code":                  "coverage_subplan_type", # "subplan"
+    # class[subplan]
+    "Coverage-class[2].type.coding[0].code":                  "coverage_subplan_type",
     "Coverage-class[2].value":                                "subplan_id",
     "Coverage-class[2].name":                                 "subplan_name",
 
@@ -393,12 +405,12 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
     "Coverage-network":                                       "network_name",
     "Coverage-subrogation":                                   "coverage_subrogation",
 
-    # costToBeneficiary = patient cost-share details (copay, deductible, coinsurance)
+    # costToBeneficiary — aligned with IN1-39 deductible / IN1-41 copay / IN1-42 coinsurance
     "Coverage-costToBeneficiary[0].type.coding[0].code":      "cost_share_type",
-    "Coverage-costToBeneficiary[0].valueMoney.value":         "cost_share_amount",
+    "Coverage-costToBeneficiary[0].valueMoney.value":         "deductible",
     "Coverage-costToBeneficiary[0].valueMoney.currency":      "cost_share_currency",
-    "Coverage-costToBeneficiary[0].valueQuantity.value":      "cost_share_pct",
-    "Coverage-costToBeneficiary[0].valueQuantity.unit":       "cost_share_pct_unit",
+    "Coverage-costToBeneficiary[0].valueQuantity.value":      "copay",
+    "Coverage-costToBeneficiary[0].valueQuantity.unit":       "coinsurance",
 
     "Coverage-contract[0].reference":                         "coverage_contract",
 
@@ -482,8 +494,9 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
     "ExplanationOfBenefit-payment.date":                                     "eob_payment_date",
 
     # ── MedicationRequest (Prescription) ──────────────────────────────────────
+    # Aligned with RXO/RXE segment canonical names for auto-matching
     "MedicationRequest-id":                                               "rx_fhir_id",
-    "MedicationRequest-identifier[0].value":                              "rx_identifier",
+    "MedicationRequest-identifier[0].value":                              "prescription_number",
     "MedicationRequest-identifier[0].type.coding[0].code":                "rx_identifier_type",
     "MedicationRequest-status":                                           "rx_status",
     "MedicationRequest-statusReason.coding[0].code":                      "rx_status_reason",
@@ -492,13 +505,13 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
     "MedicationRequest-priority":                                         "rx_priority",
     "MedicationRequest-medicationCodeableConcept.coding[0].code":         "drug_code",
     "MedicationRequest-medicationCodeableConcept.coding[0].display":      "drug_name",
-    "MedicationRequest-medicationCodeableConcept.coding[0].system":       "drug_system",
+    "MedicationRequest-medicationCodeableConcept.coding[0].system":       "drug_coding_system",
     "MedicationRequest-medicationCodeableConcept.text":                   "drug_text",
     "MedicationRequest-medicationReference.reference":                    "drug_reference",
     "MedicationRequest-subject.reference":                                "rx_patient",
     "MedicationRequest-encounter.reference":                              "rx_encounter",
-    "MedicationRequest-authoredOn":                                       "rx_authored",
-    "MedicationRequest-requester.reference":                              "rx_requester",
+    "MedicationRequest-authoredOn":                                       "rx_fill_datetime",
+    "MedicationRequest-requester.reference":                              "prescribing_provider",
     "MedicationRequest-reasonCode[0].coding[0].code":                     "rx_reason_code",
     "MedicationRequest-reasonCode[0].coding[0].display":                  "rx_reason",
     "MedicationRequest-dosageInstruction[0].text":                        "rx_dosage_text",
@@ -508,18 +521,19 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
     "MedicationRequest-dosageInstruction[0].timing.code.coding[0].code":  "rx_timing_code",
     "MedicationRequest-dosageInstruction[0].route.coding[0].code":        "rx_route_code",
     "MedicationRequest-dosageInstruction[0].route.coding[0].display":     "rx_route",
-    "MedicationRequest-dosageInstruction[0].doseAndRate[0].doseQuantity.value": "rx_dose_value",
-    "MedicationRequest-dosageInstruction[0].doseAndRate[0].doseQuantity.unit":  "rx_dose_unit",
-    "MedicationRequest-dosageInstruction[0].maxDosePerPeriod.numerator.value":  "rx_max_dose",
-    "MedicationRequest-dispenseRequest.numberOfRepeatsAllowed":           "rx_refills",
-    "MedicationRequest-dispenseRequest.quantity.value":                   "rx_quantity",
-    "MedicationRequest-dispenseRequest.quantity.unit":                    "rx_quantity_unit",
+    "MedicationRequest-dosageInstruction[0].doseAndRate[0].doseQuantity.value": "requested_dose_value",
+    "MedicationRequest-dosageInstruction[0].doseAndRate[0].doseQuantity.unit":  "requested_dose_unit",
+    "MedicationRequest-dosageInstruction[0].maxDosePerPeriod.numerator.value":  "requested_dose_max",
+    "MedicationRequest-dispenseRequest.numberOfRepeatsAllowed":           "requested_refills",
+    "MedicationRequest-dispenseRequest.quantity.value":                   "dispense_amount",
+    "MedicationRequest-dispenseRequest.quantity.unit":                    "dispense_units",
     "MedicationRequest-dispenseRequest.expectedSupplyDuration.value":     "rx_supply_days",
     "MedicationRequest-dispenseRequest.performer.reference":              "rx_dispenser",
-    "MedicationRequest-substitution.allowedBoolean":                      "rx_substitution",
+    "MedicationRequest-substitution.allowedBoolean":                      "allow_substitutions",
     "MedicationRequest-note[0].text":                                     "rx_notes",
 
     # ── AllergyIntolerance ────────────────────────────────────────────────────
+    # Aligned with AL1 segment canonical names for auto-matching
     "AllergyIntolerance-id":                                              "allergy_fhir_id",
     "AllergyIntolerance-identifier[0].value":                             "allergy_identifier",
     "AllergyIntolerance-identifier[0].type.coding[0].code":               "allergy_identifier_type",
@@ -530,10 +544,10 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
     "AllergyIntolerance-criticality":                                     "allergy_criticality",
     "AllergyIntolerance-code.coding[0].code":                             "allergen_code",
     "AllergyIntolerance-code.coding[0].display":                          "allergen_name",
-    "AllergyIntolerance-code.coding[0].system":                           "allergen_system",
+    "AllergyIntolerance-code.coding[0].system":                           "allergen_coding_system",
     "AllergyIntolerance-patient.reference":                               "allergy_patient",
     "AllergyIntolerance-encounter.reference":                             "allergy_encounter",
-    "AllergyIntolerance-onsetDateTime":                                   "allergy_onset",
+    "AllergyIntolerance-onsetDateTime":                                   "allergy_identification_date",
     "AllergyIntolerance-recordedDate":                                    "allergy_recorded",
     "AllergyIntolerance-recorder.reference":                              "allergy_recorder",
     "AllergyIntolerance-asserter.reference":                              "allergy_asserter",
@@ -543,9 +557,9 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
     "AllergyIntolerance-reaction[0].substance.coding[0].display":         "reaction_substance_name",
     "AllergyIntolerance-reaction[0].manifestation[0].coding[0].code":     "reaction_code",
     "AllergyIntolerance-reaction[0].manifestation[0].coding[0].display":  "reaction_name",
-    "AllergyIntolerance-reaction[0].description":                         "reaction_description",
+    "AllergyIntolerance-reaction[0].description":                         "allergy_reaction",
     "AllergyIntolerance-reaction[0].onset":                               "reaction_onset",
-    "AllergyIntolerance-reaction[0].severity":                            "reaction_severity",
+    "AllergyIntolerance-reaction[0].severity":                            "allergy_severity",
     "AllergyIntolerance-reaction[0].exposureRoute.coding[0].code":        "reaction_route",
     "AllergyIntolerance-reaction[0].note[0].text":                        "reaction_notes",
 
@@ -766,14 +780,26 @@ HL7_EXACT_CANONICAL: dict[str, str] = {
     "PID-3.4":    "assigning_authority",
     "PID-3.5":    "id_type_code",
     "PID-4":      "alternate_patient_id",
+    # Optional NIC alias in PID-2 (alternate patient ID as CX)
+    # so Patient.identifier[nic] can auto-match with PID mappings.
+    "PID-2.1":    "nic",
+    "PID-2.5":    "nic_type",
     "PID-5":      "fullname",
     "PID-5.1":    "family_name",
+    # PID-5 is XPN; when '&' appears inside a component, extractor emits .x.1 subcomponents.
+    "PID-5.1.1":  "family_name",
     "PID-5.2":    "given_name",
+    "PID-5.2.1":  "given_name",
     "PID-5.3":    "middle_name",
+    "PID-5.3.1":  "middle_name",
     "PID-5.4":    "name_suffix",
+    "PID-5.4.1":  "name_suffix",
     "PID-5.5":    "name_prefix",
+    "PID-5.5.1":  "name_prefix",
     "PID-5.6":    "degree",
+    "PID-5.6.1":  "degree",
     "PID-5.7":    "name_type_code",
+    "PID-5.7.1":  "name_type_code",
     "PID-6":      "mothers_maiden_name",
     "PID-6.1":    "mothers_family_name",
     "PID-6.2":    "mothers_given_name",
@@ -952,6 +978,8 @@ HL7_EXACT_CANONICAL: dict[str, str] = {
     "IN1-28":   "coverage_end_date",
     "IN1-29":   "policy_type",
     "IN1-35":   "coverage_type",
+    # CE text component for human-readable coverage type label.
+    "IN1-35.2": "coverage_type_text",
 
     # IN1-36 = Policy Number — patient's individual policy number
     "IN1-36":   "policy_number",
@@ -969,6 +997,9 @@ HL7_EXACT_CANONICAL: dict[str, str] = {
     "IN1-50":   "policy_limit_amount",
     "IN1-52":   "copay_limit_days",
     "IN1-53":   "patient_member_number",
+    # Optional/custom extension slots for canonical parity with FHIR Coverage.
+    "IN1-54":   "coverage_status",
+    "IN1-55":   "coverage_patient",
 
     # ── OBR — Observation Request (Lab Order) ─────────────────────────────────
     "OBR-1":    "order_set_id",
