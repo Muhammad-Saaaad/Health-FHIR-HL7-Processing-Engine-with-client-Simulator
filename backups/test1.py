@@ -86,7 +86,7 @@ PID|1||23||saad^Muhammad||20041006|M|||||
 """
 test1 = """
 MSH|^~\\&|EHR||payer||20260203120000||ADT^A01|MSG00001|P|2.5
-PID|1||23||saad^Muhammad||20041006|M|||||
+PID|1||23||saad^Muhammad||20041006|M|||||+92-315-3726612
 IN1|||||||||||||||Silver|||||||||||||||||||||9||||||||||||||||
 """
 import re
@@ -120,12 +120,13 @@ def get_hl7_value_by_path(hl7_message, paths) -> dict:
                     value[path] = fields[int(sp_path[1])]
         
     return value
-
-for segment in test1.split('\n')[1:]:
+# all_values = {}
+# for segment in test1.split('\n')[1:]:
     
-    segment_type, paths = hl7_extract_paths(segment)
-    print(segment_type, paths)
-    print(get_hl7_value_by_path(test1, paths))
+#     segment_type, paths = hl7_extract_paths(segment)
+#     print(segment_type, paths)
+#     all_values.update(get_hl7_value_by_path(test1, paths))
+# print(all_values)
 
 # def extract_paths(data, prefix=""):
 #     paths = []

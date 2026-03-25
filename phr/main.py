@@ -1,12 +1,15 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 # from sqlalchemy.exc import SAWarning
 # import warnings
  
-from api import authentication, doctor
+from api import authentication, doctor, engine_service
 from database import engine
 import model
 
+os.makedirs("logs", exist_ok=True)
 
 # warnings.filterwarnings("ignore", category=SAWarning)
 app = FastAPI(title="PHR System")
@@ -21,6 +24,7 @@ model.Base.metadata.create_all(bind=engine)
 
 app.include_router(authentication.router)
 app.include_router(doctor.router)
+app.include_router(engine_service.router)
 
 @app.get("/health")
 def check_health():

@@ -387,14 +387,14 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
     "Coverage-payor[0].display":                              "insurance_company_name",
 
     # class[group] — aligns with IN1-8 / IN1-9
-    "Coverage-class[0].type.coding[0].code":                  "coverage_class_type",
-    "Coverage-class[0].value":                                "group_number",
-    "Coverage-class[0].name":                                 "group_name",
+    # "Coverage-class[0].type.coding[0].code":                  "coverage_class_type",
+    # "Coverage-class[0].value":                                "group_number",
+    # "Coverage-class[0].name":                                 "group_name",
 
     # class[plan] — aligns with IN1-2 health_plan_id
-    "Coverage-class[1].type.coding[0].code":                  "coverage_plan_type",
-    "Coverage-class[1].value":                                "health_plan_id",
-    "Coverage-class[1].name":                                 "health_plan_description",
+    "Coverage-class[0].type.coding[0].code":                  "plan_type_code",
+    "Coverage-class[0].value":                                "plan_type",
+    "Coverage-class[0].name":                                 "health_plan_description",
 
     # class[subplan]
     "Coverage-class[2].type.coding[0].code":                  "coverage_subplan_type",

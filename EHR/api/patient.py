@@ -83,7 +83,10 @@ async def add_patient(patient: schema.post_patient ,db: Session = Depends(get_db
                 {
                     "resource": {
                         "resourceType": "Patient",
-                        "identifier": [{"value": new_patient.mpi}],
+                        "identifier": [
+                            { "type": { "coding": [{ "code": "MR" }]}, "value": str(new_patient.mpi)},
+                            { "type": { "coding": [{ "code": "NI" }]}, "value": str(patient.nic)}
+                        ],
                         "name": [{"text": new_patient.name}],
                         "gender": new_patient.gender,
                         "birthDate": str(new_patient.date_of_birth),
@@ -92,11 +95,31 @@ async def add_patient(patient: schema.post_patient ,db: Session = Depends(get_db
                     }
                 },
                 {
+                    # "resource": {
+                    #     "resourceType": "Coverage",
+                    #     "identifier": [{"value": patient.policy_number}],
+                    #     "type": {"text": patient.plan_type}
+                    # }
                     "resource": {
-                        "resourceType": "Coverage",
-                        "identifier": [{"value": patient.policy_number}],
-                        "type": {"text": patient.plan_type}
-                    }
+                    "resourceType": "Coverage",
+                    "identifier": [{"value": "3"}], # Plan number.
+                    "status": "active",
+                    "class": [
+                        {
+                            "type": { "coding": [{"code": "plan"}] },
+                            "value": patient.plan_type,
+                        }
+                    ],
+                    "beneficiary": {
+                        "reference": str(new_patient.mpi) # patient mpi
+                    },
+                    "subscriberId": str(patient.policy_number), # policy number
+                    "payor": [
+                        {
+                            "reference": "Organization/insurance-company-001" # insurance company id
+                        }
+                    ]
+                }
                 }
             ]
         }

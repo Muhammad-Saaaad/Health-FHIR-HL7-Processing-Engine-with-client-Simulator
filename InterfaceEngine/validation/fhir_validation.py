@@ -245,16 +245,20 @@ if __name__ == "__main__":
                     "resourceType": "Coverage",
                     "identifier": [
                         {
-                            "value": "COV-2024-001"  # policy id.
-                        }
+                            "value": "3"  # plan id.
+                        }   
                     ],
                     "status": "active",
-                    "type": {
-                        "text": "Silver"
-                    },
+                    "class": [
+                        {
+                            "type": { "coding": [{"code": "plan"}] },
+                            "value": "Gold",
+                        }
+                    ],
                     "beneficiary": {
-                        "reference": "Patient/23"
+                        "reference": "23" # patient mpi
                     },
+                    "subscriberId": "21", # policy number
                     "payor": [
                         {
                             "reference": "Organization/insurance-company-001" # insurance company id

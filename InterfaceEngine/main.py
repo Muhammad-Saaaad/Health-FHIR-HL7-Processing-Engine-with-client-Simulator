@@ -193,7 +193,8 @@ async def route_worker(route):
 
                         if rule.transform_type == 'map': # here if there is no mapping then by default we consider the same value
                             # here the first value will give me the map value, if the mapping value is not found then return the default value
-                            value = rule.config.get(str(value), value) 
+                            value = rule.config.get(str(value).lower(), value) 
+                            print("value ---> ", value)
 
                         elif rule.transform_type == 'format':
                             try: # 2004-10-06 → 20041006 vice versa
