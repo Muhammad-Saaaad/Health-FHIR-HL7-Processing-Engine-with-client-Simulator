@@ -1,5 +1,5 @@
-from fhir.resources.patient import Patient
-from fhir.resources.humanname import HumanName
+from fhir.resources.R4B.patient import Patient
+from fhir.resources.R4B.humanname import HumanName
 
 patient = Patient()
 
@@ -38,7 +38,7 @@ test = {
 
 ############################################################
 
-from fhir.resources import get_fhir_model_class
+from fhir.resources.R4B import get_fhir_model_class
 from pydantic import ValidationError
 
 def validate_unknown_fhir_resource(fhir_data: dict): # validation of any fhir message
@@ -74,5 +74,37 @@ incoming_msg = {
     "name": [{"family": "Doe", "given": ["John"]}]
 }
 
-is_valid, message = validate_unknown_fhir_resource(incoming_msg)
+# from fhir.resources.R4B.encounter import Encounter
+# from fhir.resources.R4B.identifier import Identifier
+# from fhir.resources.R4B.coding import Coding
+# from fhir.resources.R4B.codeableconcept import CodeableConcept
+# from fhir.resources.R4B.condition import Condition
+# import json
+
+# encounter = Encounter(
+#     status="in-progress",
+#     class_fhir=Coding(code="AMB"),
+#     identifier=[Identifier(value="HOU@&!HA132a")],
+#     type=[CodeableConcept(text="General Concutation")],
+#     diagnosis=[Condition()]
+# )
+# encounter_json = json.loads(encounter.model_dump_json(indent=2))
+# # print(type(encounter_json))
+# print(encounter_json)
+
+encounter = {
+    "resourceType": "Encounter",
+    "id": "123",
+    "identifier": [
+        {
+            "value": "HOU@&!HA132a"
+        }
+    ],
+    "status": "in-progress",
+    "class": {
+        "code": "IMP",
+    }
+}
+
+is_valid, message = validate_unknown_fhir_resource(encounter)
 print(message)

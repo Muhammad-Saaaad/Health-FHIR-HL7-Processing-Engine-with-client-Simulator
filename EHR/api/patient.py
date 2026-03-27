@@ -95,11 +95,6 @@ async def add_patient(patient: schema.post_patient ,db: Session = Depends(get_db
                     }
                 },
                 {
-                    # "resource": {
-                    #     "resourceType": "Coverage",
-                    #     "identifier": [{"value": patient.policy_number}],
-                    #     "type": {"text": patient.plan_type}
-                    # }
                     "resource": {
                     "resourceType": "Coverage",
                     "identifier": [{"value": "3"}], # Plan number.

@@ -231,3 +231,7 @@ def get_fhir_value_by_path(obj, path): # give the entire fhir msg and it will ex
 #     value = get_fhir_value_by_path(test, path)
 #     print("path => ",path)
 #     print("value => ",value)
+
+from datetime import datetime, timezone
+
+print(datetime.now())

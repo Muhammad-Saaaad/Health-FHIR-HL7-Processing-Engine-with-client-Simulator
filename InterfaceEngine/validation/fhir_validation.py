@@ -269,44 +269,69 @@ if __name__ == "__main__":
         ]
     }
 
-    encounter = {
-        "resourceType": "Encounter",
-        "identifier": [
+    patient_visit = {
+        "resourceType": "Bundle",
+        "type": "message",
+        "entry": [
             {
-                "value": "VID-2024-12345"  # Primary key from EHR - send to PHR
-            }
-        ],
-        "status": "in-progress",
-        "class": {
-            "code": "AMB"  # AMB=Ambulatory, IMP=Inpatient, EMER=Emergency, VR=Virtual
-        },
-        # 1. ENCOUNTER TITLE
-        "type": [
-            {
-                "text": "General Consultation"
-            }
-        ],
-        # 2. PATIENT COMPLAINT
-        "reasonCode": [
-            {
-                "text": "Patient experiencing severe headache and dizziness"
-            }
-        ],
-        # 3. DIAGNOSIS - display field shows the disease name (no separate Condition resource needed)
-        "diagnosis": [
-            {
-                "condition": {
-                    "display": "Migraine"  # display shows the disease name
+                "resource": {
+                    "resourceType": "Patient",
+                    "identifier": [
+                        { "type": { "coding": [{ "code": "MR" }]}, "value": "23" }
+                    ]
                 }
-            }
-        ],
-        # 4. CONSULTATION NOTES
-        "extension": [{
-                "url": "http://example.org/fhir/StructureDefinition/encounter-consultation-notes",
-                "valueString": "Patient responded well to medication. Follow-up advised in 2 weeks."
+            },
+            {
+                "resource": {
+                    "resourceType": "Encounter",
+                    "id" : "encounter-001",
+                    "identifier": [
+                        {
+                            "value": "VID-2024-12345"  # Primary key from EHR - send to PHR
+                        }
+                    ],
+                    "status": "in-progress",
+                    "class": {
+                        "code": "AMB"  # AMB=Ambulatory, IMP=Inpatient, EMER=Emergency, VR=Virtual
+                    },
+                    # 1. ENCOUNTER TITLE
+                    "type": [
+                        {
+                            "text": "General Consultation"
+                        }
+                    ],
+                    # 2. PATIENT COMPLAINT
+                    "reasonCode": [
+                        {
+                            "text": "Patient experiencing severe headache and dizziness"
+                        }
+                    ],
+                    # 3. DIAGNOSIS - display field shows the disease name (no separate Condition resource needed)
+                    "diagnosis": [
+                        {
+                            "condition": {
+                                "display": "Migraine"  # display shows the disease name
+                            }
+                        }
+                    ],
+                    # 4. CONSULTATION NOTES
+                    "extension": [{
+                            "valueString": "Patient responded well to medication. Follow-up advised in 2 weeks."
+                        }
+                    ]
+                }
+            },
+            {
+                "resource": {
+                    "resourceType": "lab_report",
+                }
             }
         ]
     }
 
-    is_valid, message = validate_unknown_fhir_resource(patient_registration)
-    print(message)
+is_valid, message = validate_unknown_fhir_resource(patient_visit)
+print(is_valid, " --> \n" ,message)
+
+# import uuid
+
+# print(str(uuid.uuid4()))

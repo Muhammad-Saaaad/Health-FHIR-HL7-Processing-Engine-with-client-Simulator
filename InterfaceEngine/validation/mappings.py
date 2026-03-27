@@ -27,7 +27,7 @@ Three exports:
     HL7_EXACT_CANONICAL     — segment/field exact path → canonical name
 
 Collision rules enforced throughout:
-    - "ResourceType-id"                  → "{resource}_fhir_id"  (internal server ID)
+    # - "ResourceType-id"                  → "{resource}_fhir_id"  (internal server ID)
     - "ResourceType-identifier[x].value" → clinically meaningful name where known:
         Patient-identifier[0].value      → "mpi"
         Coverage-identifier[0].value     → "member_id"  (Member/Certificate ID)
@@ -58,7 +58,7 @@ Collision rules enforced throughout:
 FHIR_EXACT_CANONICAL: dict[str, str] = {
 
     # ── Patient ───────────────────────────────────────────────────────────────
-    "Patient-id":                                         "patient_fhir_id",
+    # "Patient-id":                                         "patient_fhir_id",
     "Patient-identifier[0].value":                        "mpi",
     "Patient-identifier[0].type.coding[0].code":          "mpi_type",
     "Patient-identifier[1].value":                        "nic",
@@ -101,7 +101,7 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
     "Patient-link[0].type":                               "link_type",
 
     # ── Practitioner ──────────────────────────────────────────────────────────
-    "Practitioner-id":                                        "practitioner_fhir_id",
+    # "Practitioner-id":                                        "practitioner_fhir_id",
     "Practitioner-identifier[0].value":                       "practitioner_npi",
     "Practitioner-identifier[0].type.coding[0].code":         "practitioner_npi_type",
     "Practitioner-identifier[1].value":                       "practitioner_state_license",
@@ -131,7 +131,7 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
     "Practitioner-active":                                    "practitioner_active",
 
     # ── Organization ──────────────────────────────────────────────────────────
-    "Organization-id":                                    "org_fhir_id",
+    # "Organization-id":                                    "org_fhir_id",
     "Organization-identifier[0].value":                   "org_identifier",
     "Organization-identifier[0].type.coding[0].code":     "org_identifier_type",
     "Organization-identifier[1].value":                   "org_npi",
@@ -157,16 +157,16 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
     "Organization-contact[0].purpose.coding[0].code":     "org_contact_purpose",
 
     # ── Encounter ─────────────────────────────────────────────────────────────
-    "Encounter-id":                                                  "encounter_fhir_id",
-    "Encounter-identifier[0].value":                                 "encounter_number",
-    "Encounter-identifier[0].type.coding[0].code":                   "encounter_number_type",
+    # "Encounter-id":                                                  "encounter_fhir_id",
+    "Encounter-identifier[0].value":                                 "visit_number",
+    "Encounter-identifier[0].type.coding[0].code":                   "visit_number_type",
     "Encounter-status":                                              "encounter_status",
     "Encounter-class.code":                                          "patient_class",
     "Encounter-class.display":                                       "encounter_class_name",
     "Encounter-class.system":                                        "encounter_class_system",
-    "Encounter-type[0].coding[0].code":                              "encounter_type",
-    "Encounter-type[0].coding[0].display":                           "encounter_type_name",
-    "Encounter-serviceType.coding[0].code":                          "encounter_service_type",
+    "Encounter-type[0].coding[0].code":                              "admission_type",
+    "Encounter-type[0].coding[0].display":                           "admission_type_name",
+    "Encounter-serviceType.coding[0].code":                          "hospital_service",
     "Encounter-priority.coding[0].code":                             "encounter_priority",
     "Encounter-subject.reference":                                   "encounter_patient",
     "Encounter-participant[0].type[0].coding[0].code":               "encounter_participant_type",
@@ -175,8 +175,8 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
     "Encounter-period.end":                                          "discharge_datetime",
     "Encounter-length.value":                                        "encounter_length",
     "Encounter-length.unit":                                         "encounter_length_unit",
-    "Encounter-type[0].coding[0].code":                              "encounter_type",
-    "Encounter-type[0].coding[0].display":                           "encounter_type_name",
+    "Encounter-type[0].coding[0].code":                              "admission_type",
+    "Encounter-type[0].coding[0].display":                           "admission_type_name",
     "Encounter-type[0].text":                                        "encounter_title",
     "Encounter-reasonCode[0].coding[0].code":                        "encounter_reason_code",
     "Encounter-reasonCode[0].coding[0].display":                     "encounter_reason",
@@ -187,17 +187,17 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
     "Encounter-diagnosis[0].rank":                                   "encounter_diagnosis_rank",
     "Encounter-extension[0].url":                                    "encounter_notes_url",
     "Encounter-extension[0].valueString":                            "encounter_notes",
-    "Encounter-hospitalization.preAdmissionIdentifier.value":        "pre_admission_id",
+    "Encounter-hospitalization.preAdmissionIdentifier.value":        "preadmit_number",
     "Encounter-hospitalization.admitSource.coding[0].code":          "admit_source",
     "Encounter-hospitalization.dischargeDisposition.coding[0].code": "discharge_disposition",
-    "Encounter-location[0].location.reference":                      "encounter_location",
+    "Encounter-location[0].location.reference":                      "assigned_location",
     "Encounter-location[0].status":                                  "encounter_location_status",
     "Encounter-serviceProvider.reference":                           "encounter_org",
     "Encounter-partOf.reference":                                    "parent_encounter",
 
     # ── Condition (Diagnosis) ─────────────────────────────────────────────────
     # Aligned with DG1 segment canonical names for auto-matching
-    "Condition-id":                                       "condition_fhir_id",
+    # "Condition-id":                                       "condition_fhir_id",
     "Condition-identifier[0].value":                      "diagnosis_identifier",
     "Condition-identifier[0].type.coding[0].code":        "condition_identifier_type",
     "Condition-clinicalStatus.coding[0].code":            "condition_status",
@@ -224,7 +224,7 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
 
     # ── Observation (Lab Results / Vitals) ────────────────────────────────────
     # Aligned with OBX segment canonical names for auto-matching
-    "Observation-id":                                         "observation_fhir_id",
+    # "Observation-id":                                         "observation_fhir_id",
     "Observation-identifier[0].value":                        "observation_identifier",
     "Observation-identifier[0].type.coding[0].code":          "observation_identifier_type",
     "Observation-status":                                     "observation_result_status",
@@ -272,7 +272,7 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
     "Observation-component[0].valueQuantity.unit":            "component_unit",
 
     # ── DiagnosticReport (Lab Report) ─────────────────────────────────────────
-    "DiagnosticReport-id":                                    "report_fhir_id",
+    # "DiagnosticReport-id":                                    "report_fhir_id",
     "DiagnosticReport-identifier[0].value":                   "report_identifier",
     "DiagnosticReport-identifier[0].type.coding[0].code":     "report_identifier_type",
     "DiagnosticReport-basedOn[0].reference":                  "report_order",
@@ -302,7 +302,7 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
 
     # ── ServiceRequest (Lab Order / Referral) ─────────────────────────────────
     # Aligned with OBR segment canonical names for auto-matching
-    "ServiceRequest-id":                                      "order_fhir_id",
+    # "ServiceRequest-id":                                      "order_fhir_id",
     "ServiceRequest-identifier[0].value":                     "placer_order_number",
     "ServiceRequest-identifier[0].type.coding[0].code":       "order_identifier_type",
     "ServiceRequest-basedOn[0].reference":                    "order_based_on",
@@ -353,7 +353,7 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
     #   Coverage-costToBeneficiary copay   ↔ IN1-41  "copay"
     #   Coverage-costToBeneficiary ded     ↔ IN1-39  "deductible"
 
-    "Coverage-id":                                            "coverage_fhir_id",
+    # "Coverage-id":                                            "coverage_fhir_id",
 
     # identifier = Member ID / Certificate number — aligns with IN1-53
     "Coverage-identifier[0].value":                           "patient_member_number",
@@ -415,7 +415,7 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
     "Coverage-contract[0].reference":                         "coverage_contract",
 
     # ── Claim (Billing to Insurance) ──────────────────────────────────────────
-    "Claim-id":                                               "claim_fhir_id",
+    # "Claim-id":                                               "claim_fhir_id",
     "Claim-identifier[0].value":                              "claim_number",
     "Claim-identifier[0].type.coding[0].code":                "claim_number_type",
     "Claim-status":                                           "claim_status",
@@ -464,7 +464,7 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
     "Claim-total.currency":                                   "claim_total_currency",
 
     # ── ExplanationOfBenefit (EOB — Remittance) ───────────────────────────────
-    "ExplanationOfBenefit-id":                                               "eob_fhir_id",
+    # "ExplanationOfBenefit-id":                                               "eob_fhir_id",
     "ExplanationOfBenefit-identifier[0].value":                              "eob_identifier",
     "ExplanationOfBenefit-identifier[0].type.coding[0].code":                "eob_identifier_type",
     "ExplanationOfBenefit-status":                                           "eob_status",
@@ -495,7 +495,7 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
 
     # ── MedicationRequest (Prescription) ──────────────────────────────────────
     # Aligned with RXO/RXE segment canonical names for auto-matching
-    "MedicationRequest-id":                                               "rx_fhir_id",
+    # "MedicationRequest-id":                                               "rx_fhir_id",
     "MedicationRequest-identifier[0].value":                              "prescription_number",
     "MedicationRequest-identifier[0].type.coding[0].code":                "rx_identifier_type",
     "MedicationRequest-status":                                           "rx_status",
@@ -534,7 +534,7 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
 
     # ── AllergyIntolerance ────────────────────────────────────────────────────
     # Aligned with AL1 segment canonical names for auto-matching
-    "AllergyIntolerance-id":                                              "allergy_fhir_id",
+    # "AllergyIntolerance-id":                                              "allergy_fhir_id",
     "AllergyIntolerance-identifier[0].value":                             "allergy_identifier",
     "AllergyIntolerance-identifier[0].type.coding[0].code":               "allergy_identifier_type",
     "AllergyIntolerance-clinicalStatus.coding[0].code":                   "allergy_status",
@@ -564,7 +564,7 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
     "AllergyIntolerance-reaction[0].note[0].text":                        "reaction_notes",
 
     # ── Immunization ──────────────────────────────────────────────────────────
-    "Immunization-id":                                        "immunization_fhir_id",
+    # "Immunization-id":                                        "immunization_fhir_id",
     "Immunization-identifier[0].value":                       "immunization_identifier",
     "Immunization-identifier[0].type.coding[0].code":         "immunization_identifier_type",
     "Immunization-status":                                    "immunization_status",
@@ -598,7 +598,7 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
     "Immunization-isSubpotent":                               "vaccine_subpotent",
 
     # ── Procedure ─────────────────────────────────────────────────────────────
-    "Procedure-id":                                           "procedure_fhir_id",
+    # "Procedure-id":                                           "procedure_fhir_id",
     "Procedure-identifier[0].value":                          "procedure_identifier",
     "Procedure-identifier[0].type.coding[0].code":            "procedure_identifier_type",
     "Procedure-basedOn[0].reference":                         "procedure_order",
@@ -632,6 +632,225 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
     "Procedure-note[0].text":                                 "procedure_notes",
     "Procedure-usedCode[0].coding[0].code":                   "procedure_device_code",
     "Procedure-usedCode[0].coding[0].display":                "procedure_device",
+    # ── Explicit Cross-Standard Parity Aliases (FHIR side) ────────────────
+    # Added for canonical-name parity with HL7 v2.4 segment mappings.
+    # Encounter parity aliases for HL7 canonical-only names
+    "Encounter-extension[parity-admitting_doctor].valueString": "admitting_doctor",
+    "Encounter-extension[parity-admitting_doctor_family].valueString": "admitting_doctor_family",
+    "Encounter-extension[parity-admitting_doctor_given].valueString": "admitting_doctor_given",
+    "Encounter-extension[parity-admitting_doctor_id].valueString": "admitting_doctor_id",
+    "Encounter-extension[parity-alternate_visit_id].valueString": "alternate_visit_id",
+    "Encounter-extension[parity-ambulatory_status].valueString": "ambulatory_status",
+    "Encounter-extension[parity-attending_doctor].valueString": "attending_doctor",
+    "Encounter-extension[parity-attending_doctor_family].valueString": "attending_doctor_family",
+    "Encounter-extension[parity-attending_doctor_given].valueString": "attending_doctor_given",
+    "Encounter-extension[parity-attending_doctor_id].valueString": "attending_doctor_id",
+    "Encounter-extension[parity-attending_doctor_prefix].valueString": "attending_doctor_prefix",
+    "Encounter-extension[parity-bed].valueString": "bed",
+    "Encounter-extension[parity-consulting_doctor].valueString": "consulting_doctor",
+    "Encounter-extension[parity-diet_type].valueString": "diet_type",
+    "Encounter-extension[parity-discharged_to_location].valueString": "discharged_to_location",
+    "Encounter-extension[parity-facility].valueString": "facility",
+    "Encounter-extension[parity-financial_class].valueString": "financial_class",
+    "Encounter-extension[parity-location_type].valueString": "location_type",
+    "Encounter-extension[parity-patient_type].valueString": "patient_type",
+    "Encounter-extension[parity-point_of_care].valueString": "point_of_care",
+    "Encounter-extension[parity-prior_patient_location].valueString": "prior_patient_location",
+    "Encounter-extension[parity-referring_doctor].valueString": "referring_doctor",
+    "Encounter-extension[parity-referring_doctor_family].valueString": "referring_doctor_family",
+    "Encounter-extension[parity-referring_doctor_given].valueString": "referring_doctor_given",
+    "Encounter-extension[parity-referring_doctor_id].valueString": "referring_doctor_id",
+    "Encounter-extension[parity-room].valueString": "room",
+    "Encounter-extension[parity-temporary_location].valueString": "temporary_location",
+
+    # Patient parity aliases for HL7 canonical-only names
+    "Patient-extension[parity-address_other].valueString": "address_other",
+    "Patient-extension[parity-alias_family_name].valueString": "alias_family_name",
+    "Patient-extension[parity-alias_given_name].valueString": "alias_given_name",
+    "Patient-extension[parity-alternate_patient_id].valueString": "alternate_patient_id",
+    "Patient-extension[parity-assigning_authority].valueString": "assigning_authority",
+    "Patient-extension[parity-birth_place].valueString": "birth_place",
+    "Patient-extension[parity-breed_code].valueString": "breed_code",
+    "Patient-extension[parity-business_phone].valueString": "business_phone",
+    "Patient-extension[parity-citizenship].valueString": "citizenship",
+    "Patient-extension[parity-county_code].valueString": "county_code",
+    "Patient-extension[parity-degree].valueString": "degree",
+    "Patient-extension[parity-drivers_license].valueString": "drivers_license",
+    "Patient-extension[parity-ethnicity].valueString": "ethnicity",
+    "Patient-extension[parity-ethnicity_code].valueString": "ethnicity_code",
+    "Patient-extension[parity-ethnicity_name].valueString": "ethnicity_name",
+    "Patient-extension[parity-id_type_code].valueString": "id_type_code",
+    "Patient-extension[parity-language_code].valueString": "language_code",
+    "Patient-extension[parity-language_name].valueString": "language_name",
+    "Patient-extension[parity-last_update_datetime].valueString": "last_update_datetime",
+    "Patient-extension[parity-marital_status_code].valueString": "marital_status_code",
+    "Patient-extension[parity-middle_name].valueString": "middle_name",
+    "Patient-extension[parity-mothers_family_name].valueString": "mothers_family_name",
+    "Patient-extension[parity-mothers_given_name].valueString": "mothers_given_name",
+    "Patient-extension[parity-mothers_maiden_name].valueString": "mothers_maiden_name",
+    "Patient-extension[parity-name_type_code].valueString": "name_type_code",
+    "Patient-extension[parity-patient_account_number].valueString": "patient_account_number",
+    "Patient-extension[parity-patient_alias].valueString": "patient_alias",
+    "Patient-extension[parity-patient_alt_id].valueString": "patient_alt_id",
+    "Patient-extension[parity-phone_area_code].valueString": "phone_area_code",
+    "Patient-extension[parity-phone_local].valueString": "phone_local",
+    "Patient-extension[parity-race].valueString": "race",
+    "Patient-extension[parity-race_code].valueString": "race_code",
+    "Patient-extension[parity-race_name].valueString": "race_name",
+    "Patient-extension[parity-religion].valueString": "religion",
+    "Patient-extension[parity-species_code].valueString": "species_code",
+
+    # Coverage parity aliases for HL7 canonical-only names
+    "Coverage-extension[parity-assignment_of_benefits].valueString": "assignment_of_benefits",
+    "Coverage-extension[parity-authorization_expires].valueString": "authorization_expires",
+    "Coverage-extension[parity-authorization_info].valueString": "authorization_info",
+    "Coverage-extension[parity-coordination_of_benefits].valueString": "coordination_of_benefits",
+    "Coverage-extension[parity-coordination_of_benefits_priority].valueString": "coordination_of_benefits_priority",
+    "Coverage-extension[parity-copay_limit_days].valueString": "copay_limit_days",
+    "Coverage-extension[parity-deductible_paid].valueString": "deductible_paid",
+    "Coverage-extension[parity-employer_address].valueString": "employer_address",
+    "Coverage-extension[parity-employer_id].valueString": "employer_id",
+    "Coverage-extension[parity-employer_phone].valueString": "employer_phone",
+    "Coverage-extension[parity-group_name].valueString": "group_name",
+    "Coverage-extension[parity-group_number].valueString": "group_number",
+    "Coverage-extension[parity-health_plan_coding_system].valueString": "health_plan_coding_system",
+    "Coverage-extension[parity-health_plan_id].valueString": "health_plan_id",
+    "Coverage-extension[parity-insurance_address_line].valueString": "insurance_address_line",
+    "Coverage-extension[parity-insurance_city].valueString": "insurance_city",
+    "Coverage-extension[parity-insurance_company_address].valueString": "insurance_company_address",
+    "Coverage-extension[parity-insurance_company_contact].valueString": "insurance_company_contact",
+    "Coverage-extension[parity-insurance_phone].valueString": "insurance_phone",
+    "Coverage-extension[parity-insurance_postal_code].valueString": "insurance_postal_code",
+    "Coverage-extension[parity-insurance_set_id].valueString": "insurance_set_id",
+    "Coverage-extension[parity-insurance_state].valueString": "insurance_state",
+    "Coverage-extension[parity-insured_employer].valueString": "insured_employer",
+    "Coverage-extension[parity-insured_group_employer_id].valueString": "insured_group_employer_id",
+    "Coverage-extension[parity-insured_group_employer_name].valueString": "insured_group_employer_name",
+    "Coverage-extension[parity-job_status].valueString": "job_status",
+    "Coverage-extension[parity-plan_effective_date].valueString": "plan_effective_date",
+    "Coverage-extension[parity-plan_expiration_date].valueString": "plan_expiration_date",
+    "Coverage-extension[parity-policy_deductible].valueString": "policy_deductible",
+    "Coverage-extension[parity-policy_limit_amount].valueString": "policy_limit_amount",
+    "Coverage-extension[parity-policy_type].valueString": "policy_type",
+    "Coverage-extension[parity-preauth_number].valueString": "preauth_number",
+    "Coverage-extension[parity-subscriber_address].valueString": "subscriber_address",
+    "Coverage-extension[parity-subscriber_address_line].valueString": "subscriber_address_line",
+    "Coverage-extension[parity-subscriber_city].valueString": "subscriber_city",
+    "Coverage-extension[parity-subscriber_dob].valueString": "subscriber_dob",
+    "Coverage-extension[parity-subscriber_family_name].valueString": "subscriber_family_name",
+    "Coverage-extension[parity-subscriber_gender].valueString": "subscriber_gender",
+    "Coverage-extension[parity-subscriber_given_name].valueString": "subscriber_given_name",
+    "Coverage-extension[parity-subscriber_middle_name].valueString": "subscriber_middle_name",
+    "Coverage-extension[parity-subscriber_name].valueString": "subscriber_name",
+    "Coverage-extension[parity-subscriber_postal_code].valueString": "subscriber_postal_code",
+    "Coverage-extension[parity-subscriber_state].valueString": "subscriber_state",
+
+    # ServiceRequest parity aliases for HL7 canonical-only names
+    "ServiceRequest-extension[parity-assistant_result_interpreter].valueString": "assistant_result_interpreter",
+    "ServiceRequest-extension[parity-collection_volume].valueString": "collection_volume",
+    "ServiceRequest-extension[parity-collector_id].valueString": "collector_id",
+    "ServiceRequest-extension[parity-diagnostic_service_id].valueString": "diagnostic_service_id",
+    "ServiceRequest-extension[parity-filler_field_1].valueString": "filler_field_1",
+    "ServiceRequest-extension[parity-filler_namespace].valueString": "filler_namespace",
+    "ServiceRequest-extension[parity-filler_order_id].valueString": "filler_order_id",
+    "ServiceRequest-extension[parity-filler_order_number].valueString": "filler_order_number",
+    "ServiceRequest-extension[parity-observation_end_datetime].valueString": "observation_end_datetime",
+    "ServiceRequest-extension[parity-order_set_id].valueString": "order_set_id",
+    "ServiceRequest-extension[parity-ordering_provider_family].valueString": "ordering_provider_family",
+    "ServiceRequest-extension[parity-ordering_provider_given].valueString": "ordering_provider_given",
+    "ServiceRequest-extension[parity-ordering_provider_id].valueString": "ordering_provider_id",
+    "ServiceRequest-extension[parity-ordering_provider_prefix].valueString": "ordering_provider_prefix",
+    "ServiceRequest-extension[parity-parent_order].valueString": "parent_order",
+    "ServiceRequest-extension[parity-parent_result].valueString": "parent_result",
+    "ServiceRequest-extension[parity-placer_field_1].valueString": "placer_field_1",
+    "ServiceRequest-extension[parity-placer_field_2].valueString": "placer_field_2",
+    "ServiceRequest-extension[parity-placer_namespace].valueString": "placer_namespace",
+    "ServiceRequest-extension[parity-placer_order_id].valueString": "placer_order_id",
+    "ServiceRequest-extension[parity-principal_result_interpreter].valueString": "principal_result_interpreter",
+    "ServiceRequest-extension[parity-quantity_timing].valueString": "quantity_timing",
+    "ServiceRequest-extension[parity-reason_for_study].valueString": "reason_for_study",
+    "ServiceRequest-extension[parity-report_status_datetime].valueString": "report_status_datetime",
+    "ServiceRequest-extension[parity-result_copies_to].valueString": "result_copies_to",
+    "ServiceRequest-extension[parity-result_status].valueString": "result_status",
+    "ServiceRequest-extension[parity-scheduled_datetime].valueString": "scheduled_datetime",
+    "ServiceRequest-extension[parity-specimen_action_code].valueString": "specimen_action_code",
+    "ServiceRequest-extension[parity-specimen_received_datetime].valueString": "specimen_received_datetime",
+    "ServiceRequest-extension[parity-specimen_source].valueString": "specimen_source",
+    "ServiceRequest-extension[parity-specimen_source_code].valueString": "specimen_source_code",
+    "ServiceRequest-extension[parity-specimen_source_name].valueString": "specimen_source_name",
+    "ServiceRequest-extension[parity-transcriptionist].valueString": "transcriptionist",
+
+    # Observation parity aliases for HL7 canonical-only names
+    "Observation-extension[parity-analysis_datetime].valueString": "analysis_datetime",
+    "Observation-extension[parity-effective_date_last_normal].valueString": "effective_date_last_normal",
+    "Observation-extension[parity-nature_of_abnormal_test].valueString": "nature_of_abnormal_test",
+    "Observation-extension[parity-observation_method_code].valueString": "observation_method_code",
+    "Observation-extension[parity-observation_method_name].valueString": "observation_method_name",
+    "Observation-extension[parity-observation_sub_id].valueString": "observation_sub_id",
+    "Observation-extension[parity-performing_org_address].valueString": "performing_org_address",
+    "Observation-extension[parity-performing_org_medical_director].valueString": "performing_org_medical_director",
+    "Observation-extension[parity-performing_org_name].valueString": "performing_org_name",
+    "Observation-extension[parity-probability].valueString": "probability",
+    "Observation-extension[parity-producer_id].valueString": "producer_id",
+    "Observation-extension[parity-responsible_observer_family].valueString": "responsible_observer_family",
+    "Observation-extension[parity-responsible_observer_id].valueString": "responsible_observer_id",
+    "Observation-extension[parity-result_set_id].valueString": "result_set_id",
+    "Observation-extension[parity-result_unit_name].valueString": "result_unit_name",
+    "Observation-extension[parity-user_defined_access_checks].valueString": "user_defined_access_checks",
+    "Observation-extension[parity-value_type].valueString": "value_type",
+
+    # Condition parity aliases for HL7 canonical-only names
+    "Condition-extension[parity-attestation_datetime].valueString": "attestation_datetime",
+    "Condition-extension[parity-confidential_indicator].valueString": "confidential_indicator",
+    "Condition-extension[parity-diagnosing_clinician_family].valueString": "diagnosing_clinician_family",
+    "Condition-extension[parity-diagnosing_clinician_given].valueString": "diagnosing_clinician_given",
+    "Condition-extension[parity-diagnosing_clinician_id].valueString": "diagnosing_clinician_id",
+    "Condition-extension[parity-diagnosis_action_code].valueString": "diagnosis_action_code",
+    "Condition-extension[parity-diagnosis_coding_method].valueString": "diagnosis_coding_method",
+    "Condition-extension[parity-diagnosis_priority].valueString": "diagnosis_priority",
+    "Condition-extension[parity-diagnosis_set_id].valueString": "diagnosis_set_id",
+    "Condition-extension[parity-diagnosis_type].valueString": "diagnosis_type",
+    "Condition-extension[parity-diagnostic_related_group].valueString": "diagnostic_related_group",
+    "Condition-extension[parity-drg_approval_indicator].valueString": "drg_approval_indicator",
+    "Condition-extension[parity-drg_grouper_review_code].valueString": "drg_grouper_review_code",
+    "Condition-extension[parity-grouper_version_and_type].valueString": "grouper_version_and_type",
+    "Condition-extension[parity-major_diagnostic_category].valueString": "major_diagnostic_category",
+    "Condition-extension[parity-outlier_cost].valueString": "outlier_cost",
+    "Condition-extension[parity-outlier_days].valueString": "outlier_days",
+    "Condition-extension[parity-outlier_type].valueString": "outlier_type",
+
+    # AllergyIntolerance parity aliases for HL7 canonical-only names
+    "AllergyIntolerance-extension[parity-allergy_set_id].valueString": "allergy_set_id",
+    "AllergyIntolerance-extension[parity-allergy_severity_code].valueString": "allergy_severity_code",
+    "AllergyIntolerance-extension[parity-allergy_severity_name].valueString": "allergy_severity_name",
+    "AllergyIntolerance-extension[parity-allergy_type_code].valueString": "allergy_type_code",
+    "AllergyIntolerance-extension[parity-allergy_type_name].valueString": "allergy_type_name",
+
+    # MedicationRequest parity aliases for HL7 canonical-only names
+    "MedicationRequest-extension[parity-dispense_amount_max].valueString": "dispense_amount_max",
+    "MedicationRequest-extension[parity-dispense_amount_value].valueString": "dispense_amount_value",
+    "MedicationRequest-extension[parity-dispense_package_size].valueString": "dispense_package_size",
+    "MedicationRequest-extension[parity-dosage_form_code].valueString": "dosage_form_code",
+    "MedicationRequest-extension[parity-dosage_form_name].valueString": "dosage_form_name",
+    "MedicationRequest-extension[parity-drug_strength].valueString": "drug_strength",
+    "MedicationRequest-extension[parity-lot_number].valueString": "lot_number",
+    "MedicationRequest-extension[parity-prescribed_dose_unit].valueString": "prescribed_dose_unit",
+    "MedicationRequest-extension[parity-prescribing_provider_family].valueString": "prescribing_provider_family",
+    "MedicationRequest-extension[parity-prescribing_provider_given].valueString": "prescribing_provider_given",
+    "MedicationRequest-extension[parity-prescribing_provider_id].valueString": "prescribing_provider_id",
+    "MedicationRequest-extension[parity-provider_administration_instructions].valueString": "provider_administration_instructions",
+    "MedicationRequest-extension[parity-provider_pharmacy_instructions].valueString": "provider_pharmacy_instructions",
+    "MedicationRequest-extension[parity-refills_dispensed].valueString": "refills_dispensed",
+    "MedicationRequest-extension[parity-refills_remaining].valueString": "refills_remaining",
+    "MedicationRequest-extension[parity-requested_dispense_amount].valueString": "requested_dispense_amount",
+    "MedicationRequest-extension[parity-requested_dispense_code].valueString": "requested_dispense_code",
+    "MedicationRequest-extension[parity-requested_dosage_form].valueString": "requested_dosage_form",
+    "MedicationRequest-extension[parity-requested_dose_unit_code].valueString": "requested_dose_unit_code",
+    "MedicationRequest-extension[parity-requested_dose_unit_name].valueString": "requested_dose_unit_name",
+    "MedicationRequest-extension[parity-requested_give_rate_amount].valueString": "requested_give_rate_amount",
+    "MedicationRequest-extension[parity-requested_give_rate_units].valueString": "requested_give_rate_units",
+    "MedicationRequest-extension[parity-vaccine_expiry].valueString": "vaccine_expiry",
+
 }
 
 
@@ -642,14 +861,12 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
 # {resource} is replaced at runtime with the lowercase resource type.
 #
 # Collision rules applied:
-#   - "id"                 → "{resource}_fhir_id"     (internal server ID)
 #   - "identifier[0].value"→ "{resource}_identifier"  (real-world ID, distinct from fhir_id)
 #   - period.start / billablePeriod.start kept as separate templates
 
 FHIR_PATTERN_CANONICAL: list[tuple[str, str]] = [
 
-    # ── Identity (COLLISION FIX: fhir_id vs identifier are now distinct) ─────
-    ("id",                                        "{resource}_fhir_id"),
+    # ("id",                                        "{resource}_fhir_id"),
     ("identifier[0].value",                       "{resource}_identifier"),
     ("identifier[0].type.coding[0].code",         "{resource}_identifier_type"),
     ("identifier[1].value",                       "{resource}_secondary_identifier"),
@@ -875,6 +1092,7 @@ HL7_EXACT_CANONICAL: dict[str, str] = {
     "NK1-30":  "nok_employer_name",
 
     # ── PV1 — Patient Visit ───────────────────────────────────────────────────
+    "PV1-1":    "patient_class",
     "PV1-2":    "patient_class",
     "PV1-3":    "assigned_location",
     "PV1-3.1":  "point_of_care",
@@ -913,6 +1131,14 @@ HL7_EXACT_CANONICAL: dict[str, str] = {
     "PV1-44":   "admit_datetime",
     "PV1-45":   "discharge_datetime",
     "PV1-50":   "alternate_visit_id",
+
+    # Local PV1 extension fields used by this project for Encounter-only content
+    # (non-standard PV1 semantics; populate only when your HL7 sender emits them)
+    "PV1-51":   "encounter_title",
+    "PV1-52":   "encounter_complaint",
+    "PV1-53":   "encounter_diagnosis_display",
+    "PV1-54":   "encounter_notes",
+    "PV1-55":   "encounter_patient",
 
     # ── IN1 — Insurance ───────────────────────────────────────────────────────
     #
@@ -1248,4 +1474,182 @@ HL7_EXACT_CANONICAL: dict[str, str] = {
     "NTE-2":    "note_source_type",
     "NTE-3":    "note_text",
     "NTE-4":    "note_classification",
+
+
+    # ── Explicit Cross-Standard Parity Aliases (HL7 side) ─────────────────
+    # Added for canonical-name parity with FHIR R4B resource mappings.
+    # Encounter<->PV1 parity aliases for FHIR canonical-only names
+    "PV1-Z901": "admission_type_name",
+    "PV1-Z902": "encounter_class_name",
+    "PV1-Z903": "encounter_class_system",
+    "PV1-Z904": "encounter_diagnosis",
+    "PV1-Z905": "encounter_diagnosis_rank",
+    "PV1-Z906": "encounter_diagnosis_use",
+    "PV1-Z907": "encounter_length",
+    "PV1-Z908": "encounter_length_unit",
+    "PV1-Z909": "encounter_location_status",
+    "PV1-Z910": "encounter_notes_url",
+    "PV1-Z911": "encounter_org",
+    "PV1-Z912": "encounter_participant_type",
+    "PV1-Z913": "encounter_priority",
+    "PV1-Z914": "encounter_provider",
+    "PV1-Z915": "encounter_reason",
+    "PV1-Z916": "encounter_reason_code",
+    "PV1-Z917": "encounter_status",
+    "PV1-Z918": "parent_encounter",
+    "PV1-Z919": "visit_number_type",
+
+    # Patient<->PID parity aliases for FHIR canonical-only names
+    "PID-Z901": "address_use",
+    "PID-Z902": "district",
+    "PID-Z903": "email",
+    "PID-Z904": "email_system",
+    "PID-Z905": "email_use",
+    "PID-Z906": "link_type",
+    "PID-Z907": "linked_patient",
+    "PID-Z908": "managing_org",
+    "PID-Z909": "mpi_type",
+    "PID-Z910": "patient_active",
+    "PID-Z911": "patient_photo_url",
+    "PID-Z912": "phone_system",
+    "PID-Z913": "phone_use",
+    "PID-Z914": "primary_care_provider",
+    "PID-Z915": "ssn_type",
+
+    # Coverage<->IN1 parity aliases for FHIR canonical-only names
+    "IN1-Z901": "cost_share_currency",
+    "IN1-Z902": "cost_share_type",
+    "IN1-Z903": "coverage_contract",
+    "IN1-Z904": "coverage_subplan_type",
+    "IN1-Z905": "coverage_subrogation",
+    "IN1-Z906": "coverage_type_name",
+    "IN1-Z907": "coverage_type_system",
+    "IN1-Z908": "dependent_number",
+    "IN1-Z909": "network_name",
+    "IN1-Z910": "patient_member_number_system",
+    "IN1-Z911": "patient_member_number_type",
+    "IN1-Z912": "plan_type_code",
+    "IN1-Z913": "policy_holder",
+    "IN1-Z914": "subplan_id",
+    "IN1-Z915": "subplan_name",
+    "IN1-Z916": "subscriber",
+    "IN1-Z917": "subscriber_relationship_name",
+
+    # ServiceRequest<->OBR parity aliases for FHIR canonical-only names
+    "OBR-Z901": "order_based_on",
+    "OBR-Z902": "order_body_site",
+    "OBR-Z903": "order_category",
+    "OBR-Z904": "order_category_name",
+    "OBR-Z905": "order_do_not_perform",
+    "OBR-Z906": "order_encounter",
+    "OBR-Z907": "order_end",
+    "OBR-Z908": "order_identifier_type",
+    "OBR-Z909": "order_insurance",
+    "OBR-Z910": "order_intent",
+    "OBR-Z911": "order_location",
+    "OBR-Z912": "order_notes",
+    "OBR-Z913": "order_patient",
+    "OBR-Z914": "order_patient_instruction",
+    "OBR-Z915": "order_performer",
+    "OBR-Z916": "order_performer_type",
+    "OBR-Z917": "order_specimen",
+    "OBR-Z918": "order_start",
+    "OBR-Z919": "order_status",
+
+    # Observation<->OBX parity aliases for FHIR canonical-only names
+    "OBX-Z901": "body_site",
+    "OBX-Z902": "body_site_code",
+    "OBX-Z903": "component_code",
+    "OBX-Z904": "component_name",
+    "OBX-Z905": "component_unit",
+    "OBX-Z906": "component_value",
+    "OBX-Z907": "observation_category",
+    "OBX-Z908": "observation_category_name",
+    "OBX-Z909": "observation_code_text",
+    "OBX-Z910": "observation_encounter",
+    "OBX-Z911": "observation_end",
+    "OBX-Z912": "observation_identifier",
+    "OBX-Z913": "observation_identifier_type",
+    "OBX-Z914": "observation_issued",
+    "OBX-Z915": "observation_member",
+    "OBX-Z916": "observation_notes",
+    "OBX-Z917": "observation_patient",
+    "OBX-Z918": "observation_specimen",
+    "OBX-Z919": "observation_start",
+    "OBX-Z920": "ref_range_high",
+    "OBX-Z921": "ref_range_high_unit",
+    "OBX-Z922": "ref_range_low",
+    "OBX-Z923": "ref_range_low_unit",
+    "OBX-Z924": "result_absent_reason",
+    "OBX-Z925": "result_boolean",
+    "OBX-Z926": "result_code",
+    "OBX-Z927": "result_code_name",
+    "OBX-Z928": "result_comparator",
+    "OBX-Z929": "result_integer",
+    "OBX-Z930": "result_interpretation_name",
+    "OBX-Z931": "result_string",
+    "OBX-Z932": "result_unit_system",
+
+    # Condition<->DG1 parity aliases for FHIR canonical-only names
+    "DG1-Z901": "condition_category_name",
+    "DG1-Z902": "condition_encounter",
+    "DG1-Z903": "condition_end",
+    "DG1-Z904": "condition_identifier_type",
+    "DG1-Z905": "condition_notes",
+    "DG1-Z906": "condition_onset",
+    "DG1-Z907": "condition_onset_start",
+    "DG1-Z908": "condition_patient",
+    "DG1-Z909": "condition_recorder",
+    "DG1-Z910": "condition_severity",
+    "DG1-Z911": "condition_severity_name",
+    "DG1-Z912": "condition_stage",
+    "DG1-Z913": "condition_stage_code",
+    "DG1-Z914": "condition_status",
+    "DG1-Z915": "condition_verification",
+
+    # AllergyIntolerance<->AL1 parity aliases for FHIR canonical-only names
+    "AL1-Z901": "allergy_asserter",
+    "AL1-Z902": "allergy_category",
+    "AL1-Z903": "allergy_criticality",
+    "AL1-Z904": "allergy_encounter",
+    "AL1-Z905": "allergy_identifier",
+    "AL1-Z906": "allergy_identifier_type",
+    "AL1-Z907": "allergy_last_occurrence",
+    "AL1-Z908": "allergy_notes",
+    "AL1-Z909": "allergy_patient",
+    "AL1-Z910": "allergy_recorded",
+    "AL1-Z911": "allergy_recorder",
+    "AL1-Z912": "allergy_status",
+    "AL1-Z913": "allergy_verification",
+    "AL1-Z914": "reaction_code",
+    "AL1-Z915": "reaction_name",
+    "AL1-Z916": "reaction_notes",
+    "AL1-Z917": "reaction_onset",
+    "AL1-Z918": "reaction_route",
+    "AL1-Z919": "reaction_substance_code",
+    "AL1-Z920": "reaction_substance_name",
+
+    # MedicationRequest<->RXO+RXE parity aliases for FHIR canonical-only names
+    "RXO-Z901": "drug_reference",
+    "RXO-Z902": "drug_text",
+    "RXO-Z903": "rx_category",
+    "RXO-Z904": "rx_dispenser",
+    "RXO-Z905": "rx_dosage_text",
+    "RXO-Z906": "rx_encounter",
+    "RXO-Z907": "rx_frequency",
+    "RXO-Z908": "rx_identifier_type",
+    "RXO-Z909": "rx_intent",
+    "RXO-Z910": "rx_notes",
+    "RXO-Z911": "rx_patient",
+    "RXO-Z912": "rx_period",
+    "RXO-Z913": "rx_period_unit",
+    "RXO-Z914": "rx_priority",
+    "RXO-Z915": "rx_reason",
+    "RXO-Z916": "rx_reason_code",
+    "RXO-Z917": "rx_route",
+    "RXO-Z918": "rx_route_code",
+    "RXO-Z919": "rx_status",
+    "RXO-Z920": "rx_status_reason",
+    "RXO-Z921": "rx_supply_days",
+    "RXO-Z922": "rx_timing_code",
 }

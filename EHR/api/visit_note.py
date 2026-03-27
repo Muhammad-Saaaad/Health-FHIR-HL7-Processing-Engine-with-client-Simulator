@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 from fastapi import APIRouter, status, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
@@ -57,10 +59,9 @@ def add_visit_note(visit_note: schema.VisitNote ,db: Session = Depends(get_db)):
             note_title = visit_note.note_title,
             patient_complaint = visit_note.patient_complaint,
             dignosis = visit_note.dignosis, 
-            note_details = visit_note.note_details
+            note_details = visit_note.note_details,
         )
         db.add(new_visit_note)
-        db.flush()
 
         if visit_note.test_names:
             
@@ -74,6 +75,30 @@ def add_visit_note(visit_note: schema.VisitNote ,db: Session = Depends(get_db)):
                     )
                 )
             db.add_all(lab_models)
+        db.flush()
+
+        patient_visit = {
+            "resourceType": "Encounter",
+            "id" : str(uuid4()),
+            "identifier": [ {"value": str(new_visit_note.note_id)} ],
+            "status": "Completed",
+            "class": { "code": "AMB" }, # AMB=Ambulatory, IMP=Inpatient, EMER=Emergency, VR=Virtual
+
+            # 1. ENCOUNTER TITLE
+            "type": [{"text": new_visit_note.note_title}],
+
+            # 2. PATIENT COMPLAINT
+            "reasonCode": [ {"text": new_visit_note.patient_complaint} ],
+
+            # 3. DIAGNOSIS - display field shows the disease name (no separate Condition resource needed)
+            "diagnosis": [{ "condition": {"display": new_visit_note.dignosis} }],
+
+            # 4. CONSULTATION NOTES
+            "extension": [{
+                    "valueString": new_visit_note.note_details
+                }
+            ]
+        }
 
         db.commit()
         db.refresh(new_visit_note)
@@ -105,21 +130,20 @@ def visit_note(doc_id: int, pid: int, db: Session = Depends(get_db)):
     - `404 Not Found`: Doctor with given `doc_id` does not exist
     - `400 Bad Request`: Unexpected database or server error
     """
+
+    is_patient = db.query(model.Patient).filter(model.Patient.mpi == pid).first()
+
+    if not is_patient:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="patient does not exists")
+    
+    is_doc = db.query(model.Doctor).filter(model.Doctor.doctor_id == doc_id).first()
+    if not is_doc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Doctor does not exists")
+
     try:
-
-        is_patient = db.query(model.Patient).filter(model.Patient.mpi == pid).first()
-
-        if not is_patient:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="patient does not exists")
-        
-        is_doc = db.query(model.Doctor).filter(model.Doctor.doctor_id == doc_id).first()
-        if not is_doc:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Doctor does not exists")
-
         notes = db.query(model.VisitingNotes) \
             .filter(model.VisitingNotes.doctor_id ==doc_id, model.VisitingNotes.mpi == pid).all()
         return notes
-    
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f'{str(e)}')
 
