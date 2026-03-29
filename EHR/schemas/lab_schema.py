@@ -10,3 +10,14 @@ class LabReport(BaseModel):
     test_status: str
     created_at : datetime | None
     updated_at : datetime | None
+
+    model_config = {"from_attributes": True}
+
+class LoincMaster(BaseModel):
+    loinc_code: str
+    long_common_name: str
+    short_name: str | None
+    component: str | None
+    system: str | None
+
+    model_config = {"from_attributes": True}

@@ -78,6 +78,7 @@ class LoincMaster(Base):
     short_name       = Column(String(150), nullable=True)
     component        = Column(String(200), nullable=True)  # what is being measured ("WBC, RBC, Glucose")
     system           = Column(String(100), nullable=True)  # The specimen from which the measurement is taken (Blood, Urine, etc.)
+    
 
 class LabReport(Base): 
     # add the lab results column here as well (description, bill amount, amount_status(paid or not paid) )
