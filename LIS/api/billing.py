@@ -6,10 +6,12 @@ from sqlalchemy.orm import Session
 from database import get_db
 import model
 from schemas.billing_schema import BillingCreate, BillingOut
+from rate_limiting import rate_limit
 
 router = APIRouter(tags=["Billing"])
 
 @router.post("/billing/", response_model=BillingOut, status_code=status.HTTP_201_CREATED, tags=["Billing"])
+@rate_limit(limit=10, period=60)  # Limit to 10 requests per minute per IP
 def create_bill(b: BillingCreate, db: Session = Depends(get_db)):
     """
     Create a new billing record for a lab test request.
@@ -57,6 +59,7 @@ def create_bill(b: BillingCreate, db: Session = Depends(get_db)):
     return bill
 
 @router.put("/billing/{bill_id}/pay", response_model=BillingOut, tags=["Billing"])
+@rate_limit(limit=10, period=60)  # Limit to 10 payment updates per minute per IP
 def update_payment(bill_id: int, db: Session = Depends(get_db)):
     """
     Mark an existing bill as paid.

@@ -7,10 +7,12 @@ from sqlalchemy.orm import Session
 from schemas.server import AddUpdateServer, GetServer
 import models
 from database import get_db, session_local
+from rate_limiting import rate_limit
 
 router = APIRouter(tags=["Server"])
 
 @router.post("/add-server", status_code=status.HTTP_201_CREATED)
+@rate_limit(limit=10, period=60)  # Limit to 10 requests per minute per IP
 async def add_server(server: AddUpdateServer, db: Session = Depends(get_db)):
     """
     Register a new external server (EHR, LIS, Payer, etc.) in the Interface Engine.
@@ -89,6 +91,7 @@ async def add_server(server: AddUpdateServer, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
 
 @router.get("/all-servers", status_code=status.HTTP_200_OK, response_model=list[GetServer])
+@rate_limit(limit=30, period=60)  # Limit to 30 requests per minute per IP
 def all_servers(db: Session = Depends(get_db)):
     """
     Retrieve all registered servers in the Interface Engine.
@@ -119,6 +122,7 @@ def all_servers(db: Session = Depends(get_db)):
 
 
 @router.get("/specific-server/{server_id}", status_code=status.HTTP_200_OK, response_model=GetServer)
+@rate_limit(limit=30, period=60)  # Limit to 30 requests per minute per IP
 def specific_server(server_id: int, db: Session = Depends(get_db)):
     """
     Retrieve details of a specific server by its ID.
@@ -140,6 +144,7 @@ def specific_server(server_id: int, db: Session = Depends(get_db)):
     return is_server
 
 @router.put("/update-server/{server_id}", status_code=status.HTTP_200_OK)
+@rate_limit(limit=10, period=60)  # Limit to 10 requests per minute per IP
 def update_server(server_id: int, server: AddUpdateServer, db: Session = Depends(get_db)):
     """
     Update the configuration of an existing registered server.
@@ -185,6 +190,7 @@ def update_server(server_id: int, server: AddUpdateServer, db: Session = Depends
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
 
 @router.delete("/delete-server/{server_id}", status_code=status.HTTP_200_OK)
+@rate_limit(limit=10, period=60)  # Limit to 10 requests per minute per IP
 def delete_server(server_id: int, db: Session = Depends(get_db)):
     """
     Permanently delete a registered server from the Interface Engine.

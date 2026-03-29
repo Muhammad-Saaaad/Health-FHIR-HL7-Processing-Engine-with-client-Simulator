@@ -11,10 +11,12 @@ from schemas.lab_schema import (
     TestRequestStatusUpdate,
     CompleteTestResultCreate
 )
+from rate_limiting import rate_limit
 
 router = APIRouter(tags=["Test Requests"])
 
 @router.post("/test_requests", response_model=TestRequestOut, status_code=status.HTTP_201_CREATED, tags=["Test Requests"])
+@rate_limit(limit=10, period=60)  # Limit to 10 requests per minute per IP
 def create_test_request(request: TestRequestCreate, db: Session = Depends(get_db)):
     """
     Create a new lab test request for a patient.
@@ -59,6 +61,7 @@ def create_test_request(request: TestRequestCreate, db: Session = Depends(get_db
     return db_request
 
 @router.get("/requests/pending", response_model=list[TestRequestOut], tags=["Test Requests"])
+@rate_limit(limit=20, period=60)  # Limit to 10 requests per minute per IP
 def get_pending_requests(db: Session = Depends(get_db)):
     """
     Retrieve all lab test requests that are currently in "Pending" status.
@@ -75,6 +78,7 @@ def get_pending_requests(db: Session = Depends(get_db)):
     return db.query(model.LabTestRequest).filter(model.LabTestRequest.status == "Pending").all()
 
 @router.get("/requests/accepted/payment/paid", response_model=list[TestRequestOut], tags=["Test Requests"])
+@rate_limit(limit=20, period=60)  # Limit to 20 requests per minute per IP
 def get_accepted_requests(db: Session = Depends(get_db)):
     """
     Retrieve all lab test requests that have been accepted AND whose payment has been marked as "Paid".
@@ -96,6 +100,7 @@ def get_accepted_requests(db: Session = Depends(get_db)):
     return accepted_requests
 
 @router.put("/requests/{req_id}/status", response_model=TestRequestOut, tags=["Test Requests"])
+@rate_limit(limit=10, period=60)  # Limit to 10 requests per minute per IP
 def update_request_status(req_id: int, status_update: TestRequestStatusUpdate, db: Session = Depends(get_db)):
     """
     Update the status of a lab test request (e.g., accept or decline it).
@@ -126,6 +131,7 @@ def update_request_status(req_id: int, status_update: TestRequestStatusUpdate, d
     return updated_request
 
 @router.put("/requests/{req_id}/lock", response_model=TestRequestOut, tags=["Test Requests"])
+@rate_limit(limit=10, period=60)  # Limit to 10 requests per minute per IP
 def lock_test_request(req_id: int, user_id: int, db: Session = Depends(get_db)):
     """
     Lock a lab test request to a specific technician to prevent concurrent processing.
@@ -164,6 +170,7 @@ def lock_test_request(req_id: int, user_id: int, db: Session = Depends(get_db)):
     return updated_request
 
 @router.put("/requests/{req_id}/unlock", response_model=TestRequestOut, tags=["Test Requests"])
+@rate_limit(limit=10, period=60)  # Limit to 10 requests per minute per IP
 def unlock_test_request(req_id: int, user_id: int, db: Session = Depends(get_db)):
     """
     Unlock a lab test request to release it from a technician's hold.
@@ -207,6 +214,7 @@ def unlock_test_request(req_id: int, user_id: int, db: Session = Depends(get_db)
 
 
 @router.post("/results/complete", status_code=status.HTTP_201_CREATED, tags=["Results"])
+@rate_limit(limit=10, period=60)  # Limit to 10 requests per minute per IP
 def add_complete_result(r_in: CompleteTestResultCreate, db: Session = Depends(get_db)):
     """
     Submit a complete lab result for an accepted and paid test request.

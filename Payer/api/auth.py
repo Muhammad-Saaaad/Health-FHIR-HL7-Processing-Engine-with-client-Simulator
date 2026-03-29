@@ -4,10 +4,12 @@ from sqlalchemy.orm import Session
 from database import get_db
 import models
 from schemas import auth_schema as schema
+from rate_limiting import rate_limit
 
 router = APIRouter(tags=["Authentication"])
 
 @router.post("/signup", response_model=schema.SystemUserDisplay, status_code=status.HTTP_201_CREATED)
+@rate_limit(limit=10, period=60)  # Limit to 10 requests per minute per IP
 def signup_user(request: schema.SystemUserCreate, db: Session = Depends(get_db)):
     """
     Create a new user account (signup).
@@ -43,6 +45,7 @@ def signup_user(request: schema.SystemUserCreate, db: Session = Depends(get_db))
     return new_user
 
 @router.post("/login", status_code=status.HTTP_200_OK)
+@rate_limit(limit=10, period=60)  # Limit to 10 login attempts per minute per IP
 def login_user(request: schema.LoginRequest, db: Session = Depends(get_db)):
     """
     Authenticate user and login.

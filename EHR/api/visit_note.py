@@ -7,10 +7,12 @@ from sqlalchemy.orm import Session
 from schemas import visit_note_schema as schema
 from database import get_db
 import model
+from rate_limiting import rate_limit
 
 router = APIRouter(tags=['Visit Note'])
 
 @router.post("/visit-note-add", status_code=status.HTTP_201_CREATED)
+@rate_limit(limit=10, period=60)
 def add_visit_note(visit_note: schema.VisitNote ,db: Session = Depends(get_db)):
     """
     Create a new visit note for a patient, including billing and optional lab test orders.
@@ -110,6 +112,7 @@ def add_visit_note(visit_note: schema.VisitNote ,db: Session = Depends(get_db)):
 
 
 @router.get("/all-visit-notes{doc_id}/{pid}", response_model=list[schema.ViewNote] ,status_code=status.HTTP_200_OK)
+@rate_limit(limit=30, period=60)  # Limit to 30 requests per minute per IP
 def visit_note(doc_id: int, pid: int, db: Session = Depends(get_db)):
     """
     Retrieve all visit notes for a specific patient created by a specific doctor.
@@ -148,6 +151,7 @@ def visit_note(doc_id: int, pid: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f'{str(e)}')
 
 @router.get("/visit-note{note_id}", response_model=schema.ViewNote ,status_code=status.HTTP_200_OK)
+@rate_limit(limit=30, period=60)  # Limit to 30 requests per minute per IP
 def visit_note(note_id: int, db: Session = Depends(get_db)):
     """
     Retrieve a single visit note by its unique note ID.

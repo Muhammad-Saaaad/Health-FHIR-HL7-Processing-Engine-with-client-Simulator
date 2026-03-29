@@ -4,10 +4,12 @@ from sqlalchemy.orm import Session
 from database import get_db
 import models
 from schemas import patient_schema as schema
+from rate_limiting import rate_limit
 
 router = APIRouter(tags=["Patients"])
 
 @router.post("/reg_patient",  status_code=status.HTTP_201_CREATED, tags=["Patients"])
+@rate_limit(limit=15, period=60)  # Limit to 10 requests per minute per IP
 def register_patient(request: schema.PatientCreate, db: Session = Depends(get_db)):
     """
     Register a new patient in the Payer system and automatically create an insurance policy.
@@ -109,6 +111,7 @@ def register_patient(request: schema.PatientCreate, db: Session = Depends(get_db
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 @router.get("/get_all_patients", response_model=list[schema.PatientDisplay], status_code=status.HTTP_200_OK, tags=["Patients"])
+@rate_limit(limit=30, period=60)  # Limit to 30 requests per minute per IP
 def get_all_patients(db: Session = Depends(get_db)):
     """
     Retrieve all patients registered in the Payer system.
@@ -150,6 +153,7 @@ def get_all_patients(db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 @router.get("/get_patient/{p_id}", response_model=schema.PatientPolicyDetails, status_code=status.HTTP_200_OK, tags=["Patients"])
+@rate_limit(limit=30, period=60)
 def get_single_patient(p_id: int, db: Session = Depends(get_db)):
     """
     Retrieve detailed information about a specific patient including their insurance policies.
@@ -179,7 +183,7 @@ def get_single_patient(p_id: int, db: Session = Depends(get_db)):
     
     patient_policies = []
     for policiy in patient.policies:
-        patient_policies.routerend({
+        patient_policies.append({
             "policy_id": policiy.policy_id,
             "category_name": policiy.category_name,
             "total_coverage": policiy.total_coverage,

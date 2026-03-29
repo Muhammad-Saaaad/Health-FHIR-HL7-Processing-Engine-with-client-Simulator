@@ -4,57 +4,61 @@ from sqlalchemy.orm import Session
 from database import get_db
 import models
 from schemas import policy_schema as schema
+from rate_limiting import rate_limit
 
 router = APIRouter(tags=["Insurance_Policies"])
 
-@router.post("/create_policy", status_code=status.HTTP_201_CREATED, tags=["Insurance_Policies"])
-def create_policy(request: schema.PolicyCreate, db: Session = Depends(get_db)):
-    """
-    Create a new insurance policy and associate it with a patient.
+# this is already used with the patient registration endpoint, so we can skip it here
+# @router.post("/create_policy", status_code=status.HTTP_201_CREATED, tags=["Insurance_Policies"])
+# @rate_limit(limit=20, period=60)  # Limit to 20 requests per minute per IP
+# def create_policy(request: schema.PolicyCreate, db: Session = Depends(get_db)):
+#     """
+#     Create a new insurance policy and associate it with a patient.
 
-    **Request Body:**
-    - `p_id` (int, required): Valid patient ID to associate the policy with. Must exist in the system.
-    - `u_id` (int, required): Valid system user/admin ID creating the policy. Must exist in the system.
-    - `category_name` (str, required): Insurance category or plan name (e.g., "Premium", "Basic", "Gold").
-    - `total_coverage` (float, required): Maximum coverage amount allowed under this policy.
-    - `amount_used` (float, optional, default=0.0): Amount already consumed from the total coverage.
-    - `description` (str, optional): Additional notes or details about the policy.
+#     **Request Body:**
+#     - `p_id` (int, required): Valid patient ID to associate the policy with. Must exist in the system.
+#     - `u_id` (int, required): Valid system user/admin ID creating the policy. Must exist in the system.
+#     - `category_name` (str, required): Insurance category or plan name (e.g., "Premium", "Basic", "Gold").
+#     - `total_coverage` (float, required): Maximum coverage amount allowed under this policy.
+#     - `amount_used` (float, optional, default=0.0): Amount already consumed from the total coverage.
+#     - `description` (str, optional): Additional notes or details about the policy.
 
-    **Response (201 Created):**
-    Returns the newly created policy object with all submitted fields plus:
-    - `policy_id`: Auto-generated unique policy identifier
+#     **Response (201 Created):**
+#     Returns the newly created policy object with all submitted fields plus:
+#     - `policy_id`: Auto-generated unique policy identifier
 
-    **Constraints:**
-    - `p_id` must refer to an existing patient in the Patient table.
-    - `u_id` must refer to an existing user in the SystemUser table.
+#     **Constraints:**
+#     - `p_id` must refer to an existing patient in the Patient table.
+#     - `u_id` must refer to an existing user in the SystemUser table.
 
-    **Error Responses:**
-    - `404 Not Found`: Patient with given `p_id` does not exist
-    - `404 Not Found`: User with given `u_id` does not exist
-    - `422 Unprocessable Entity`: Invalid data format or missing required fields
-    """
-    if not db.query(models.Patient).filter(models.Patient.p_id == request.p_id).first():
-        raise HTTPException(status_code=404, detail="Patient ID not found")
+#     **Error Responses:**
+#     - `404 Not Found`: Patient with given `p_id` does not exist
+#     - `404 Not Found`: User with given `u_id` does not exist
+#     - `422 Unprocessable Entity`: Invalid data format or missing required fields
+#     """
+#     if not db.query(models.Patient).filter(models.Patient.p_id == request.p_id).first():
+#         raise HTTPException(status_code=404, detail="Patient ID not found")
     
-    is_user = db.query(models.SystemUser).filter(models.SystemUser.user_id == request.u_id).first()
+#     is_user = db.query(models.SystemUser).filter(models.SystemUser.user_id == request.u_id).first()
 
-    if not is_user:
-        raise HTTPException(status_code=404, detail="Invalid user id")
+#     if not is_user:
+#         raise HTTPException(status_code=404, detail="Invalid user id")
         
-    new_policy = models.InsurancePolicy(
-        p_id=request.p_id,
-        u_id=request.u_id,
-        category_name=request.category_name,
-        total_coverage=request.total_coverage,
-        amount_used=request.amount_used,
-        description=request.description,
-    )
-    db.add(new_policy)
-    db.commit()
-    db.refresh(new_policy)
-    return new_policy
+#     new_policy = models.InsurancePolicy(
+#         p_id=request.p_id,
+#         u_id=request.u_id,
+#         category_name=request.category_name,
+#         total_coverage=request.total_coverage,
+#         amount_used=request.amount_used,
+#         description=request.description,
+#     )
+#     db.add(new_policy)
+#     db.commit()
+#     db.refresh(new_policy)
+#     return new_policy
 
 @router.get("/single_policy{policy_id}", status_code=200, response_model=schema.PolicyCreate, tags=["Insurance_Policies"])
+@rate_limit(limit=30, period=60)
 def get_policy(policy_id : int , db: Session = Depends(get_db)):
     """
     Retrieve the details of a specific insurance policy by its ID.
@@ -81,6 +85,7 @@ def get_policy(policy_id : int , db: Session = Depends(get_db)):
     return policy
 
 @router.get("/all_patients_per_policy_category{policy_category}", status_code=200, tags=["Insurance_Policies"])
+@rate_limit(limit=20, period=60)
 def patients_per_policy_cat(policy_category : str, db: Session = Depends(get_db)):
     """
     Retrieve all patients enrolled in a specific insurance policy category.
