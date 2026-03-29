@@ -1,17 +1,17 @@
-from fastapi import APIRouter, status, Depends, HTTPException
+from fastapi import APIRouter, status, Depends, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from schemas import auth_schema, patient_schema
 from database import get_db
 import model
-from rate_limiting import rate_limit
+from rate_limiting import limiter
 
 router = APIRouter(tags=['Authentication'])
 
 @router.post("/signup", status_code=status.HTTP_201_CREATED)
-@rate_limit(limit=10, period=60)
-def SignUP_patient(patient: auth_schema.SignUp, db :Session = Depends(get_db)):
+@limiter.limit("10/minute")
+def SignUP_patient(patient: auth_schema.SignUp, request: Request, response: Response,  db :Session = Depends(get_db)):
     """
     Set a password for an existing patient in the PHR system.
 
@@ -49,8 +49,8 @@ def SignUP_patient(patient: auth_schema.SignUp, db :Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
 
 @router.post("/login",status_code=status.HTTP_200_OK, response_model=patient_schema.Patient)
-@rate_limit(limit=10, period=60)
-def login_patient(patient: auth_schema.Login, db :Session = Depends(get_db)):
+@limiter.limit("10/minute")
+def login_patient(patient: auth_schema.Login, request: Request, response: Response, db :Session = Depends(get_db)):
     """
         Authenticate a patient and log in to the PHR (Personal Health Record) system.
 

@@ -1,17 +1,17 @@
-from fastapi import APIRouter, status, Depends, HTTPException
+from fastapi import APIRouter, status, Depends, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from database import get_db
-from rate_limiting import rate_limit
+from rate_limiting import limiter
 from schemas import auth_schema as schema
 import model
 
 router = APIRouter(tags=['Authentication'])
 
 @router.post("/signup", status_code=status.HTTP_201_CREATED)
-@rate_limit(limit=20, period=60)  # Limit to 10 requests per minute per IP
-def create_doctor(doctor: schema.SignUp, db :Session = Depends(get_db)):
+@limiter.limit("20/minute")
+def create_doctor(doctor: schema.SignUp, request: Request, response: Response, db :Session = Depends(get_db)):
     """
     Register a new doctor in the EHR system.
 
@@ -46,8 +46,8 @@ def create_doctor(doctor: schema.SignUp, db :Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
 
 @router.post("/login",status_code=status.HTTP_200_OK)
-@rate_limit(limit=20, period=60)  # Limit to 10 requests per minute per IP
-def login_doctor(doctor: schema.Login, db :Session = Depends(get_db)):
+@limiter.limit("20/minute")
+def login_doctor(doctor: schema.Login, request: Request, response: Response, db :Session = Depends(get_db)):
     """
     Authenticate a doctor and log in to the EHR system.
 
@@ -79,8 +79,8 @@ def login_doctor(doctor: schema.Login, db :Session = Depends(get_db)):
     return {"message": "login sucessfully"}
 
 @router.get("/get-doctor/{email}/{password}", status_code=status.HTTP_200_OK)
-@rate_limit(limit=40, period=60)  # Limit to 10 requests per minute per IP
-def get_doctor(email: str, password: str, db: Session = Depends(get_db)):
+@limiter.limit("40/minute")
+def get_doctor(email: str, password: str, request: Request, response: Response, db: Session = Depends(get_db)):
     """
     Retrieve a doctor's record by verifying their email and password credentials.
 
@@ -107,8 +107,8 @@ def get_doctor(email: str, password: str, db: Session = Depends(get_db)):
         
 
 @router.put("/change-phone-no{p_no}/id{doc_id}", status_code=status.HTTP_202_ACCEPTED)
-@rate_limit(limit=20, period=60)  # Limit to 10 requests per minute per IP
-def alter_phone_no(p_no: str , doc_id: int, db :Session = Depends(get_db)):
+@limiter.limit("20/minute")
+def alter_phone_no(p_no: str , doc_id: int, request: Request, response: Response, db :Session = Depends(get_db)):
     """
     Update the phone number of a registered doctor.
 

@@ -1,18 +1,18 @@
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Response 
 from sqlalchemy.orm import Session
 
 from database import get_db
 import models
 from schemas import claims_schema as schema
-from rate_limiting import rate_limit
+from rate_limiting import limiter
 
 router = APIRouter(tags=["Claims"])
 
 @router.post("/submit_claim", response_model=schema.PatientClaimDisplay, status_code=status.HTTP_201_CREATED, tags=["Claims"])
-@rate_limit(limit=10, period=60)  # Limit to 10 requests per minute per IP
-def submit_claim(request: schema.PatientClaimCreate, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")  # Limit to 10 requests per minute per IP
+def submit_claim(data: schema.PatientClaimCreate, request: Request, response: Response,  db: Session = Depends(get_db)):
     """
     Submit a new insurance claim for a patient.
 
@@ -33,20 +33,20 @@ def submit_claim(request: schema.PatientClaimCreate, db: Session = Depends(get_d
     - `404 Not Found`: `policy_id` or `patient_id` does not exist in the system
     - `422 Unprocessable Entity`: Missing required fields or invalid data types
     """
-    policy = db.query(models.InsurancePolicy).filter(models.InsurancePolicy.policy_id == request.policy_id).first()
+    policy = db.query(models.InsurancePolicy).filter(models.InsurancePolicy.policy_id == data.policy_id).first()
     if not policy:
         raise HTTPException(status_code=404, detail="Policy ID not found")
     
-    patient = db.query(models.Patient).filter(models.Patient.p_id == request.patient_id).first()
+    patient = db.query(models.Patient).filter(models.Patient.p_id == data.patient_id).first()
     if not patient:
         raise HTTPException(status_code=404, detail="Patient ID not found")
 
     new_claim = models.PatientClaim(
-        policy_id=request.policy_id,
-        patient_id = request.patient_id,
-        service_name=request.service_name,
-        bill_amount=request.bill_amount,
-        provider_phone_no=request.provider_phone_no
+        policy_id=data.policy_id,
+        patient_id = data.patient_id,
+        service_name=data.service_name,
+        bill_amount=data.bill_amount,
+        provider_phone_no=data.provider_phone_no
     )
     db.add(new_claim)
     db.commit()
@@ -54,8 +54,8 @@ def submit_claim(request: schema.PatientClaimCreate, db: Session = Depends(get_d
     return new_claim
 
 @router.get("/get_all_claims", response_model=list[schema.AllClaims], status_code=status.HTTP_200_OK, tags=["Claims"])
-@rate_limit(limit=30, period=60)
-def get_all_pending_claims(db: Session = Depends(get_db)):
+@limiter.limit("30/minute")  # Limit to 30 requests per minute per IP
+def get_all_pending_claims(request: Request, response: Response, db: Session = Depends(get_db)):
     """
     Retrieve all claims that are currently in "Pending" status.
 
@@ -88,8 +88,8 @@ def get_all_pending_claims(db: Session = Depends(get_db)):
     return claims
 
 @router.get("/claims_per_patient{pid}", response_model=schema.ClaimsPerPatient, status_code=200, tags=["Claims"])
-@rate_limit(limit=30, period=60) 
-def claims_per_patient(pid : int , db: Session = Depends(get_db)):
+@limiter.limit("30/minute") 
+def claims_per_patient(pid : int, request: Request, response: Response,  db: Session = Depends(get_db)):
     """
     Get all claims associated with a specific patient.
 
@@ -126,8 +126,8 @@ def claims_per_patient(pid : int , db: Session = Depends(get_db)):
     return out_data
 
 @router.get("/get_single_claim{claim_id}", response_model=schema.PatientClaimDisplay, status_code=status.HTTP_200_OK, tags=["Claims"])
-@rate_limit(limit=30, period=60)
-def get_single_claims(claim_id : int, db: Session = Depends(get_db)):
+@limiter.limit("30/minute")  # Limit to 30 requests per minute per IP
+def get_single_claims(claim_id : int, request: Request, response: Response, db: Session = Depends(get_db)):
     """
     Retrieve the complete details of a specific claim by its ID.
 
@@ -156,8 +156,8 @@ def get_single_claims(claim_id : int, db: Session = Depends(get_db)):
     return claim
 
 @router.put("/change_claim_status{claim_id}/{claim_status}", status_code=status.HTTP_202_ACCEPTED, tags=['Claims'])
-@rate_limit(limit=20, period=60)
-def claim_status(claim_id : int, claim_status: str, db: Session = Depends(get_db)):
+@limiter.limit("20/minute")  # Limit to 20 requests per minute per IP
+def claim_status(claim_id : int, claim_status: str, request: Request, response: Response, db: Session = Depends(get_db)):
     """
     Update the status of a claim and automatically add the bill amount to the associated policy's usage.
 
@@ -199,8 +199,8 @@ def claim_status(claim_id : int, claim_status: str, db: Session = Depends(get_db
     return {"message": f"status set to {claim_status}"}
 
 @router.put("/lock_claim{claim_id}/by{user_id}", status_code=status.HTTP_202_ACCEPTED, tags=['Claims'])
-@rate_limit(limit=20, period=60)
-def claim_lock(claim_id : int, user_id: int, db: Session = Depends(get_db)):
+@limiter.limit("20/minute")  # Limit to 20 requests per minute per IP
+def claim_lock(claim_id : int, user_id: int, request: Request, response: Response, db: Session = Depends(get_db)):
     """
     Lock a claim to a specific user to prevent concurrent modifications during processing.
 
@@ -241,8 +241,8 @@ def claim_lock(claim_id : int, user_id: int, db: Session = Depends(get_db)):
     return {"message": f"claim locked by {user.user_name}"}
 
 @router.put("/unlock_claim{claim_id}/by{user_id}", status_code=status.HTTP_202_ACCEPTED, tags=['Claims'])
-@rate_limit(limit=20, period=60)
-def claim_unlock(claim_id : int, user_id: int, db: Session = Depends(get_db)):
+@limiter.limit("20/minute")
+def claim_unlock(claim_id : int, user_id: int, request: Request, response: Response, db: Session = Depends(get_db)):
     """
     Unlock a claim to release it from processing so it can be worked on again.
 

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, status, Depends, HTTPException
+from fastapi import APIRouter, Response, status, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
@@ -6,13 +6,13 @@ from api import engine_service
 from schemas import patient_schema as schema
 from database import get_db
 import model
-from rate_limiting import rate_limit
+from rate_limiting import limiter
 
 router = APIRouter(tags=['Patient'])
 
 @router.get("/patients", response_model=list[schema.get_patient], status_code=status.HTTP_200_OK)
-@rate_limit(limit=30, period=60)
-def get_patient(db: Session = Depends(get_db)):
+@limiter.limit("20/minute")
+def get_patient(request: Request, response: Response, db: Session = Depends(get_db)):
     """
     Retrieve all patients from the EHR system.
     
@@ -31,8 +31,8 @@ def get_patient(db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
     
 @router.post("/patients", status_code=status.HTTP_201_CREATED)
-@rate_limit(limit=10, period=60)
-async def add_patient(patient: schema.post_patient ,db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+async def add_patient(patient: schema.post_patient, request: Request, response: Response ,db: Session = Depends(get_db)):
     """
     Register a new patient in the EHR system and sync with FHIR engine.
     

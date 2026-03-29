@@ -9,12 +9,15 @@ from contextlib import asynccontextmanager
 import httpx
 from fastapi import FastAPI, status, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi.middleware import SlowAPIMiddleware
+from slowapi.errors import RateLimitExceeded
 
 from api import server, route, endpoint
 from validation.fhir_validation import validate_unknown_fhir_resource, get_fhir_value_by_path, fhir_extract_paths
 from validation.fhir_validation import build_fhir_message
 from validation.hl7_validation import get_hl7_value_by_path, hl7_extract_paths
 from validation.hl7_validation import build_hl7_message
+from rate_limiting import limiter, rate_limit_exceeded_handler
 from database import engine, session_local
 import models
 
@@ -73,6 +76,10 @@ app.add_middleware(
     allow_methods=["*"]
 )
 models.Base.metadata.create_all(bind=engine)
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 app.include_router(server.router, prefix="/server")
 app.include_router(route.router, prefix="/route")

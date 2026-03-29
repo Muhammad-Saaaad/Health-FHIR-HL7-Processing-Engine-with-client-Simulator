@@ -4,14 +4,14 @@ from sqlalchemy.orm import Session
 from schemas import lab_schema as schema
 from database import get_db
 import model
-from rate_limiting import rate_limit
+from rate_limiting import limiter
 
 router = APIRouter(tags=['Visit Note'])
 
 cached_data = {}
 
 @router.get("/lab-reports-by-{note_id}", response_model=list[schema.LabReport], status_code=status.HTTP_200_OK, tags=["Lab"])
-@rate_limit(limit=30, period=60)  # Limit to 30 requests per minute per IP
+@limiter.limit("30/minute")
 def fetch_lab_report(note_id: int, request: Request, response: Response, db: Session = Depends(get_db)):
     """
     Retrieve all lab reports associated with a specific visit note.
@@ -41,7 +41,7 @@ def fetch_lab_report(note_id: int, request: Request, response: Response, db: Ses
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f'{str(e)}')
 
 @router.get("/lab_test_search", response_model=list[schema.LoincMaster], status_code=status.HTTP_200_OK, tags=["Lab"])
-@rate_limit(limit=80, period=60)  # Limit to 80 requests per minute per IP
+@limiter.limit("80/minute")
 async def test_search(search_name: str, request: Request, response: Response, db: Session = Depends(get_db)):
     """
         * This will get the top 10 case insensetive results that contain the search name in the long common name of the LoincMaster table. 

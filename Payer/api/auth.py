@@ -1,16 +1,16 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
 from sqlalchemy.orm import Session
 
 from database import get_db
 import models
 from schemas import auth_schema as schema
-from rate_limiting import rate_limit
+from rate_limiting import limiter
 
 router = APIRouter(tags=["Authentication"])
 
 @router.post("/signup", response_model=schema.SystemUserDisplay, status_code=status.HTTP_201_CREATED)
-@rate_limit(limit=10, period=60)  # Limit to 10 requests per minute per IP
-def signup_user(request: schema.SystemUserCreate, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")  # Limit to 10 requests per minute per IP
+def signup_user(data: schema.SystemUserCreate, request: Request, response: Response, db: Session = Depends(get_db)):
     """
     Create a new user account (signup).
     
@@ -29,15 +29,15 @@ def signup_user(request: schema.SystemUserCreate, db: Session = Depends(get_db))
     - 400 Bad Request: Email already registered
     - 422 Unprocessable Entity: Invalid email format or missing required fields
     """
-    existing_user = db.query(models.SystemUser).filter(models.SystemUser.email == request.email).first()
+    existing_user = db.query(models.SystemUser).filter(models.SystemUser.email == data.email).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
 
 
     new_user = models.SystemUser(
-        user_name=request.user_name,
-        email=request.email,
-        password=request.password,
+        user_name=data.user_name,
+        email=data.email,
+        password=data.password,
     )
     db.add(new_user)
     db.commit()
@@ -45,8 +45,8 @@ def signup_user(request: schema.SystemUserCreate, db: Session = Depends(get_db))
     return new_user
 
 @router.post("/login", status_code=status.HTTP_200_OK)
-@rate_limit(limit=10, period=60)  # Limit to 10 login attempts per minute per IP
-def login_user(request: schema.LoginRequest, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")  # Limit to 10 login attempts per minute per IP
+def login_user(data: schema.LoginRequest,request: Request, response: Response,  db: Session = Depends(get_db)):
     """
     Authenticate user and login.
     
@@ -65,11 +65,11 @@ def login_user(request: schema.LoginRequest, db: Session = Depends(get_db)):
     - 404 Not Found: Invalid Password - Password does not match the registered email
     - 422 Unprocessable Entity: Invalid email format or missing fields
     """
-    user = db.query(models.SystemUser).filter(models.SystemUser.email == request.email).first()
+    user = db.query(models.SystemUser).filter(models.SystemUser.email == data.email).first()
     if not user:
         raise HTTPException(status_code=404, detail="Invalid Email")
     
-    if user.password != request.password:
+    if user.password != data.password:
         raise HTTPException(status_code=404, detail="Invalid Password")
 
     return {

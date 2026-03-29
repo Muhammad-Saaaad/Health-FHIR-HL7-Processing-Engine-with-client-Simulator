@@ -1,16 +1,16 @@
-from fastapi import APIRouter, status, HTTPException, Depends
+from fastapi import APIRouter, status, HTTPException, Depends, Request, Response
 from sqlalchemy.orm import Session
 
 from database import get_db
 import model
 from schemas.patient_schema import GetPatient
-from rate_limiting import rate_limit
+from rate_limiting import limiter
 
 router = APIRouter(tags=["patient"])
 
 @router.get("/get_patients", response_model=list[GetPatient], tags=["patient"])
-@rate_limit(limit=20, period=60)  # Limit to 20 requests per minute per IP
-def get_all_patients(db: Session = Depends(get_db)):
+@limiter.limit("20/minute")  # Limit to 20 requests per minute per IP
+def get_all_patients(request: Request, response: Response, db: Session = Depends(get_db)):
     """
     Retrieve all patients registered in the LIS system.
 
@@ -27,8 +27,8 @@ def get_all_patients(db: Session = Depends(get_db)):
     return patients
 
 @router.get("/patients/{pid}", response_model=GetPatient, tags=["patient"])
-@rate_limit(limit=20, period=60)  # Limit to 20 requests per minute per IP
-def get_patient_detail(pid: int, db: Session = Depends(get_db)):
+@limiter.limit("20/minute")  # Limit to 20 requests per minute per IP
+def get_patient_detail(pid: int, request: Request, response: Response, db: Session = Depends(get_db)):
     """
     Retrieve detailed information about a specific patient by their internal patient ID.
 
@@ -45,5 +45,5 @@ def get_patient_detail(pid: int, db: Session = Depends(get_db)):
     """
     patient = db.get(model.Patient, pid)
     if not patient:
-        raise HTTPException(status_code=404, detail="Patient not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found")
     return patient

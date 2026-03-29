@@ -1,18 +1,18 @@
 from datetime import datetime
 
-from fastapi import APIRouter, status, HTTPException, Depends
+from fastapi import APIRouter, status, HTTPException, Depends, Request, Response
 from sqlalchemy.orm import Session
 
 from database import get_db
 import model
 from schemas.billing_schema import BillingCreate, BillingOut
-from rate_limiting import rate_limit
+from rate_limiting import limiter
 
 router = APIRouter(tags=["Billing"])
 
 @router.post("/billing/", response_model=BillingOut, status_code=status.HTTP_201_CREATED, tags=["Billing"])
-@rate_limit(limit=10, period=60)  # Limit to 10 requests per minute per IP
-def create_bill(b: BillingCreate, db: Session = Depends(get_db)):
+@limiter.limit(limit=10, period=60)  # Limit to 10 requests per minute per IP
+def create_bill(b: BillingCreate, request: Request, response: Response, db: Session = Depends(get_db)):
     """
     Create a new billing record for a lab test request.
 
@@ -59,8 +59,8 @@ def create_bill(b: BillingCreate, db: Session = Depends(get_db)):
     return bill
 
 @router.put("/billing/{bill_id}/pay", response_model=BillingOut, tags=["Billing"])
-@rate_limit(limit=10, period=60)  # Limit to 10 payment updates per minute per IP
-def update_payment(bill_id: int, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")  # Limit to 10 payment updates per minute per IP
+def update_payment(bill_id: int,request: Request, response: Response, db: Session = Depends(get_db)):
     """
     Mark an existing bill as paid.
 

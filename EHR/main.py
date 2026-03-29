@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi.middleware import SlowAPIMiddleware
+from slowapi.errors import RateLimitExceeded
 # from sqlalchemy.exc import SAWarning
 # import warnings
  
@@ -12,6 +14,7 @@ from api import (
     visit_note,
     # engine_service
 )
+from rate_limiting import limiter, rate_limit_exceeded_handler
 
 # warnings.filterwarnings("ignore", category=SAWarning)
 app = FastAPI(title="EHR System")
@@ -23,6 +26,10 @@ app.add_middleware(
     allow_methods=["*"]
 )
 model.Base.metadata.create_all(bind=engine) # once you run the server, then you should comment this, so this won't do issue with testing.
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 app.include_router(authentication.router)
 app.include_router(lab.router)

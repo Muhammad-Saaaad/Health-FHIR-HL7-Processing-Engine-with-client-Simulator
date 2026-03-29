@@ -1,13 +1,13 @@
 import logging
 from logging.handlers import RotatingFileHandler
 
-from fastapi import APIRouter, status, HTTPException, Depends
+from fastapi import APIRouter, status, HTTPException, Depends, Response, Request
 from sqlalchemy.orm import Session
 
 from schemas.endpoint import AddEndpoint
 import models
 from database import get_db
-from rate_limiting import rate_limit
+from rate_limiting import limiter
 from validation.mappings import FHIR_EXACT_CANONICAL, FHIR_PATTERN_CANONICAL, HL7_EXACT_CANONICAL
 from validation.fhir_validation import validate_unknown_fhir_resource, fhir_extract_paths
 from validation.hl7_validation import hl7_extract_paths
@@ -29,8 +29,8 @@ if not logger.handlers:
     logger.addHandler(rotating_file_handler)
 
 @router.get("/server-endpoint/{server_id}", status_code=status.HTTP_200_OK)
-@rate_limit(limit=40, period=60)  # Limit to 40 requests per minute per IP
-def server_endpoint(server_id: int, db:Session = Depends(get_db)):
+@limiter.limit("40/minute")  # Limit to 40 requests per minute per IP
+def server_endpoint(server_id: int, request: Request, response: Response, db:Session = Depends(get_db)):
     """
     Retrieve all registered endpoints belonging to a specific server.
 
@@ -62,8 +62,8 @@ def server_endpoint(server_id: int, db:Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
 
 @router.post("/add-endpoint", status_code=status.HTTP_201_CREATED)
-@rate_limit(limit=10, period=60)  # Limit to 10 requests per minute per IP
-async def add_endpoint(endpoint: AddEndpoint, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")  # Limit to 10 requests per minute per IP
+async def add_endpoint(endpoint: AddEndpoint, request: Request, response: Response, db: Session = Depends(get_db)):
     """
     Register a new endpoint for a server and auto-extract its field mappings from a sample message.
 
@@ -163,8 +163,8 @@ async def add_endpoint(endpoint: AddEndpoint, db: Session = Depends(get_db)):
 
 
 @router.get("/endpoint_field_path/{endpoint_id}", status_code=status.HTTP_200_OK)
-@rate_limit(limit=40, period=60)  # Limit to 40 requests per minute per IP
-def endpoint_field_paths(endpoint_id: int, db:Session = Depends(get_db)):
+@limiter.limit("40/minute")  # Limit to 40 requests per minute per IP
+def endpoint_field_paths(endpoint_id: int, request: Request, response: Response, db:Session = Depends(get_db)):
     """
     Retrieve all discovered fields for a specific endpoint.
 

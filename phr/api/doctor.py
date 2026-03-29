@@ -1,15 +1,15 @@
-from fastapi import APIRouter, status, HTTPException, Depends
+from fastapi import APIRouter, status, HTTPException, Depends, Response, Request
 from sqlalchemy.orm import Session
 
 from database import get_db
 import model
-from rate_limiting import rate_limit
+from rate_limiting import limiter
 
 router = APIRouter(tags=["Doctors"])
 
 @router.get("/all_doctors", status_code=status.HTTP_200_OK)
-@rate_limit(limit=30, period=60)
-def get_doctors(db: Session = Depends(get_db)):
+@limiter.limit("30/minute")
+def get_doctors(request: Request, response: Response, db: Session = Depends(get_db)):
     try:
         return db.query(model.Doctor).all()
     except Exception as exp:

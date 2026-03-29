@@ -1,7 +1,7 @@
 import logging
 from logging.handlers import RotatingFileHandler
 
-from fastapi import APIRouter, status, HTTPException, Depends
+from fastapi import APIRouter, Request, Response, status, HTTPException, Depends
 from fastapi.params import Query
 from sqlalchemy.orm import Session
 
@@ -9,7 +9,7 @@ from database import get_db
 from schemas.route import GetRoute, AddRoute
 import models
 from validation.suggestion import generate_single_suggestion
-from rate_limiting import rate_limit
+from rate_limiting import limiter
 
 router = APIRouter(tags=["Route"])
 
@@ -22,8 +22,8 @@ logger.addHandler(handler)
 
 
 @router.get("/all-routes", status_code=status.HTTP_200_OK, response_model=list[GetRoute])
-@rate_limit(limit=40, period=60)  # Limit to 40 requests per minute per IP
-def all_routes(db: Session = Depends(get_db)):
+@limiter.limit("40/minute")  # Limit to 40 requests per minute per IP
+def all_routes(request: Request, response: Response,db: Session = Depends(get_db)):
     """
     Retrieve all configured routes in the Interface Engine.
 
@@ -78,8 +78,8 @@ def all_routes(db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
 
 @router.get("/mapping_rules/{route_id}", status_code=status.HTTP_200_OK)
-@rate_limit(limit=30, period=60)  # Limit to 30 requests per minute per IP
-def get_rules(route_id: int, db: Session = Depends(get_db)):
+@limiter.limit("30/minute")  # Limit to 30 requests per minute per IP
+def get_rules(request: Request, response: Response, route_id: int, db: Session = Depends(get_db)):
     """
     Retrieve all field mapping rules for a specific route, grouped by transformation type.
 
@@ -261,8 +261,9 @@ def get_rules(route_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
 
 @router.get("/mapping_suggestion/src_server_id/{src_server_id}/dest_server_id/{dest_server_id}", status_code=status.HTTP_200_OK)
-@rate_limit(limit=150, period=60)  # Limit to 150 requests per minute per IP
+@limiter.limit("150/minute")  # Limit to 150 requests per minute per IP
 def mapping_suggestion(
+    request: Request, response: Response,
     src_server_id: int,
     dest_server_id: int,
     src_field_ids: list[int] = Query(...), # Now a query param: ?src_field_ids=1&src_field_ids=2
@@ -331,8 +332,8 @@ def mapping_suggestion(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
 
 @router.post("/add-route", status_code=status.HTTP_201_CREATED)
-@rate_limit(limit=10, period=60)  # Limit to 10 requests per minute per IP
-def add_route(data: AddRoute, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")  # Limit to 10 requests per minute per IP
+def add_route(data: AddRoute,request: Request, response: Response, db: Session = Depends(get_db)):
     """
     Create a new message routing rule between two server endpoints with field-level mapping.
 
@@ -494,8 +495,8 @@ def add_route(data: AddRoute, db: Session = Depends(get_db)):
     return {"message": "Sucessfully done"}
 
 @router.delete("/delete-route/{route_id}", status_code=status.HTTP_204_NO_CONTENT)
-@rate_limit(limit=15, period=60)  # Limit to 15 requests per minute per IP
-def delete_route(route_id: int, db: Session = Depends(get_db)):
+@limiter.limit("15/minute")  # Limit to 15 requests per minute per IP
+def delete_route(route_id: int, request: Request, response: Response, db: Session = Depends(get_db)):
     """
     Delete an existing route and all its associated mapping rules.
 

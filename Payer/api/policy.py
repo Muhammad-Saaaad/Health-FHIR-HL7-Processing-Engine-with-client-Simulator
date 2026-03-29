@@ -1,16 +1,16 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
 from sqlalchemy.orm import Session
 
 from database import get_db
 import models
 from schemas import policy_schema as schema
-from rate_limiting import rate_limit
+from rate_limiting import limiter
 
 router = APIRouter(tags=["Insurance_Policies"])
 
 # this is already used with the patient registration endpoint, so we can skip it here
 # @router.post("/create_policy", status_code=status.HTTP_201_CREATED, tags=["Insurance_Policies"])
-# @rate_limit(limit=20, period=60)  # Limit to 20 requests per minute per IP
+# @limiter.limit(limit=20, period=60)  # Limit to 20 requests per minute per IP
 # def create_policy(request: schema.PolicyCreate, db: Session = Depends(get_db)):
 #     """
 #     Create a new insurance policy and associate it with a patient.
@@ -58,8 +58,8 @@ router = APIRouter(tags=["Insurance_Policies"])
 #     return new_policy
 
 @router.get("/single_policy{policy_id}", status_code=200, response_model=schema.PolicyCreate, tags=["Insurance_Policies"])
-@rate_limit(limit=30, period=60)
-def get_policy(policy_id : int , db: Session = Depends(get_db)):
+@limiter.limit("30/minute")  # Limit to 30 requests per minute per IP
+def get_policy(policy_id : int , request: Request, response: Response, db: Session = Depends(get_db)):
     """
     Retrieve the details of a specific insurance policy by its ID.
 
@@ -85,8 +85,8 @@ def get_policy(policy_id : int , db: Session = Depends(get_db)):
     return policy
 
 @router.get("/all_patients_per_policy_category{policy_category}", status_code=200, tags=["Insurance_Policies"])
-@rate_limit(limit=20, period=60)
-def patients_per_policy_cat(policy_category : str, db: Session = Depends(get_db)):
+@limiter.limit("20/minute")  # Limit to 20 requests per minute per IP
+def patients_per_policy_cat(policy_category : str, request: Request, response: Response, db: Session = Depends(get_db)):
     """
     Retrieve all patients enrolled in a specific insurance policy category.
 
@@ -117,9 +117,8 @@ def patients_per_policy_cat(policy_category : str, db: Session = Depends(get_db)
             output.append({
                 "p_id": d.p_id,
                 "name": d.name,
-                "cnic": d.cnic,
                 "date_of_birth": d.date_of_birth,
-                "policy_catrgory": policy_category
+                "policy_category": policy_category
             })
         return output
     except Exception as e:

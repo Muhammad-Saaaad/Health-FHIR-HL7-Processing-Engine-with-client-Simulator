@@ -1,16 +1,16 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
 from sqlalchemy.orm import Session
 
 from database import get_db
 import models
 from schemas import patient_schema as schema
-from rate_limiting import rate_limit
+from rate_limiting import limiter
 
 router = APIRouter(tags=["Patients"])
 
 @router.post("/reg_patient",  status_code=status.HTTP_201_CREATED, tags=["Patients"])
-@rate_limit(limit=15, period=60)  # Limit to 10 requests per minute per IP
-def register_patient(request: schema.PatientCreate, db: Session = Depends(get_db)):
+@limiter.limit("15/minute")  # Limit to 15 requests per minute per IP
+def register_patient(data: schema.PatientCreate, request: Request, response: Response,  db: Session = Depends(get_db)):
     """
     Register a new patient in the Payer system and automatically create an insurance policy.
 
@@ -43,8 +43,8 @@ def register_patient(request: schema.PatientCreate, db: Session = Depends(get_db
     - `422 Unprocessable Entity`: Invalid data format or missing required fields
     """
     # user_id 0 means that it is inserted by the engine. 
-    if request.user_id != 0:
-        is_user = db.query(models.SystemUser).filter(models.SystemUser.user_id == request.user_id).first()
+    if data.user_id != 0:
+        is_user = db.query(models.SystemUser).filter(models.SystemUser.user_id == data.user_id).first()
 
         if not is_user:
             raise HTTPException(status_code=404, detail="Invalid user id")
@@ -59,42 +59,42 @@ def register_patient(request: schema.PatientCreate, db: Session = Depends(get_db
             db.add(engine_user)
             db.commit()
             db.refresh(engine_user)
-            request.user_id = engine_user.user_id
+            data.user_id = engine_user.user_id
         else:            
-            request.user_id = is_engine_user.user_id
+            data.user_id = is_engine_user.user_id
     
     if db.query(models.Patient).filter(
-            models.Patient.phone_no == request.phone_no,                            
-            models.Patient.date_of_birth == request.date_of_birth,
-            models.Patient.name == request.name).first():
+            models.Patient.phone_no == data.phone_no,                            
+            models.Patient.date_of_birth == data.date_of_birth,
+            models.Patient.name == data.name).first():
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="This Patient already exists")
 
     try:
         new_patient = models.Patient(
-            u_id=request.user_id,
-            name=request.name,
-            phone_no=request.phone_no,
-            gender=request.gender,
-            date_of_birth=request.date_of_birth,
+            u_id=data.user_id,
+            name=data.name,
+            phone_no=data.phone_no,
+            gender=data.gender,
+            date_of_birth=data.date_of_birth,
         )
         db.add(new_patient)
         db.flush()
         db.refresh(new_patient)
 
         total_coverage = 0
-        if request.insurance_type in ("Gold", "Golden", "golden", "gold"):
+        if data.insurance_type in ("Gold", "Golden", "golden", "gold"):
             total_coverage = 1000000
-        elif request.insurance_type in ("Silver", "silver"):
+        elif data.insurance_type in ("Silver", "silver"):
             total_coverage = 500000
-        elif request.insurance_type in ("Bronze", "bronze"):
+        elif data.insurance_type in ("Bronze", "bronze"):
             total_coverage = 200000
 
-        print(f"Total coverage for {request.insurance_type} is {total_coverage}")
+        print(f"Total coverage for {data.insurance_type} is {total_coverage}")
 
         new_policy = models.InsurancePolicy(
             pid=new_patient.pid,
             u_id = new_patient.u_id,
-            category_name=request.insurance_type,
+            category_name=data.insurance_type,
             total_coverage=total_coverage,
             amount_used=0,
             status="active"
@@ -111,8 +111,8 @@ def register_patient(request: schema.PatientCreate, db: Session = Depends(get_db
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 @router.get("/get_all_patients", response_model=list[schema.PatientDisplay], status_code=status.HTTP_200_OK, tags=["Patients"])
-@rate_limit(limit=30, period=60)  # Limit to 30 requests per minute per IP
-def get_all_patients(db: Session = Depends(get_db)):
+@limiter.limit("30/minute")  # Limit to 30 requests per minute per IP
+def get_all_patients(request: Request, response: Response, db: Session = Depends(get_db)):
     """
     Retrieve all patients registered in the Payer system.
 
@@ -153,8 +153,8 @@ def get_all_patients(db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 @router.get("/get_patient/{p_id}", response_model=schema.PatientPolicyDetails, status_code=status.HTTP_200_OK, tags=["Patients"])
-@rate_limit(limit=30, period=60)
-def get_single_patient(p_id: int, db: Session = Depends(get_db)):
+@limiter.limit("30/minute")  # Limit to 30 requests per minute per IP
+def get_single_patient(p_id: int, request: Request, response: Response, db: Session = Depends(get_db)):
     """
     Retrieve detailed information about a specific patient including their insurance policies.
 

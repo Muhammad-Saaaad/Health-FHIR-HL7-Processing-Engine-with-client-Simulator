@@ -1,9 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi.middleware import SlowAPIMiddleware
+from slowapi.errors import RateLimitExceeded
 
 from database import engine
 import model
 from api import auth, patient ,lab, billing, engine_service
+from rate_limiting import limiter, rate_limit_exceeded_handler
 
 app = FastAPI()
 
@@ -16,6 +19,11 @@ app.add_middleware(
 )
 
 model.base.metadata.create_all(bind=engine) 
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
+
 app.include_router(auth.router)
 app.include_router(patient.router)
 app.include_router(lab.router)
