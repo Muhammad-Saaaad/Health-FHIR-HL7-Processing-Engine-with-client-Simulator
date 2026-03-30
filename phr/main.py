@@ -2,12 +2,15 @@ import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi.middleware import SlowAPIMiddleware
+from slowapi.errors import RateLimitExceeded
 # from sqlalchemy.exc import SAWarning
 # import warnings
  
 from api import authentication, doctor, engine_service
 from database import engine
 import model
+from rate_limiting import limiter, rate_limit_exceeded_handler
 
 os.makedirs("logs", exist_ok=True)
 
@@ -21,6 +24,10 @@ app.add_middleware(
     allow_methods=["*"]
 )
 model.Base.metadata.create_all(bind=engine)
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 app.include_router(authentication.router)
 app.include_router(doctor.router)
