@@ -55,7 +55,8 @@ async def get_registed_patient(req: Request, db: Session = Depends(get_db)):
 
         # Parse all segments
         all_values = {}
-        for segment in data.split('\n')[1:]:
+        # for segment in data.split('\n')[1:]:
+        for segment in data.splitlines()[1:]:
             if not segment.strip():
                 continue
             _, paths = hl7_extract_paths(segment=segment)

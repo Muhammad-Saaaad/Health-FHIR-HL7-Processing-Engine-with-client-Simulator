@@ -11,7 +11,7 @@ from rate_limiting import limiter
 router = APIRouter(tags=["Billing"])
 
 @router.post("/billing/", response_model=BillingOut, status_code=status.HTTP_201_CREATED, tags=["Billing"])
-@limiter.limit(limit=10, period=60)  # Limit to 10 requests per minute per IP
+@limiter.limit("10/minute")  # Limit to 10 requests per minute per IP
 def create_bill(b: BillingCreate, request: Request, response: Response, db: Session = Depends(get_db)):
     """
     Create a new billing record for a lab test request.

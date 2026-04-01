@@ -75,6 +75,16 @@ def get_suggestion(src_profile: dict, dest_profile: dict, src_field_type: str, d
                 "config": {"from": src_fmt, "to": dest_fmt}
             }
         
+        # _________________ regex ____________________
+        elif src_field_type in ("id_format", "subject_refrence_format"):
+            src_pattern = src_profile.get(src_field_type, {})
+            dest_pattern = dest_profile.get(dest_field_type, {})
+
+            if src_pattern == dest_pattern:
+                return {"transform": "copy", "config": {}}
+            
+            return {"transform": "regex", "config": {"from": src_pattern, "to": dest_pattern}}
+        
         # _________________  any code map (gender, boolean, status, marital, race, relationship) ____________________
 
         elif src_field_type in ("gender_code", "boolean", "status_code",
@@ -153,6 +163,10 @@ def get_field_type(canonical_name: str) -> str:
 
     # ── Explicit overrides for ambiguous names ────────────────────────────────
     EXPLICIT = {
+        # regex
+        "mpi":                         "regex",
+        "patient_mpi":                 "regex",
+
         # dates
         "birth_date":                  "date",
         "deceased_date":               "date",

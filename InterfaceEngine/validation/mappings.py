@@ -55,6 +55,15 @@ Collision rules enforced throughout:
 #   Claim, ExplanationOfBenefit, MedicationRequest,
 #   AllergyIntolerance, Immunization, Procedure
 
+# COLLECTION_MAPPING_TYPE : list[str] = [
+#     # all of the paths belong here belong to collection mapping type
+#     "ServiceRequest-code.coding[0].code",
+#     "ServiceRequest-code.coding[0].display",
+#     "ServiceRequest-code.coding[0].system",
+
+
+# ]
+
 FHIR_EXACT_CANONICAL: dict[str, str] = {
 
     # ── Patient ───────────────────────────────────────────────────────────────
@@ -168,7 +177,7 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
     "Encounter-type[0].coding[0].display":                           "admission_type_name",
     "Encounter-serviceType.coding[0].code":                          "hospital_service",
     "Encounter-priority.coding[0].code":                             "encounter_priority",
-    "Encounter-subject.reference":                                   "encounter_patient",
+    "Encounter-subject.reference":                                   "mpi", # this will map to the patient mpi.
     "Encounter-participant[0].type[0].coding[0].code":               "encounter_participant_type",
     "Encounter-participant[0].individual.reference":                 "encounter_provider",
     "Encounter-period.start":                                        "admit_datetime",
@@ -302,37 +311,37 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
 
     # ── ServiceRequest (Lab Order / Referral) ─────────────────────────────────
     # Aligned with OBR segment canonical names for auto-matching
-    # "ServiceRequest-id":                                      "order_fhir_id",
+    # "ServiceRequest-id":                                      "lab_order_fhir_id",
     "ServiceRequest-identifier[0].value":                     "placer_order_number",
-    "ServiceRequest-identifier[0].type.coding[0].code":       "order_identifier_type",
-    "ServiceRequest-basedOn[0].reference":                    "order_based_on",
-    "ServiceRequest-status":                                  "order_status",
-    "ServiceRequest-intent":                                  "order_intent",
-    "ServiceRequest-category[0].coding[0].code":              "order_category",
-    "ServiceRequest-category[0].coding[0].display":           "order_category_name",
-    "ServiceRequest-priority":                                "order_priority",
-    "ServiceRequest-doNotPerform":                            "order_do_not_perform",
-    "ServiceRequest-code.coding[0].code":                     "order_code",
-    "ServiceRequest-code.coding[0].display":                  "order_name",
-    "ServiceRequest-code.coding[0].system":                   "order_coding_system",
-    "ServiceRequest-subject.reference":                       "order_patient",
-    "ServiceRequest-encounter.reference":                     "order_encounter",
+    "ServiceRequest-identifier[0].type.coding[0].code":       "lab_order_identifier_type",
+    "ServiceRequest-basedOn[0].reference":                    "lab_order_based_on",
+    "ServiceRequest-status":                                  "lab_order_status",
+    "ServiceRequest-intent":                                  "lab_order_intent",
+    "ServiceRequest-category[0].coding[0].code":              "lab_order_category",
+    "ServiceRequest-category[0].coding[0].display":           "lab_order_category_name",
+    "ServiceRequest-priority":                                "lab_order_priority",
+    "ServiceRequest-doNotPerform":                            "lab_order_do_not_perform",
+    "ServiceRequest-code.coding[0].code":                     "lab_order_code",
+    "ServiceRequest-code.coding[0].display":                  "lab_order_name",
+    "ServiceRequest-code.coding[0].system":                   "lab_order_coding_system",
+    "ServiceRequest-subject.reference":                       "patient_mpi", # this will map to the patient mpi.
+    "ServiceRequest-encounter.reference":                     "lab_order_encounter",
     "ServiceRequest-occurrenceDateTime":                      "observation_start_datetime",
-    "ServiceRequest-occurrencePeriod.start":                  "order_start",
-    "ServiceRequest-occurrencePeriod.end":                    "order_end",
+    "ServiceRequest-occurrencePeriod.start":                  "lab_order_start",
+    "ServiceRequest-occurrencePeriod.end":                    "lab_order_end",
     "ServiceRequest-authoredOn":                              "requested_datetime",
     "ServiceRequest-requester.reference":                     "ordering_provider",
-    "ServiceRequest-performer[0].reference":                  "order_performer",
-    "ServiceRequest-performerType.coding[0].code":            "order_performer_type",
-    "ServiceRequest-locationReference[0].reference":          "order_location",
+    "ServiceRequest-performer[0].reference":                  "lab_order_performer",
+    "ServiceRequest-performerType.coding[0].code":            "lab_order_performer_type",
+    "ServiceRequest-locationReference[0].reference":          "lab_order_location",
     "ServiceRequest-reasonCode[0].coding[0].code":            "reason_code",
     "ServiceRequest-reasonCode[0].coding[0].display":         "reason_name",
-    "ServiceRequest-insurance[0].reference":                  "order_insurance",
+    "ServiceRequest-insurance[0].reference":                  "lab_order_insurance",
     "ServiceRequest-supportingInfo[0].reference":             "relevant_clinical_info",
-    "ServiceRequest-specimen[0].reference":                   "order_specimen",
-    "ServiceRequest-bodySite[0].coding[0].code":              "order_body_site",
-    "ServiceRequest-note[0].text":                            "order_notes",
-    "ServiceRequest-patientInstruction":                      "order_patient_instruction",
+    "ServiceRequest-specimen[0].reference":                   "lab_order_specimen",
+    "ServiceRequest-bodySite[0].coding[0].code":              "lab_order_body_site",
+    "ServiceRequest-note[0].text":                            "lab_order_notes",
+    "ServiceRequest-patientInstruction":                      "lab_order_patient_instruction",
 
     # ── Coverage (Insurance Card) — R4B v4.3.0 ───────────────────────────────
     #
@@ -755,7 +764,7 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
     "ServiceRequest-extension[parity-filler_order_id].valueString": "filler_order_id",
     "ServiceRequest-extension[parity-filler_order_number].valueString": "filler_order_number",
     "ServiceRequest-extension[parity-observation_end_datetime].valueString": "observation_end_datetime",
-    "ServiceRequest-extension[parity-order_set_id].valueString": "order_set_id",
+    "ServiceRequest-extension[parity-order_set_id].valueString": "lab_order_set_id",
     "ServiceRequest-extension[parity-ordering_provider_family].valueString": "ordering_provider_family",
     "ServiceRequest-extension[parity-ordering_provider_given].valueString": "ordering_provider_given",
     "ServiceRequest-extension[parity-ordering_provider_id].valueString": "ordering_provider_id",
@@ -1138,7 +1147,7 @@ HL7_EXACT_CANONICAL: dict[str, str] = {
     "PV1-52":   "encounter_complaint",
     "PV1-53":   "encounter_diagnosis_display",
     "PV1-54":   "encounter_notes",
-    "PV1-55":   "encounter_patient",
+    # "PV1-55":   "encounter_patient_mpi", we don't need this as it's redundant with PID-3 MPI field
 
     # ── IN1 — Insurance ───────────────────────────────────────────────────────
     #
@@ -1228,18 +1237,18 @@ HL7_EXACT_CANONICAL: dict[str, str] = {
     "IN1-55":   "coverage_patient",
 
     # ── OBR — Observation Request (Lab Order) ─────────────────────────────────
-    "OBR-1":    "order_set_id",
+    "OBR-1":    "lab_order_set_id",
     "OBR-2":    "placer_order_id",
     "OBR-2.1":  "placer_order_number",
     "OBR-2.2":  "placer_namespace",
     "OBR-3":    "filler_order_id",
     "OBR-3.1":  "filler_order_number",
     "OBR-3.2":  "filler_namespace",
-    "OBR-4":    "order_code",
-    "OBR-4.1":  "order_code",
-    "OBR-4.2":  "order_name",
-    "OBR-4.3":  "order_coding_system",
-    "OBR-5":    "order_priority",
+    "OBR-4":    "lab_order_code",
+    "OBR-4.1":  "lab_order_code",
+    "OBR-4.2":  "lab_order_name",
+    "OBR-4.3":  "lab_order_coding_system",
+    "OBR-5":    "lab_order_priority",
     "OBR-6":    "requested_datetime",
     "OBR-7":    "observation_start_datetime",
     "OBR-8":    "observation_end_datetime",
@@ -1536,25 +1545,25 @@ HL7_EXACT_CANONICAL: dict[str, str] = {
     "IN1-Z917": "subscriber_relationship_name",
 
     # ServiceRequest<->OBR parity aliases for FHIR canonical-only names
-    "OBR-Z901": "order_based_on",
-    "OBR-Z902": "order_body_site",
-    "OBR-Z903": "order_category",
-    "OBR-Z904": "order_category_name",
-    "OBR-Z905": "order_do_not_perform",
-    "OBR-Z906": "order_encounter",
-    "OBR-Z907": "order_end",
-    "OBR-Z908": "order_identifier_type",
-    "OBR-Z909": "order_insurance",
-    "OBR-Z910": "order_intent",
-    "OBR-Z911": "order_location",
-    "OBR-Z912": "order_notes",
-    "OBR-Z913": "order_patient",
-    "OBR-Z914": "order_patient_instruction",
-    "OBR-Z915": "order_performer",
-    "OBR-Z916": "order_performer_type",
-    "OBR-Z917": "order_specimen",
-    "OBR-Z918": "order_start",
-    "OBR-Z919": "order_status",
+    "OBR-Z901": "lab_order_based_on",
+    "OBR-Z902": "lab_order_body_site",
+    "OBR-Z903": "lab_order_category",
+    "OBR-Z904": "lab_order_category_name",
+    "OBR-Z905": "lab_order_do_not_perform",
+    "OBR-Z906": "lab_order_encounter",
+    "OBR-Z907": "lab_order_end",
+    "OBR-Z908": "lab_order_identifier_type",
+    "OBR-Z909": "lab_order_insurance",
+    "OBR-Z910": "lab_order_intent",
+    "OBR-Z911": "lab_order_location",
+    "OBR-Z912": "lab_order_notes",
+    # "OBR-Z913": "lab_order_patient", don't need it, as this will be redudent with the PID-3 patient identifier field
+    "OBR-Z914": "lab_order_patient_instruction",
+    "OBR-Z915": "lab_order_performer",
+    "OBR-Z916": "lab_order_performer_type",
+    "OBR-Z917": "lab_order_specimen",
+    "OBR-Z918": "lab_order_start",
+    "OBR-Z919": "lab_order_status",
 
     # Observation<->OBX parity aliases for FHIR canonical-only names
     "OBX-Z901": "body_site",

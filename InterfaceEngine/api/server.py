@@ -54,25 +54,35 @@ async def add_server(server: AddUpdateServer, request: Request, response: Respon
         if not await server_health_check(client, server.ip, server.port):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Server is not reachable or unhealthy")
 
-    config = {
-        "date_format": "%Y-%m-%d",
-        "date_time_format": "%Y-%m-%dT%H:%M:%S",
-        "name_style": "split",
-        "gender_code": {"male": "male", "female": "female"},
-        "status_code": {
-            "active": "active", "inactive": "inactive",
-            "final": "final", "pending": "pending"
-        },
-        "boolean": {"true": "true", "false": "false"}
-    }
+    # config means that the server accept this kind of data, and send this kind of data, we will use this config in
+    # the transformation part to know how to transform the data, for example if the date format is different in the
+    # source and destination server, then we will use the date format from the config to transform the date before sending
+    # it to the destination server.
+    config = {}
+    if server.protocol == "FHIR":
+        config = {
+            "date_format": "%Y-%m-%d",
+            "date_time_format": "%Y-%m-%dT%H:%M:%S",
+            "name_style": "split",
+            "gender_code": {"male": "male", "female": "female"},
+            "status_code": {
+                "active": "active", "inactive": "inactive",
+                "final": "final", "pending": "pending"
+            },
+            "boolean": {"true": "true", "false": "false"},
+            "id_format": r"\d+", # regex
+            "subject_refrence_format": r"patient/\d+" # e.g. patient/32, we will extract the mpi from this reference and then use it in the transformation
+        }
 
-    if server.protocol != "FHIR":
+    if server.protocol == "HL7":
         config["date_format"] = "%Y%m%d"
         config["date_time_format"] = "%Y%m%d%H%M%S"
         config["name_style"] = "concat"
         config["gender_code"] = {"male": "M", "female": "F"}
         config["status_code"] = {"active": "A", "inactive": "I", "final": "F", "pending": "P" }
         config["boolean"] = {"true": "Y", "false": "N"}
+        config["id_format"]= r"\d+"
+        config["subject_refrence_format"] = r"\d+" # e.g. patient/32, we will extract the mpi from this reference and then use it in the transformation
 
     try:
         new_server = models.Server(

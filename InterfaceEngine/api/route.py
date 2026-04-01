@@ -306,6 +306,13 @@ def mapping_suggestion(
     
     try:
         # check if the mapping your doing is not wrong mapping.
+        # is_src_type_collection, src_names = set_and_check_field(is_collection=False, fields=src_fields)
+        # is_dest_type_collection, dest_names = set_and_check_field(is_collection=False, fields=src_fields)
+
+        # if is_src_type_collection != is_dest_type_collection:
+        #     logging.warning(f"Cannot map type Scaler to Collection")
+        #     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot map type Scaler to Collection")
+
         src_names = [field.name for field in src_fields]
         dest_names = [field.name for field in dest_fields]
 
@@ -330,6 +337,16 @@ def mapping_suggestion(
     except Exception as exp:
         logger.error(f"Error retrieving mapping suggestion: {str(exp)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
+
+# def set_and_check_field(is_collection, fields):
+#     field_names = []
+#     for field in fields:
+
+#         if field.mapping_type == "Collection":
+#             is_collection = True
+#         field_names.append(field.name)``
+    
+#     return (is_collection, field_names)
 
 @router.post("/add-route", status_code=status.HTTP_201_CREATED)
 @limiter.limit("10/minute")  # Limit to 10 requests per minute per IP
@@ -368,6 +385,7 @@ def add_route(data: AddRoute,request: Request, response: Response, db: Session =
     | `copy` | 1 field | 1 field | `{}` |
     | `map` | 1 field | 1 field | `{"Male": "M", "Female": "F"}` |
     | `format` | 1 field | 1 field | `{"from": "%Y-%m-%d", "to": "%Y%m%d"}` |
+    | `regex` | 1 field | 1 field | `{"pattern": r"(\d{4})-(\d{2})-(\d{2})", "replacement": r"\1\2\3"}` |
     | `split` | 1 field | multiple fields | `{"delimiter": " "}` |
     | `concat` | multiple fields | 1 field | `{}` |
 
@@ -471,7 +489,7 @@ def add_route(data: AddRoute,request: Request, response: Response, db: Session =
                     config = rule['config']
             ))
 
-        elif rule['transform'] in ['copy', 'map', 'format'] :
+        elif rule['transform'] in ['copy', 'map', 'format','regex'] :
             rules.append(models.MappingRule(
                 route_id = route.route_id,
                 src_field_id = rule['src_paths'][0],
