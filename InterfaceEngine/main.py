@@ -13,13 +13,14 @@ from slowapi.middleware import SlowAPIMiddleware
 from slowapi.errors import RateLimitExceeded
 
 from api import server, route, endpoint
+from database import engine, session_local
+import models
+from rate_limiting import limiter, rate_limit_exceeded_handler
+from validation.transformation import regex_replace_with_template, increment_segment
 from validation.fhir_validation import validate_unknown_fhir_resource, get_fhir_value_by_path, fhir_extract_paths
 from validation.fhir_validation import build_fhir_message
 from validation.hl7_validation import get_hl7_value_by_path, hl7_extract_paths
 from validation.hl7_validation import build_hl7_message
-from rate_limiting import limiter, rate_limit_exceeded_handler
-from database import engine, session_local
-import models
 
 os.makedirs("logs", exist_ok=True)
 
@@ -159,6 +160,12 @@ async def route_worker(route):
         db.close()
 
         # lookup maps 
+        """
+            Here we take the endpoing field id, and then we give to src_id_to_path to take the path of the src_field.
+            then give the src_path to take the value from the src_path_to_value that we get from the ingest function right after the while loop.
+            we then do some transformation if needed, and then we take the dest_path from the dest_id_to_path using the dest_field_id, 
+            we know have the path, just take the src value and put it against the path and make the message.
+        """
         src_id_to_path = {f.endpoint_field_id: f.path for f in src_endpoint_fields} # e.g. path = Patient-identifier[0].value
         dest_id_to_path = {f.endpoint_field_id: f.path for f in dest_endpoint_fields}
         dest_path_to_resource = {f.path: f.resource for f in dest_endpoint_fields} # use resource for making messages.
@@ -176,7 +183,7 @@ async def route_worker(route):
             split_data = {} # contain single src field id, and multiple mapping rule that split that single src into multiple destination.
 
             try:
-                for rule in mapping_rules_for_specific_route:
+                for rule in mapping_rules_for_specific_route: # rule for each src-to-dest field mapping in the route
 
                     if rule.transform_type == 'concat': # for concat we should have multiple src and 1 dest
                         # this takes a key and the value, if the key doesn't exists or exists with a different value
@@ -189,7 +196,7 @@ async def route_worker(route):
                         # here we have a singe src id, that will split into multiple destinations
                         split_data.setdefault(rule.src_field_id, []).append(rule)
                     
-                    else: # map | copy | formate
+                    else: # map | copy | formate | regex
                         src_path = src_id_to_path[rule.src_field_id]
 
                         if src_path not in src_path_to_value:
@@ -198,10 +205,13 @@ async def route_worker(route):
                     
                         value = src_path_to_value[src_path]
 
-                        if rule.transform_type == 'map': # here if there is no mapping then by default we consider the same value
+                        if rule.transform_type == 'map':
                             # here the first value will give me the map value, if the mapping value is not found then return the default value
                             value = rule.config.get(str(value).lower(), value) 
-                            print("value ---> ", value)
+                            print("mapped-value ---> ", value)
+
+                        elif rule.transform_type == "regex":
+                            value = regex_replace_with_template(value=value, pattern_from=rule.config["from"], pattern_to=rule.config["to"])
 
                         elif rule.transform_type == 'format':
                             try: # 2004-10-06 → 20041006 vice versa
@@ -218,6 +228,7 @@ async def route_worker(route):
                             continue
                             
                         dest_path = dest_id_to_path[rule.dest_field_id]
+                        dest_path = increment_segment(dest_path) # here PID-5.1 will become PID[1]-5.1
                         output_data[dest_path] = value
 
                 ################################## Concat Data ##################################
@@ -250,6 +261,7 @@ async def route_worker(route):
                         continue
 
                     dest_path = dest_id_to_path[dest_id]
+                    dest_path = increment_segment(dest_path)
                     output_data[dest_path] = concated_value
                 
                 #################################### Spit Data ####################################
@@ -280,6 +292,7 @@ async def route_worker(route):
                                 continue
 
                             dest_path = dest_id_to_path[rule.dest_field_id]
+                            dest_path = increment_segment(dest_path)
                             output_data[dest_path] = parts[i]
                     
                     if len(parts) > len(rules): # here if the while spliting, if there is some data left concatenate it with the last path

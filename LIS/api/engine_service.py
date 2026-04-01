@@ -44,7 +44,8 @@ async def add_patient(req: Request, db: Session = Depends(get_db)):
         raw = await req.body()
         data = raw.decode("utf-8")
 
-        _, path = hl7_extract_paths(segment=data.split('\n')[1])
+        # _, path = hl7_extract_paths(segment=data.split('\n')[1])
+        _, path = hl7_extract_paths(segment=data.splitlines()[1])
         values = get_hl7_value_by_path(data, path)
         
         dt = datetime.strptime(values['PID-7'], "%Y%m%d")
@@ -54,7 +55,7 @@ async def add_patient(req: Request, db: Session = Depends(get_db)):
 
         patient = model.Patient(
             mpi = values['PID-3'],
-            fname = values['PID-5.1'] if 'PID-5.1' in values else ' '.join(values.get('PID-5', '').split(' ')[:-1]),
+            fname = values['PID-5.1'] if 'PID-5.1' in values else ' '.join(values.get('PID-5', '').split(' ')[:-1]), # here the last -1 is for last name.
             lname = values['PID-5.2'] if 'PID-5.2' in values else values.get('PID-5', '').split(' ')[-1],
             dob = date,
             gender = gender

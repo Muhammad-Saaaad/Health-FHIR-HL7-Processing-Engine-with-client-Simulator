@@ -43,6 +43,7 @@ class EndpointFields(Base):
     resource = Column(String(50), nullable=False) # Patient | PID | Encounter | ORU -> useful when there are multiple resources in a msg
     path = Column(String(100), nullable=False) # name.text | name.given
     name = Column(String(100), nullable=False) # fullname | given name | mpi
+    mapping_type = Column(String(15), nullable=False, default="Scalar") # e.g. Scalar, Collection
 
     endpoint = relationship("Endpoints", back_populates="endpoint_fields")
 

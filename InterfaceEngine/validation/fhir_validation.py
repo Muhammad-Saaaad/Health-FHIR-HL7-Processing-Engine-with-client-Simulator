@@ -1,3 +1,4 @@
+import json
 import re
 
 from fhir.resources.R4B import get_fhir_model_class
@@ -160,6 +161,8 @@ def build_fhir_message(output_data: dict[str, str],
     {dest_path: value} mapping produced by the route worker.
 
     Each dest_path has the form "ResourceType-dot.bracket[0].path".
+    Repeated resources are supported using an indexed resource prefix,
+    e.g. "Observation[1]-status" and "Observation[2]-status".
     If multiple resource types are present a FHIR Bundle is returned;
     otherwise a single resource object is returned.
 
@@ -170,25 +173,39 @@ def build_fhir_message(output_data: dict[str, str],
     Returns:
         FHIR-compliant dict (single resource or Bundle).
     """
-    # Group paths by resource type
-    resources: dict[str, dict] = {}
+    # Group paths by resource type + occurrence index.
+    # Key shape: ("Patient", 1), ("Patient", 2), ("Coverage", 1), ...
+    resources: dict[tuple[str, int], dict] = {}
+    resource_order: list[tuple[str, int]] = []
 
     for path, value in output_data.items():
-        resource_type = dest_path_to_resource.get(path)
+        if "-" in path:
+            prefix, suffix = path.split("-", 1)
+        else:
+            prefix, suffix = path, path
+
+        # Prefix can be "Patient" or "Patient[2]".
+        prefix_match = re.fullmatch(r"([A-Za-z][A-Za-z0-9]*)(?:\[(\d+)\])?", prefix)
+        parsed_resource_type = prefix_match.group(1) if prefix_match else None
+        occurrence = int(prefix_match.group(2)) if prefix_match and prefix_match.group(2) else 1
+
+        resource_type = dest_path_to_resource.get(path) or parsed_resource_type
         if not resource_type: # if no resource_type then continue to the next resource
             continue
 
-        if resource_type not in resources: # if the resource is not present then only make a resource.
-            resources[resource_type] = {"resourceType": resource_type}
+        resource_key = (resource_type, occurrence)
+        if resource_key not in resources: # if this resource occurrence is not present then create it.
+            resources[resource_key] = {"resourceType": resource_type}
+            resource_order.append(resource_key)
 
-        # Strip "ResourceType-" prefix, then tokenise
-        suffix = path.split("-", 1)[1] if "-" in path else path # the 1 in the .split() means that max_split = 1
+        # Strip "ResourceType-" prefix, then tokenise.
+        # Works for both "Patient-name[0].text" and "Patient[2]-name[0].text".
 
         # Split path by dots and brackets [ ]
         # "name[0].family" -> ["name", "0", "", "family"]
         #  "gender" -> ["gender"]
         keys = [k for k in re.split(r"\[|\]|\.", suffix) if k]
-        _set_nested(resources[resource_type], keys, value)
+        _set_nested(resources[resource_key], keys, value)
 
     # Single resource — return it directly
     if len(resources) == 1:
@@ -202,7 +219,8 @@ def build_fhir_message(output_data: dict[str, str],
             {
                 "resource": res,
             }
-            for res in resources.values()
+            for key in resource_order
+            for res in [resources[key]]
         ],
     }
 
@@ -220,13 +238,19 @@ def build_fhir_message(output_data: dict[str, str],
 if __name__ == "__main__":
     # Usage Example:
 
+    from uuid import uuid4
+    unique_id = str(uuid4())
+    print("unique_id --> ", unique_id)
+
     patient_registration = {
         "resourceType": "Bundle",
         "type": "message",
+        "id": unique_id,
         "entry": [
             { 
                 "resource": {
                     "resourceType": "Patient",
+                    "id": unique_id,
                     "identifier": [
                         { "type": { "coding": [{ "code": "MR" }]}, "value": "23" },
                         { "type": { "coding": [{ "code": "NI" }]}, "value": "37201-23123123"}
@@ -243,6 +267,7 @@ if __name__ == "__main__":
             {
                 "resource": {
                     "resourceType": "Coverage",
+                    "id": unique_id,
                     "identifier": [
                         {
                             "value": "3"  # plan id.
@@ -272,19 +297,12 @@ if __name__ == "__main__":
     patient_visit = {
         "resourceType": "Bundle",
         "type": "message",
+        "id": unique_id,
         "entry": [
             {
                 "resource": {
-                    "resourceType": "Patient",
-                    "identifier": [
-                        { "type": { "coding": [{ "code": "MR" }]}, "value": "23" }
-                    ]
-                }
-            },
-            {
-                "resource": {
                     "resourceType": "Encounter",
-                    "id" : "encounter-001",
+                    "id": unique_id,
                     "identifier": [
                         {
                             "value": "VID-2024-12345"  # Primary key from EHR - send to PHR
@@ -314,6 +332,7 @@ if __name__ == "__main__":
                             }
                         }
                     ],
+                    "subject": {"reference": "patient/32"}, # reference to the patient resource (with mpi = 32 in this case)
                     # 4. CONSULTATION NOTES
                     "extension": [{
                             "valueString": "Patient responded well to medication. Follow-up advised in 2 weeks."
@@ -323,14 +342,74 @@ if __name__ == "__main__":
             },
             {
                 "resource": {
-                    "resourceType": "lab_report",
+                    "resourceType": "ServiceRequest",
+                    "id": unique_id,
+                    "status": "active",
+                    "intent": "order",
+                    "code":{
+                        "coding": [
+                            {
+                                # "system": "http://loinc.org",
+                                "code": "73761001",
+                                "display": "Headache (disorder)"
+                            }
+                        ]
+                    },
+                    "subject": {"reference": "patient/32"}
                 }
             }
         ]
     }
 
-is_valid, message = validate_unknown_fhir_resource(patient_visit)
-print(is_valid, " --> \n" ,message)
+    # ---------------- build_fhir_message test sample ----------------
+    # Flat route output -> rebuilt FHIR Bundle with repeated Patient resources
+    sample_output_data = {
+        "Patient[1]-id": unique_id,
+        "Patient[1]-identifier[0].value": "23",
+        "Patient[1]-name[0].text": "Muhammad Saad",
+        "Patient[1]-gender": "male",
+
+        "Patient[2]-id": "patient-2-id",
+        "Patient[2]-identifier[0].value": "24",
+        "Patient[2]-name[0].text": "Ali Khan",
+        "Patient[2]-gender": "male",
+
+        "Coverage[1]-id": "coverage-1-id",
+        "Coverage[1]-identifier[0].value": "3",
+        "Coverage[1]-status": "active",
+        "Coverage[1]-beneficiary.reference": "Patient/23",
+
+        "Coverage[2]-id": "coverage-2-id",
+        "Coverage[2]-identifier[0].value": "4",
+        "Coverage[2]-status": "active",
+        "Coverage[2]-beneficiary.reference": "Patient/24",
+    }
+
+    sample_dest_path_to_resource = {
+        "Patient-id": "Patient",
+        "Patient-identifier[0].value": "Patient",
+        "Patient-name[0].text": "Patient",
+        "Patient-gender": "Patient",
+        "Patient-id": "Patient",
+        "Patient-identifier[0].value": "Patient",
+        "Patient-name[0].text": "Patient",
+        "Patient-gender": "Patient",
+        "Coverage-id": "Coverage",
+        "Coverage-identifier[0].value": "Coverage",
+        "Coverage-status": "Coverage",
+        "Coverage-beneficiary.reference": "Coverage",
+        "Coverage-id": "Coverage",
+        "Coverage-identifier[0].value": "Coverage",
+        "Coverage-status": "Coverage",
+        "Coverage-beneficiary.reference": "Coverage",
+    }
+
+    rebuilt = build_fhir_message(sample_output_data, sample_dest_path_to_resource)
+    print("\n--- build_fhir_message sample output ---")
+    print(json.dumps(rebuilt, indent=2))
+
+# is_valid, message = validate_unknown_fhir_resource(patient_visit)
+# print(is_valid, " --> \n" ,message)
 
 # import uuid
 
