@@ -58,13 +58,11 @@ def increment_segment(segment : str) -> str:
         number = int(match.group(1))
         incremented_number = number + 1
         output= re.sub(r"\[\d+\]", f"[{incremented_number}]", segment_parts[0]) + "-" + segment_parts[1]
-        print("Input path: ", segment, " --> Output path: ", output)
         return output
     else:
         # if theree was no digit in the segment or resource name then by default add 1.
         if len(segment_parts) == 2:
             output= f"{segment_parts[0]}[1]-{segment_parts[1]}"
-            print("Input path: ", segment, " --> Output path: ", output)
             return output
         else:
             return

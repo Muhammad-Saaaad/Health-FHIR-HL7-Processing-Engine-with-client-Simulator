@@ -1507,3 +1507,27 @@ This came when processing/sending data for route add-patient(ehr-to-payer)
 2026-04-02 17:33:04,906 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
 2026-04-02 17:33:04,913 - INFO - HTTP Request: GET http://127.0.0.1:8004/health "HTTP/1.1 200 OK"
 2026-04-02 17:33:04,920 - INFO - HTTP Request: GET http://127.0.0.1:8003/health "HTTP/1.1 200 OK"
+2026-04-02 17:33:40,414 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-04-02 17:33:40,421 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-04-02 17:33:40,428 - INFO - HTTP Request: GET http://127.0.0.1:8004/health "HTTP/1.1 200 OK"
+2026-04-02 17:33:40,437 - INFO - HTTP Request: GET http://127.0.0.1:8003/health "HTTP/1.1 200 OK"
+2026-04-02 17:34:15,871 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-04-02 17:34:15,881 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-04-02 17:34:15,891 - INFO - HTTP Request: GET http://127.0.0.1:8004/health "HTTP/1.1 200 OK"
+2026-04-02 17:34:15,901 - INFO - HTTP Request: GET http://127.0.0.1:8003/health "HTTP/1.1 200 OK"
+2026-04-02 17:34:51,253 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-04-02 17:34:51,260 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-04-02 17:34:51,266 - INFO - HTTP Request: GET http://127.0.0.1:8004/health "HTTP/1.1 200 OK"
+2026-04-02 17:34:51,274 - INFO - HTTP Request: GET http://127.0.0.1:8003/health "HTTP/1.1 200 OK"
+2026-04-02 17:35:09,818 - INFO - Route_manager received Cancellation signal
+2026-04-02 17:35:09,819 - INFO - Route Manger shutting down
+2026-04-02 17:35:14,168 - INFO - route_worker start for route Ehr-to-lis
+2026-04-02 17:35:14,168 - INFO - route_worker start for route ehr-to-phr
+2026-04-02 17:35:14,169 - INFO - route_worker start for route add-patient(ehr-to-payer)
+2026-04-02 17:35:14,193 - INFO - route_Worker Started for route Ehr-to-lis
+2026-04-02 17:35:14,200 - INFO - route_Worker Started for route ehr-to-phr
+2026-04-02 17:35:14,208 - INFO - route_Worker Started for route add-patient(ehr-to-payer)
+2026-04-02 17:35:14,213 - INFO - HTTP Request: GET http://127.0.0.1:8001/health "HTTP/1.1 200 OK"
+2026-04-02 17:35:14,221 - INFO - HTTP Request: GET http://127.0.0.1:8002/health "HTTP/1.1 200 OK"
+2026-04-02 17:35:14,228 - INFO - HTTP Request: GET http://127.0.0.1:8004/health "HTTP/1.1 200 OK"
+2026-04-02 17:35:14,237 - INFO - HTTP Request: GET http://127.0.0.1:8003/health "HTTP/1.1 200 OK"
