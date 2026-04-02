@@ -139,6 +139,22 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
     "Practitioner-communication[0].coding[0].code":           "practitioner_language",
     "Practitioner-active":                                    "practitioner_active",
 
+    # ── PractitionerRole ───────────────────────────────────────────────────────
+    "PractitionerRole-identifier[0].value":                   "practitioner_role_identifier",
+    "PractitionerRole-practitioner.reference":                "practitioner_role_practitioner_ref",
+    "PractitionerRole-organization.reference":                    "practitioner_role_organization_ref",
+    "PractitionerRole-code[0].coding[0].code":                "practitioner_role_code",
+    "PractitionerRole-code[0].coding[0].display":             "practitioner_role_code_display",
+    "PractitionerRole-specialty[0].coding[0].code":           "practitioner_role_specialty",
+    "PractitionerRole-specialty[0].coding[0].display":        "practitioner_role_specialty_display",
+    "PractitionerRole-location[0].reference":                 "practitioner_role_location_ref",
+    "PractitionerRole-telecom[0].value":                      "practitioner_role_phone",
+    "PractitionerRole-telecom[0].use":                        "practitioner_role_phone_use",
+    "PractitionerRole-telecom[1].value":                      "practitioner_role_email",
+    "PractitionerRole-period.start":                          "practitioner_role_start",
+    "PractitionerRole-period.end":                            "practitioner_role_end",
+    "PractitionerRole-active":                                "practitioner_role_active",
+
     # ── Organization ──────────────────────────────────────────────────────────
     # "Organization-id":                                    "org_fhir_id",
     "Organization-identifier[0].value":                   "org_identifier",

@@ -297,12 +297,32 @@ if __name__ == "__main__":
     patient_visit = {
         "resourceType": "Bundle",
         "type": "message",
-        "id": unique_id,
+        "id": "5e4d2222-11b8-4acc-9998-40a49e273c4e",
         "entry": [
             {
                 "resource": {
+                    "resourceType": "Practitioner",
+                    "id": "5e4d2222-11b8-4acc-9998-40a49e273c4e",
+                    "identifier" :[ {"value": "PRAC-001"} ],
+                    "name": [{"text": "Dr. Ayesha Khan"}],
+                    "telecom": [{"value": "+33 (237) 998327"}],
+                    "extension": [{
+                        "valueString": "General Practitioner with 10 years of experience in primary care, specializing in patient-centered treatment and preventive medicine."
+                    }]
+                }
+            },
+            {
+                "resource": {
+                    "resourceType": "PractitionerRole",
+                    "id": "5e4d2222-11b8-4acc-9998-40a49e273c4e",
+                    "specialty": [ { "coding": [{"display": "General Practitioner"}] } ],
+                    "practitioner": {"reference": f"Practitioner/{"PRAC-001"}"}
+                }
+            },
+            {
+                "resource": {
                     "resourceType": "Encounter",
-                    "id": unique_id,
+                    "id": "5e4d2222-11b8-4acc-9998-40a49e273c4e",
                     "identifier": [
                         {
                             "value": "VID-2024-12345"  # Primary key from EHR - send to PHR
@@ -343,7 +363,7 @@ if __name__ == "__main__":
             {
                 "resource": {
                     "resourceType": "ServiceRequest",
-                    "id": unique_id,
+                    "id": "5e4d2222-11b8-4acc-9998-40a49e273c4e",
                     "status": "active",
                     "intent": "order",
                     "code":{
@@ -364,7 +384,7 @@ if __name__ == "__main__":
     # ---------------- build_fhir_message test sample ----------------
     # Flat route output -> rebuilt FHIR Bundle with repeated Patient resources
     sample_output_data = {
-        "Patient[1]-id": unique_id,
+        "Patient[1]-id": "5e4d2222-11b8-4acc-9998-40a49e273c4e",
         "Patient[1]-identifier[0].value": "23",
         "Patient[1]-name[0].text": "Muhammad Saad",
         "Patient[1]-gender": "male",
@@ -404,13 +424,13 @@ if __name__ == "__main__":
         "Coverage-beneficiary.reference": "Coverage",
     }
 
-    rebuilt = build_fhir_message(sample_output_data, sample_dest_path_to_resource)
-    print("\n--- build_fhir_message sample output ---")
-    print(json.dumps(rebuilt, indent=2))
+    # rebuilt = build_fhir_message(sample_output_data, sample_dest_path_to_resource)
+    # print("\n--- build_fhir_message sample output ---")
+    # print(json.dumps(rebuilt, indent=2))
 
-# is_valid, message = validate_unknown_fhir_resource(patient_visit)
-# print(is_valid, " --> \n" ,message)
+    is_valid, message = validate_unknown_fhir_resource(patient_visit)
+    print(is_valid, " --> \n" ,message)
 
-# import uuid
+    # import uuid
 
-# print(str(uuid.uuid4()))
+    # print(str(uuid.uuid4()))

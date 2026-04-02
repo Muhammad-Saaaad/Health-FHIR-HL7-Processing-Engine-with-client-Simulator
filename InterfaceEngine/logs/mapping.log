@@ -69,3 +69,99 @@
 2026-03-24 15:56:04,726- INFO - [endpoint.py:303] - Mapped field policy_number to path IN1-36
 2026-03-24 15:56:04,731- INFO - [endpoint.py:317] - HL7 field extraction completed for endpoint_id=117, total_fields_added=8
 2026-03-24 15:56:04,731- INFO - [endpoint.py:153] - HL7 endpoint fields added successfully for endpoint_id=117
+2026-04-01 23:08:31,026- INFO - [endpoint.py:105] - Add endpoint request received: server_id=7, url=/add/visit-note, server_protocol=FHIR
+2026-04-01 23:08:31,040- INFO - [endpoint.py:137] - Endpoint created and flushed successfully: endpoint_id=118
+2026-04-01 23:08:31,237- ERROR - [endpoint.py:143] - Invalid FHIR sample message: Validation Failed: 5 validation errors for Bundle
+id
+  String should match pattern '^[A-Za-z0-9\-.]+$' [type=string_pattern_mismatch, input_value='unique_id', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_pattern_mismatch
+entry.0.resource.id
+  String should match pattern '^[A-Za-z0-9\-.]+$' [type=string_pattern_mismatch, input_value='unique_id', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_pattern_mismatch
+entry.1.resource.id
+  String should match pattern '^[A-Za-z0-9\-.]+$' [type=string_pattern_mismatch, input_value='unique_id', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_pattern_mismatch
+entry.2.resource.id
+  String should match pattern '^[A-Za-z0-9\-.]+$' [type=string_pattern_mismatch, input_value='unique_id', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_pattern_mismatch
+entry.3.resource.id
+  String should match pattern '^[A-Za-z0-9\-.]+$' [type=string_pattern_mismatch, input_value='unique_id', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_pattern_mismatch
+2026-04-01 23:08:31,239- ERROR - [endpoint.py:161] - Add endpoint failed for url=/add/visit-note: 400: Validation Failed: 5 validation errors for Bundle
+id
+  String should match pattern '^[A-Za-z0-9\-.]+$' [type=string_pattern_mismatch, input_value='unique_id', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_pattern_mismatch
+entry.0.resource.id
+  String should match pattern '^[A-Za-z0-9\-.]+$' [type=string_pattern_mismatch, input_value='unique_id', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_pattern_mismatch
+entry.1.resource.id
+  String should match pattern '^[A-Za-z0-9\-.]+$' [type=string_pattern_mismatch, input_value='unique_id', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_pattern_mismatch
+entry.2.resource.id
+  String should match pattern '^[A-Za-z0-9\-.]+$' [type=string_pattern_mismatch, input_value='unique_id', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_pattern_mismatch
+entry.3.resource.id
+  String should match pattern '^[A-Za-z0-9\-.]+$' [type=string_pattern_mismatch, input_value='unique_id', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_pattern_mismatch
+2026-04-01 23:11:26,387- INFO - [endpoint.py:105] - Add endpoint request received: server_id=9, url=/add/visit-note, server_protocol=FHIR
+2026-04-01 23:11:26,395- INFO - [endpoint.py:137] - Endpoint created and flushed successfully: endpoint_id=119
+2026-04-01 23:11:26,397- ERROR - [endpoint.py:143] - Invalid FHIR sample message: Validation Failed: 5 validation errors for Bundle
+id
+  String should match pattern '^[A-Za-z0-9\-.]+$' [type=string_pattern_mismatch, input_value='unique_id', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_pattern_mismatch
+entry.0.resource.id
+  String should match pattern '^[A-Za-z0-9\-.]+$' [type=string_pattern_mismatch, input_value='unique_id', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_pattern_mismatch
+entry.1.resource.id
+  String should match pattern '^[A-Za-z0-9\-.]+$' [type=string_pattern_mismatch, input_value='unique_id', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_pattern_mismatch
+entry.2.resource.id
+  String should match pattern '^[A-Za-z0-9\-.]+$' [type=string_pattern_mismatch, input_value='unique_id', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_pattern_mismatch
+entry.3.resource.id
+  String should match pattern '^[A-Za-z0-9\-.]+$' [type=string_pattern_mismatch, input_value='unique_id', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_pattern_mismatch
+2026-04-01 23:11:26,398- ERROR - [endpoint.py:161] - Add endpoint failed for url=/add/visit-note: 400: Validation Failed: 5 validation errors for Bundle
+id
+  String should match pattern '^[A-Za-z0-9\-.]+$' [type=string_pattern_mismatch, input_value='unique_id', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_pattern_mismatch
+entry.0.resource.id
+  String should match pattern '^[A-Za-z0-9\-.]+$' [type=string_pattern_mismatch, input_value='unique_id', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_pattern_mismatch
+entry.1.resource.id
+  String should match pattern '^[A-Za-z0-9\-.]+$' [type=string_pattern_mismatch, input_value='unique_id', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_pattern_mismatch
+entry.2.resource.id
+  String should match pattern '^[A-Za-z0-9\-.]+$' [type=string_pattern_mismatch, input_value='unique_id', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_pattern_mismatch
+entry.3.resource.id
+  String should match pattern '^[A-Za-z0-9\-.]+$' [type=string_pattern_mismatch, input_value='unique_id', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_pattern_mismatch
+2026-04-01 23:15:55,927- INFO - [endpoint.py:105] - Add endpoint request received: server_id=7, url=add/visit-note, server_protocol=FHIR
+2026-04-01 23:15:55,966- INFO - [endpoint.py:137] - Endpoint created and flushed successfully: endpoint_id=120
+2026-04-01 23:15:56,464- INFO - [endpoint.py:223] - FHIR field extraction started for endpoint_id=120
+2026-04-01 23:15:56,465- WARNING - [endpoint.py:358] - No canonical mapping found for path Practitioner-id, skipping.
+2026-04-01 23:15:56,465- INFO - [endpoint.py:248] - Mapped field practitioner_npi to path Practitioner-identifier[0].value
+2026-04-01 23:15:56,466- INFO - [endpoint.py:248] - Mapped field practitioner_fullname to path Practitioner-name[0].text
+2026-04-01 23:15:56,466- INFO - [endpoint.py:248] - Mapped field practitioner_phone to path Practitioner-telecom[0].value
+2026-04-01 23:15:56,467- WARNING - [endpoint.py:358] - No canonical mapping found for path Practitioner-extension[0].valueString, skipping.
+2026-04-01 23:15:56,467- WARNING - [endpoint.py:358] - No canonical mapping found for path PractitionerRole-id, skipping.
+2026-04-01 23:15:56,468- INFO - [endpoint.py:248] - Mapped field practitioner_role_specialty_display to path PractitionerRole-specialty[0].coding[0].display
+2026-04-01 23:15:56,468- INFO - [endpoint.py:248] - Mapped field practitioner_role_practitioner_ref to path PractitionerRole-practitioner.reference
+2026-04-01 23:15:56,469- WARNING - [endpoint.py:358] - No canonical mapping found for path Encounter-id, skipping.
+2026-04-01 23:15:56,469- INFO - [endpoint.py:248] - Mapped field visit_number to path Encounter-identifier[0].value
+2026-04-01 23:15:56,470- INFO - [endpoint.py:248] - Mapped field encounter_status to path Encounter-status
+2026-04-01 23:15:56,471- INFO - [endpoint.py:248] - Mapped field patient_class to path Encounter-class.code
+2026-04-01 23:15:56,471- INFO - [endpoint.py:248] - Mapped field encounter_title to path Encounter-type[0].text
+2026-04-01 23:15:56,472- INFO - [endpoint.py:248] - Mapped field encounter_complaint to path Encounter-reasonCode[0].text
+2026-04-01 23:15:56,473- INFO - [endpoint.py:248] - Mapped field encounter_diagnosis_display to path Encounter-diagnosis[0].condition.display
+2026-04-01 23:15:56,474- INFO - [endpoint.py:248] - Mapped field mpi to path Encounter-subject.reference
+2026-04-01 23:15:56,474- INFO - [endpoint.py:248] - Mapped field encounter_notes to path Encounter-extension[0].valueString
+2026-04-01 23:15:56,475- WARNING - [endpoint.py:358] - No canonical mapping found for path ServiceRequest-id, skipping.
+2026-04-01 23:15:56,476- INFO - [endpoint.py:248] - Mapped field lab_order_status to path ServiceRequest-status
+2026-04-01 23:15:56,477- INFO - [endpoint.py:248] - Mapped field lab_order_intent to path ServiceRequest-intent
+2026-04-01 23:15:56,477- INFO - [endpoint.py:248] - Mapped field lab_order_code to path ServiceRequest-code.coding[0].code
+2026-04-01 23:15:56,478- INFO - [endpoint.py:248] - Mapped field lab_order_name to path ServiceRequest-code.coding[0].display
+2026-04-01 23:15:56,479- INFO - [endpoint.py:248] - Mapped field patient_mpi to path ServiceRequest-subject.reference
+2026-04-01 23:15:56,509- INFO - [endpoint.py:262] - FHIR field extraction completed for endpoint_id=120, total_fields_added=18
+2026-04-01 23:15:56,509- INFO - [endpoint.py:150] - FHIR endpoint fields added successfully for endpoint_id=120

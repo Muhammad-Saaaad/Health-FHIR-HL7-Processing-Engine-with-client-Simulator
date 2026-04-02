@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Column, String, Integer, ForeignKey, DateTime, Float
+from sqlalchemy import Column, String, Integer, ForeignKey, DateTime, Float, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -89,3 +89,17 @@ class MiniLabResult(base):
     result_value = Column(String(7), nullable=False)
 
     test_result = relationship("LabResult", back_populates="mini_test")
+
+class LoincMaster(base):
+    __tablename__ = "loinc_master"
+
+    loinc_code       = Column(String(10),  primary_key=True, index=True)
+    long_common_name = Column(Text, nullable=False)
+    short_name       = Column(String(150), nullable=True)
+    component        = Column(String(200), nullable=True)  # what is being measured ("WBC, RBC, Glucose")
+    system           = Column(String(100), nullable=True)  # The specimen from which the measurement is taken (Blood, Urine, etc.)
+    
+# create a table for the lab tests, where the laboutry have their own test codes,
+# on that table. i will map the lab tests with the loinc master table's test names.
+# this way, when the lab test orders comes, i will first check which lab test it is refering to
+# and then I will know the range, units of that test, and also do we even do that test or not.

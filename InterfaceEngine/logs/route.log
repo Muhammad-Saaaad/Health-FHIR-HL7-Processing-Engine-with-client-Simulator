@@ -66,3 +66,20 @@
 2026-03-24 16:33:29,808- INFO - [route.py:517] - Delete route completed successfully: route_id=1025
 2026-03-24 16:33:30,699- INFO - [route.py:57] - All routes request received
 2026-03-24 16:33:30,713- INFO - [route.py:72] - All routes fetched successfully: total_routes=2
+2026-04-01 23:16:01,275- INFO - [route.py:59] - All routes request received
+2026-04-01 23:16:01,307- INFO - [route.py:74] - All routes fetched successfully: total_routes=2
+2026-04-01 23:16:04,543- INFO - [route.py:59] - All routes request received
+2026-04-01 23:16:04,556- INFO - [route.py:74] - All routes fetched successfully: total_routes=2
+2026-04-01 23:16:48,803- INFO - [route.py:409] - Add route request received: name=ehr-to-payer, src_endpoint_id=115, dest_endpoint_id=117, msg_type=ADT
+2026-04-01 23:16:48,823- INFO - [route.py:455] - Route created and flushed successfully with route_id=1026
+2026-04-01 23:16:48,838- INFO - [route.py:510] - Add route completed successfully: route_id=1026, total_mapping_rules=5
+2026-04-01 23:16:49,475- INFO - [route.py:59] - All routes request received
+2026-04-01 23:16:49,489- INFO - [route.py:74] - All routes fetched successfully: total_routes=3
+2026-04-02 12:50:23,907- INFO - [route.py:59] - All routes request received
+2026-04-02 12:50:23,962- INFO - [route.py:74] - All routes fetched successfully: total_routes=3
+2026-04-02 12:54:11,184- INFO - [route.py:59] - All routes request received
+2026-04-02 12:54:11,217- INFO - [route.py:74] - All routes fetched successfully: total_routes=3
+2026-04-02 12:54:14,100- INFO - [route.py:59] - All routes request received
+2026-04-02 12:54:14,124- INFO - [route.py:74] - All routes fetched successfully: total_routes=3
+2026-04-02 13:58:56,155- INFO - [route.py:59] - All routes request received
+2026-04-02 13:58:56,185- INFO - [route.py:74] - All routes fetched successfully: total_routes=3

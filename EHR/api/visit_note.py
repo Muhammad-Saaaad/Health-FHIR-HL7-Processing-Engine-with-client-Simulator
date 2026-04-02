@@ -51,6 +51,10 @@ def add_visit_note(visit_note: schema.VisitNote ,request: Request, response: Res
         bill_id = new_bill.bill_id
         if not db.get(model.Bill, bill_id):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="bill not added due to internal issues")
+        
+        is_doctor = db.query(model.Doctor).filter(model.Doctor.doctor_id == visit_note.doctor_id).first()
+        if not is_doctor:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid doctor ID")
 
         new_visit_note = model.VisitingNotes(
             mpi = visit_note.mpi,
@@ -78,25 +82,90 @@ def add_visit_note(visit_note: schema.VisitNote ,request: Request, response: Res
             db.add_all(lab_models)
         db.flush()
 
+        unique_id = str(uuid4())
+
         patient_visit = {
-            "resourceType": "Encounter",
-            "id" : str(uuid4()),
-            "identifier": [ {"value": str(new_visit_note.note_id)} ],
-            "status": "Completed",
-            "class": { "code": "AMB" }, # AMB=Ambulatory, IMP=Inpatient, EMER=Emergency, VR=Virtual
-
-            # 1. ENCOUNTER TITLE
-            "type": [{"text": new_visit_note.note_title}],
-
-            # 2. PATIENT COMPLAINT
-            "reasonCode": [ {"text": new_visit_note.patient_complaint} ],
-
-            # 3. DIAGNOSIS - display field shows the disease name (no separate Condition resource needed)
-            "diagnosis": [{ "condition": {"display": new_visit_note.dignosis} }],
-
-            # 4. CONSULTATION NOTES
-            "extension": [{
-                    "valueString": new_visit_note.note_details
+            "resourceType": "Bundle",
+            "type": "message",
+            "id": unique_id,
+            "entry": [
+                {
+                    "resource": {
+                        "resourceType": "Practitioner",
+                        "id": unique_id,
+                        "identifier" :[ {"value": str(is_doctor.doctor_id)} ],
+                        "name": [{"text": is_doctor.doctor_name}],
+                        "telecom": [{"value": str(is_doctor.phone_no)}],
+                        "extension": [{
+                            "valueString": is_doctor.about
+                        }]
+                    }
+                },
+                {
+                    "resource": {
+                        "resourceType": "PractitionerRole",
+                        "id": unique_id,
+                        "specialty": [ { "coding": [{"display": str(is_doctor.specialization)}] } ],
+                        "practitioner": {"reference": f"Practitioner/{str(is_doctor.doctor_id)}"}
+                    }
+                },
+                {
+                    "resource": {
+                        "resourceType": "Encounter",
+                        "id": unique_id,
+                        "identifier": [
+                            {
+                                "value": str(new_visit_note.note_id)  # Primary key from EHR - send to PHR
+                            }
+                        ],
+                        "status": "in-progress",
+                        "class": {
+                            "code": "AMB"  # AMB=Ambulatory, IMP=Inpatient, EMER=Emergency, VR=Virtual
+                        },
+                        # 1. ENCOUNTER TITLE
+                        "type": [
+                            {
+                                "text": new_visit_note.note_title
+                            }
+                        ],
+                        # 2. PATIENT COMPLAINT
+                        "reasonCode": [
+                            {
+                                "text": new_visit_note.patient_complaint
+                            }
+                        ],
+                        # 3. DIAGNOSIS - display field shows the disease name (no separate Condition resource needed)
+                        "diagnosis": [
+                            {
+                                "condition": {
+                                    "display": new_visit_note.dignosis  # display shows the disease name
+                                }
+                            }
+                        ],
+                        "subject": {"reference": f"patient/{str(visit_note.mpi)}"}, # reference to the patient resource (with mpi = 32 in this case)
+                        # 4. CONSULTATION NOTES
+                        "extension": [{
+                                "valueString": new_visit_note.note_details
+                            }
+                        ]
+                    }
+                },
+                {
+                    "resource": {
+                        "resourceType": "ServiceRequest",
+                        "id": unique_id,
+                        "status": "active",
+                        "intent": "order",
+                        "code":{
+                            "coding": [
+                                {
+                                    "code": "73761001",
+                                    "display": "Headache (disorder)"
+                                }
+                            ]
+                        },
+                        "subject": {"reference": f"patient/{str(visit_note.mpi)}"}
+                    }
                 }
             ]
         }

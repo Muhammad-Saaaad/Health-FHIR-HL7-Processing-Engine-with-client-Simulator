@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, DateTime, Date, Float
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Date, Float
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -14,7 +14,7 @@ class Doctor(Base):
     name = Column(String(100), nullable=False)
     specialization = Column(String(50), nullable=True)
 
-    last_visit = Column(DateTime)
+    last_visit = Column(Date, default=datetime.now().date())
     about = Column(String(255), nullable=True)
     phone_no = Column(String(20), nullable=True)
 
