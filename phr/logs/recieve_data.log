@@ -1,0 +1,18 @@
+2026-04-02 15:23:00,153- ERROR - [engine_service.py:73] - Error processing FHIR data: 'identifier[0].value'
+2026-04-02 15:24:36,674- ERROR - [engine_service.py:73] - Error processing FHIR data: 'identifier[0].value'
+2026-04-02 15:25:39,756- ERROR - [engine_service.py:73] - Error processing FHIR data: 'identifier[0].value'
+2026-04-02 15:29:00,488- ERROR - [engine_service.py:73] - Error processing FHIR data: 'identifier[0].value'
+2026-04-02 15:41:13,510- ERROR - [engine_service.py:73] - Error processing FHIR data: 'identifier[0].value'
+2026-04-02 15:49:04,484- ERROR - [engine_service.py:73] - Error processing FHIR data: 'identifier[0].value'
+2026-04-02 16:07:32,202- ERROR - [engine_service.py:73] - Error processing FHIR data: (pyodbc.IntegrityError) ('23000', "[23000] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Violation of UNIQUE KEY constraint 'UQ__patient__DF97D0F5DD918521'. Cannot insert duplicate key in object 'dbo.patient'. The duplicate key value is (37201-7612231-2). (2627) (SQLExecDirectW); [23000] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]The statement has been terminated. (3621)")
+[SQL: INSERT INTO patient (mpi, nic, password, name, phone_no, gender, date_of_birth, address) VALUES (?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: ('1191', '37201-7612231-2', '', 'moiz akbar ahmed', '+92-361-7423412', 'male', '2008-01-21', 'Kalar Khar')]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-04-02 16:23:26,148- ERROR - [engine_service.py:73] - Error processing FHIR data: (pyodbc.IntegrityError) ('23000', "[23000] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Violation of UNIQUE KEY constraint 'UQ__patient__DF97D0F5DD918521'. Cannot insert duplicate key in object 'dbo.patient'. The duplicate key value is (37201-7231231-2). (2627) (SQLExecDirectW); [23000] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]The statement has been terminated. (3621)")
+[SQL: INSERT INTO patient (mpi, nic, password, name, phone_no, gender, date_of_birth, address) VALUES (?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: ('1195', '37201-7231231-2', '', 'moiz akbarrrr', '+92-391-7413412', 'male', '2008-01-13', 'Kalar Khar')]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-04-02 16:23:43,987- ERROR - [engine_service.py:73] - Error processing FHIR data: (pyodbc.IntegrityError) ('23000', "[23000] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Violation of UNIQUE KEY constraint 'UQ__patient__DF97D0F5DD918521'. Cannot insert duplicate key in object 'dbo.patient'. The duplicate key value is (37201-7231231-2). (2627) (SQLExecDirectW); [23000] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]The statement has been terminated. (3621)")
+[SQL: INSERT INTO patient (mpi, nic, password, name, phone_no, gender, date_of_birth, address) VALUES (?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: ('1196', '37201-7231231-2', '', 'moiz akaasrrr', '+92-391-7213412', 'male', '2008-01-16', 'Kalar Khar')]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)

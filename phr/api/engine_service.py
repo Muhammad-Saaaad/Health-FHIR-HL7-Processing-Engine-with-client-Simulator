@@ -15,7 +15,7 @@ formater = logging.Formatter("%(asctime)s- %(levelname)s - [%(filename)s:%(linen
 
 if not logger.handlers:
     rotating_file_handler = RotatingFileHandler(
-        r"./logs/recieve_data.log",
+        r"E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\phr\logs\recieve_data.log",
         maxBytes=20000, # 20KB
         backupCount=1
     )
@@ -29,6 +29,7 @@ async def add_patient(req: Request, db: Session = Depends(get_db)):
     try:
         json_data = await req.json()
 
+        print(f"Recieved FHIR Data: {json_data}")
         logger.info(f"Recieved FHIR Data: {json_data}")
 
         resource_type = json_data['resourceType']
@@ -69,6 +70,7 @@ async def add_patient(req: Request, db: Session = Depends(get_db)):
         return {"message": db_data}
 
     except Exception as e:
+        logger.error(f"Error processing FHIR data: {str(e)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 """

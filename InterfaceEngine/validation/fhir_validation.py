@@ -177,6 +177,7 @@ def build_fhir_message(output_data: dict[str, str],
     # Key shape: ("Patient", 1), ("Patient", 2), ("Coverage", 1), ...
     resources: dict[tuple[str, int], dict] = {}
     resource_order: list[tuple[str, int]] = []
+    print("output_data --> ", output_data)
 
     for path, value in output_data.items():
         if "-" in path:

@@ -18,7 +18,7 @@ def register_engine(data: dict):
                    raises an exception with the engine's error detail so the caller can rollback.
     """
     try:
-        response = httpx.post("http://127.0.0.1:9000/fhir/add-patient", json=data)
+        response = httpx.post("http://127.0.0.1:9000/fhir/add-patient", json=data, timeout=7)
         if response.status_code == 200:
             return "sucessfull"
         # The engine returns 502 when a downstream delivery (Payer/LIS) fails.

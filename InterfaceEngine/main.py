@@ -4,6 +4,7 @@ import logging
 from logging.handlers import TimedRotatingFileHandler
 import os
 import time
+from uuid import uuid4
 
 from contextlib import asynccontextmanager
 import httpx
@@ -94,6 +95,14 @@ def check_health():
 active_route_listners = {} # consist of all the running routes|Channels lisning for a soruce endpoint
 route_queue = {} # consist of each route key with that route value that it gets from source endpoint
 
+
+def _payload_preview(data, max_len: int = 240) -> str:
+    text = str(data)
+    compact = " ".join(text.split())
+    if len(compact) <= max_len:
+        return compact
+    return compact[:max_len] + "..."
+
 async def route_manager():
     """
         Takes all the routes from database, and use route_worker function, after that the route|channel
@@ -113,7 +122,7 @@ async def route_manager():
                         route_queue[route.route_id] = asyncio.Queue() # make a async queue for a new route that is not listning
                         task = asyncio.create_task(route_worker(route)) # this start the listning the route.
                         active_route_listners[route.route_id] = task
-                        logging.info(f"route_worker start for route {route.route_id}")
+                        logging.info(f"route_worker start for route {route.name}")
                 await asyncio.sleep(5)
 
             except asyncio.CancelledError:
@@ -170,7 +179,7 @@ async def route_worker(route):
         dest_id_to_path = {f.endpoint_field_id: f.path for f in dest_endpoint_fields}
         dest_path_to_resource = {f.path: f.resource for f in dest_endpoint_fields} # use resource for making messages.
 
-        logging.info(f"route_Worker Started for route {route.route_id}")
+        logging.info(f"route_Worker Started for route {route.name}")
 
         dest_endpoint_url = f"http://{dest_server.ip}:{dest_server.port}{dest_endpoint.url}"
 
@@ -297,6 +306,7 @@ async def route_worker(route):
                     
                     if len(parts) > len(rules): # here if the while spliting, if there is some data left concatenate it with the last path
                         dest_path = dest_id_to_path[rules[-1].dest_field_id] # take the last destination path
+                        print("destination path for remaining data ---> ", dest_path)
                         output_data[dest_path] += " " + (' ').join(parts[len(rules):]) # join all the remaining parts with the remining data
 
                 # BUILD MESSAGE
@@ -328,7 +338,7 @@ async def route_worker(route):
                         result_future.set_exception(Exception(err))
 
             except Exception as exp:
-                logging.error(f"{exp}\nThis came when processing/sending data for route {route.route_id}")
+                logging.error(f"{exp}\nThis came when processing/sending data for route {route.name}")
                 if not result_future.done():
                     result_future.set_exception(exp)
 
@@ -337,6 +347,7 @@ async def route_worker(route):
 
 @app.post("/{full_path:path}", status_code=status.HTTP_200_OK)
 async def ingest(full_path: str, req: Request):
+    trace_id = req.headers.get("X-Trace-Id") or uuid4().hex[:12]
     try:
         db = session_local()
         # check url if it exists in the database.
@@ -351,12 +362,20 @@ async def ingest(full_path: str, req: Request):
         routes = db.query(models.Route).filter(models.Route.src_endpoint_id == endpoint.endpoint_id).all()
         server = db.get(models.Server, endpoint.server_id)
         db.close()
+        logging.info(
+            "trace=%s ingest_received path=/%s protocol=%s routes=%s",
+            trace_id,
+            full_path,
+            server.protocol,
+            len(routes),
+        )
 
         # Read the request body based on protocol.
         # FHIR endpoints send JSON; HL7 endpoints send the raw HL7 string
         # (either as text/plain bytes OR as a JSON-encoded string — we handle both).
         if server.protocol == "FHIR":
             payload = await req.json()  # dict
+            logging.info("trace=%s ingest_payload_preview=%s", trace_id, _payload_preview(payload))
 
             is_valid, message = validate_unknown_fhir_resource(fhir_data=payload) # validating fhir message
             if not is_valid:
@@ -370,14 +389,16 @@ async def ingest(full_path: str, req: Request):
                     # Unexpected — treat whatever we got as a string
                     payload = str(payload)
             except Exception:
-                print("reading plain text as json was invalid, in the ingest function")
+                logging.info("trace=%s ingest_hl7_json_parse_failed_falling_back_to_text", trace_id)
                 raw = await req.body()
-                payload = raw.decode("utf-8")
+                payload = raw.decode("utf-8", errors="replace")
+            logging.info("trace=%s ingest_payload_preview=%s", trace_id, _payload_preview(payload))
         
         # Extract paths based on the protocol, mirroring how add_fhir/hl7_endpoint_fields
         # parses paths during endpoint 
         if server.protocol == "FHIR":
             resource_type = payload.get("resourceType", "Unknown")
+            bundle_path_to_resource = {}
             if resource_type == "Bundle":
                 # Bundle: extract paths per entry resource, prefixed with each resource type.
                 # e.g. "Patient-birthDate", "Coverage-identifier[0].value"
@@ -386,7 +407,10 @@ async def ingest(full_path: str, req: Request):
                     resource = entry.get("resource", {})
                     res_type = resource.get("resourceType", "Unknown")
                     raw_paths = fhir_extract_paths(resource)
-                    paths.extend([f"{res_type}-{p}" for p in raw_paths])
+                    for p in raw_paths:
+                        full_path = f"{res_type}-{p}"
+                        paths.append(full_path)
+                        bundle_path_to_resource[full_path] = resource
             else:
                 # Single resource: prefix with that resource's type.
                 raw_paths = fhir_extract_paths(payload)
@@ -403,31 +427,21 @@ async def ingest(full_path: str, req: Request):
 
         # Data Validation --> here you can do any kind of step if data is not available
         # you can also return the msg back, if data is not valid. but right know we will just ignore it.
-        print(f"\n[DEBUG] Extracted paths from payload: {paths}")
+        logging.info("trace=%s extracted_path_count=%s", trace_id, len(paths))
         for field in endpoint_fields:
-                if field.path not in paths:
-                    print(f"[DEBUG] MISSING from payload — DB field path: {field.path}")
+            if field.path not in paths:
+                logging.warning("trace=%s missing_path=%s", trace_id, field.path)
         
         # Extract value based on the path
         # Note: get_fhir_value_by_path strips the resource prefix internally
         src_path_to_value = {}
         if server.protocol == "FHIR":
-            if resource_type == "Bundle":
-                # For Bundles, look up value inside the correct entry resource.
-                # get_fhir_value_by_path strips the "ResourceType-" prefix and
-                # traverses the top-level object — so pass each entry resource.
-                for entry in payload.get("entry", []):
-                    resource = entry.get("resource", {})
-                    res_type = resource.get("resourceType", "Unknown")
-                    raw_paths = fhir_extract_paths(resource)
-                    for p in raw_paths:
-                        full_path = f"{res_type}-{p}"
-                        value = get_fhir_value_by_path(obj=resource, path=full_path)
-                        src_path_to_value[full_path] = value
-            else:
-                for path in paths:
-                    value = get_fhir_value_by_path(obj=payload, path=path)
-                    src_path_to_value[path] = value
+            # Use a single loop for both single resources and Bundles.
+            # For Bundles, each full path maps to its entry resource object.
+            for path in paths:
+                obj = bundle_path_to_resource.get(path, payload) if resource_type == "Bundle" else payload
+                value = get_fhir_value_by_path(obj=obj, path=path)
+                src_path_to_value[path] = value
         else:
             # For HL7, extract all values in one pass over the message segments
             src_path_to_value = get_hl7_value_by_path(hl7_message=payload, paths=paths)
@@ -442,7 +456,7 @@ async def ingest(full_path: str, req: Request):
                 await route_queue[route.route_id].put((src_path_to_value, future))
                 delivery_futures.append((route.route_id, future))
             else:
-                logging.warning(f"Route {route.route_id} queue not found. route_Worker may not be running")
+                logging.warning("trace=%s route_queue_missing route_id=%s", trace_id, route.name)
         
         # Wait for all route workers to finish delivery.
         # If any delivery failed, raise an error so the caller (EHR) knows to rollback.
@@ -454,15 +468,17 @@ async def ingest(full_path: str, req: Request):
                 errors.append(f"Route {route_id}: {str(exp)}")
         
         if errors:
+            logging.error("trace=%s delivery_failed errors=%s", trace_id, errors)
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 detail=f"One or more downstream deliveries failed: {'; '.join(errors)}"
             )
-        
+        logging.info("trace=%s ingest_delivery_succeeded destination_count=%s", trace_id, len(delivery_futures))
         return {"message": "Successfully sent data to all destinations"}
     except HTTPException:
         raise  # re-raise HTTP exceptions as-is
     except Exception as exp:
+        logging.exception("trace=%s ingest_unhandled_error=%s", trace_id, str(exp))
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
 
 

@@ -15,6 +15,7 @@ def register_patient(data: schema.PatientCreate, request: Request, response: Res
     Register a new patient in the Payer system and automatically create an insurance policy.
 
     **Request Body:**
+    - `mpi` (int, optional): Patient's medical record number.
     - `name` (str, required): Patient's full name.
     - `phone_no` (str, optional): Patient's phone number. Must be unique across all patients.
     - `gender` (str, optional): Patient's gender (e.g., "Male", "Female").
@@ -71,6 +72,7 @@ def register_patient(data: schema.PatientCreate, request: Request, response: Res
 
     try:
         new_patient = models.Patient(
+            mpi = data.mpi if data.mpi else None,
             u_id=data.user_id,
             name=data.name,
             phone_no=data.phone_no,

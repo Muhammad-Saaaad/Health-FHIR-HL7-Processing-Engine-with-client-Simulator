@@ -1,4 +1,5 @@
 from datetime import datetime
+import logging
 import re
 
 
@@ -43,8 +44,8 @@ async def add_patient(req: Request, db: Session = Depends(get_db)):
         # HL7 is sent as plain text — read raw bytes and decode
         raw = await req.body()
         data = raw.decode("utf-8")
+        print(data)
 
-        # _, path = hl7_extract_paths(segment=data.split('\n')[1])
         _, path = hl7_extract_paths(segment=data.splitlines()[1])
         values = get_hl7_value_by_path(data, path)
         
@@ -67,6 +68,8 @@ async def add_patient(req: Request, db: Session = Depends(get_db)):
 
         return {"message": "Patient Added sucessfully"}
 
+    except HTTPException:
+        raise
     except Exception as exp:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
 

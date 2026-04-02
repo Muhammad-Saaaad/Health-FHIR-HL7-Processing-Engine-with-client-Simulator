@@ -83,3 +83,52 @@
 2026-04-02 12:54:14,124- INFO - [route.py:74] - All routes fetched successfully: total_routes=3
 2026-04-02 13:58:56,155- INFO - [route.py:59] - All routes request received
 2026-04-02 13:58:56,185- INFO - [route.py:74] - All routes fetched successfully: total_routes=3
+2026-04-02 14:55:54,971- INFO - [route.py:59] - All routes request received
+2026-04-02 14:55:54,985- INFO - [route.py:74] - All routes fetched successfully: total_routes=3
+2026-04-02 14:55:56,595- INFO - [route.py:137] - Mapping rules request received for route_id=1026
+2026-04-02 14:55:56,619- INFO - [route.py:254] - Mapping rules fetched successfully for route_id=1026: total_rules=5
+2026-04-02 16:04:28,311- INFO - [route.py:59] - All routes request received
+2026-04-02 16:04:28,349- INFO - [route.py:74] - All routes fetched successfully: total_routes=3
+2026-04-02 16:04:31,065- INFO - [route.py:137] - Mapping rules request received for route_id=1026
+2026-04-02 16:04:31,119- INFO - [route.py:254] - Mapping rules fetched successfully for route_id=1026: total_rules=5
+2026-04-02 16:04:34,665- INFO - [route.py:531] - Delete route request received: route_id=1026
+2026-04-02 16:04:34,695- INFO - [route.py:542] - Delete route completed successfully: route_id=1026
+2026-04-02 16:04:36,849- INFO - [route.py:59] - All routes request received
+2026-04-02 16:04:36,864- INFO - [route.py:74] - All routes fetched successfully: total_routes=2
+2026-04-02 16:05:56,696- INFO - [route.py:409] - Add route request received: name=add-patient(ehr-to-payer), src_endpoint_id=115, dest_endpoint_id=117, msg_type=ADT
+2026-04-02 16:05:56,747- INFO - [route.py:455] - Route created and flushed successfully with route_id=1027
+2026-04-02 16:05:56,784- INFO - [route.py:510] - Add route completed successfully: route_id=1027, total_mapping_rules=7
+2026-04-02 16:05:57,539- INFO - [route.py:59] - All routes request received
+2026-04-02 16:05:57,565- INFO - [route.py:74] - All routes fetched successfully: total_routes=3
+2026-04-02 16:06:01,522- INFO - [route.py:137] - Mapping rules request received for route_id=1027
+2026-04-02 16:06:01,573- INFO - [route.py:254] - Mapping rules fetched successfully for route_id=1027: total_rules=7
+2026-04-02 16:06:07,135- INFO - [route.py:137] - Mapping rules request received for route_id=1027
+2026-04-02 16:06:07,269- INFO - [route.py:254] - Mapping rules fetched successfully for route_id=1027: total_rules=7
+2026-04-02 16:06:09,495- INFO - [route.py:59] - All routes request received
+2026-04-02 16:06:09,570- INFO - [route.py:74] - All routes fetched successfully: total_routes=3
+2026-04-02 16:06:11,058- INFO - [route.py:137] - Mapping rules request received for route_id=1022
+2026-04-02 16:06:11,092- INFO - [route.py:254] - Mapping rules fetched successfully for route_id=1022: total_rules=4
+2026-04-02 16:06:26,458- INFO - [route.py:137] - Mapping rules request received for route_id=1022
+2026-04-02 16:06:26,494- INFO - [route.py:254] - Mapping rules fetched successfully for route_id=1022: total_rules=4
+2026-04-02 16:07:24,109- INFO - [route.py:137] - Mapping rules request received for route_id=1022
+2026-04-02 16:07:24,142- INFO - [route.py:254] - Mapping rules fetched successfully for route_id=1022: total_rules=4
+2026-04-02 16:57:49,165- INFO - [route.py:137] - Mapping rules request received for route_id=1022
+2026-04-02 16:57:49,203- INFO - [route.py:254] - Mapping rules fetched successfully for route_id=1022: total_rules=4
+2026-04-02 16:57:50,953- INFO - [route.py:59] - All routes request received
+2026-04-02 16:57:50,991- INFO - [route.py:74] - All routes fetched successfully: total_routes=3
+2026-04-02 16:58:00,652- INFO - [route.py:137] - Mapping rules request received for route_id=1023
+2026-04-02 16:58:00,698- INFO - [route.py:254] - Mapping rules fetched successfully for route_id=1023: total_rules=9
+2026-04-02 16:58:06,595- INFO - [route.py:59] - All routes request received
+2026-04-02 16:58:06,627- INFO - [route.py:74] - All routes fetched successfully: total_routes=3
+2026-04-02 16:58:07,897- INFO - [route.py:137] - Mapping rules request received for route_id=1022
+2026-04-02 16:58:07,931- INFO - [route.py:254] - Mapping rules fetched successfully for route_id=1022: total_rules=4
+2026-04-02 16:58:10,087- INFO - [route.py:59] - All routes request received
+2026-04-02 16:58:10,118- INFO - [route.py:74] - All routes fetched successfully: total_routes=3
+2026-04-02 16:58:12,102- INFO - [route.py:137] - Mapping rules request received for route_id=1027
+2026-04-02 16:58:12,146- INFO - [route.py:254] - Mapping rules fetched successfully for route_id=1027: total_rules=7
+2026-04-02 16:58:16,290- INFO - [route.py:59] - All routes request received
+2026-04-02 16:58:16,318- INFO - [route.py:74] - All routes fetched successfully: total_routes=3
+2026-04-02 17:01:18,094- INFO - [route.py:59] - All routes request received
+2026-04-02 17:01:18,130- INFO - [route.py:74] - All routes fetched successfully: total_routes=3
+2026-04-02 17:29:42,068- INFO - [route.py:59] - All routes request received
+2026-04-02 17:29:42,086- INFO - [route.py:74] - All routes fetched successfully: total_routes=3

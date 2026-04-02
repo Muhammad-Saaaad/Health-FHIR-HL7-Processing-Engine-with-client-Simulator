@@ -23,7 +23,7 @@ json_data = {
                     "birthDate": "2004-10-06",
                     "address": [{ "text": "123 street, city, country" }],
                     "telecom" : [{
-                        "value" : null
+                        "value" : "+33 (237) 998327"
                     }]
                 }
             },

@@ -1,4 +1,5 @@
 from datetime import datetime
+import logging
 import re
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -51,11 +52,10 @@ async def get_registed_patient(req: Request, db: Session = Depends(get_db)):
     try:
         # HL7 is sent as plain text — read raw bytes and decode
         raw = await req.body()
-        data = raw.decode("utf-8")
+        data = raw.decode("utf-8", errors="replace")
 
         # Parse all segments
         all_values = {}
-        # for segment in data.split('\n')[1:]:
         for segment in data.splitlines()[1:]:
             if not segment.strip():
                 continue
@@ -77,6 +77,8 @@ async def get_registed_patient(req: Request, db: Session = Depends(get_db)):
         
         phone_no = all_values.get('PID-13') or all_values.get('PID-14') or None
 
+    except HTTPException:
+        raise
     except Exception as exp:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
 
@@ -85,7 +87,7 @@ async def get_registed_patient(req: Request, db: Session = Depends(get_db)):
     # policy_id from IN1 maps to InsurancePolicy.policy_id
     policy_id = all_values.get('IN1-36') or all_values.get('IN1-2')
     plan_type = all_values.get('IN1-15') or all_values.get('IN1-3')
-
+    mpi = int(all_values['PID-3'].strip())
     existing_patient = (
         db.query(models.Patient)
         .join(models.InsurancePolicy, models.InsurancePolicy.policy_id == int(str(policy_id).strip()))
@@ -100,7 +102,7 @@ async def get_registed_patient(req: Request, db: Session = Depends(get_db)):
 
     if existing_patient:
         # Patient already registered in Payer — just update the MPI
-        existing_patient.mpi = all_values['PID-3']
+        existing_patient.mpi = mpi
         db.commit()
         db.refresh(existing_patient)
         # return {"message": "Patient MPI updated successfully"}
@@ -111,6 +113,7 @@ async def get_registed_patient(req: Request, db: Session = Depends(get_db)):
             response = await client.post(
                 "http://localhost:8003/reg_patient",
                 json={
+                    "mpi": mpi,
                     "name": name,
                     "phone_no": phone_no,
                     "gender": gender,

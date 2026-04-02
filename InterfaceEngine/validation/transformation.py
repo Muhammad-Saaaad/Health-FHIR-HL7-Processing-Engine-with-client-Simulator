@@ -51,25 +51,32 @@ def increment_segment(segment : str) -> str:
         "Patient[1]-name" → "Patient[2]-name"
         "Patient[2]-name" → "Patient[3]-name"
     """
-    match = re.search(r"\[(\d+)\]", segment) # find [digit] in Patient[1]-name or PID[1]-name
-    if match:
+    segment_parts = segment.split("-", 1) # PID-5.1 -> ["PID", "5.1"] -> PID[1]-5.1
+
+    match = re.search(r"\[(\d+)\]", segment_parts[0]) # find [digit] in Patient[1] or PID[1] or in PID
+    if match: # if there is a match, increment the number
         number = int(match.group(1))
         incremented_number = number + 1
-        return re.sub(r"\[\d+\]", f"[{incremented_number}]", segment)
+        output= re.sub(r"\[\d+\]", f"[{incremented_number}]", segment_parts[0]) + "-" + segment_parts[1]
+        print("Input path: ", segment, " --> Output path: ", output)
+        return output
     else:
-        # PID-5.1 -> ["PID", "5.1"] -> PID[1]-5.1
-        segment_parts = segment.split("-", 1)
+        # if theree was no digit in the segment or resource name then by default add 1.
         if len(segment_parts) == 2:
-            return f"{segment_parts[0]}[1]-{segment_parts[1]}"
+            output= f"{segment_parts[0]}[1]-{segment_parts[1]}"
+            print("Input path: ", segment, " --> Output path: ", output)
+            return output
         else:
             return
 
 
 if __name__ == "__main__":
 
-    print(increment_segment("Patient-name"))
-    print(increment_segment("Patient[1]-name"))
-    print(increment_segment("Patient[2]-name"))
-    print(increment_segment("PID-5.1"))
-    print(increment_segment("PID[2]-5.2"))
-    print(increment_segment("ServiceRequest[2]-name"))
+    increment_segment("Patient-identifier[1].value")
+    increment_segment("Patient-identifier[0].type.coding[0].code")
+    increment_segment("Patient-name.text")
+    increment_segment("Patient[1]-name.text")
+    increment_segment("Patient[2]-name")
+    increment_segment("PID-5.1")
+    increment_segment("PID[2]-5.2")
+    increment_segment("ServiceRequest[2]-name")
