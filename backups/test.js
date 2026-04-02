@@ -7,7 +7,7 @@ const obj = JSON.parse(jsonString);
 console.log(obj.name); // Output: "John"
 
 
-json_data = {
+add_patient = { // ehr -> endpoint => /fhir/add-patient
         "resourceType": "Bundle",
         "type": "message",
         "entry": [
@@ -56,7 +56,34 @@ json_data = {
         ]
     }
 
-json_data = {
+add_patient ={ // phr -> endpoint => /add/patient
+    "resourceType": "Patient",
+    "identifier": [
+        { "type": { "coding": [{ "code": "MR" }]}, "value": "23" },
+        { "type": { "coding": [{ "code": "NI" }]}, "value": "37201-23123123"}
+    ],
+    "name": [{"text": "Muhammad Saad"}],
+    "gender": "male",
+    "birthDate": "2004-10-06",
+    "address": [{ "text": "123 street, city, country" }],
+    "telecom" : [{
+        "value" : "+33 (237) 998327"
+    }]
+}
+
+
+add_patient = // LIS -> endpoint => /get/new-patient
+"MSH|^~\\&|EHR||LIS||20260203120000||ADT^A01|MSG00001|P|2.5"
+"PID|1||23||saad^Muhammad||20041006|M|||||+92-315-3726612"
+
+add_patient = // Payer -> endpoint => /get/registed_patient
+"MSH|^~\\&|EHR||payer||20260203120000||ADT^A01|MSG00001|P|2.5"
+"PID|1||23||saad^Muhammad||20041006|M|||||"
+"IN1|||||||||||||||Silver|||||||||||||||||||||9||||||||||||||||"
+
+// -----------------------------------------------------------------------------------------------------------------------------------------
+
+add_visit_note = { // ehr -> endpoint => 
         "resourceType": "Bundle",
         "type": "message",
         "id": "5e4d2222-11b8-4acc-9998-40a49e273c4e",

@@ -81,8 +81,8 @@ def hl7_extract_paths(segment) -> tuple[str, list[str]]:
 # ORM|2||12||Muhammad^ali||20041006|M|||123 street, city, country||+33 (237) 998327
 # """
 test = """
-MSH|^~\\&|EHR||payer||20260203120000||ADT^A01|MSG00001|P|2.5
-PID|1||23||saad^Muhammad||20041006|M|||||
+MSH|^~\\&|EHR||LIS||20260203120000||ADT^A01|MSG00001|P|2.5
+PID|1||23||saad^Muhammad||20041006|M|||||+92-315-3726612
 """
 test1 = """
 MSH|^~\\&|EHR||payer||20260203120000||ADT^A01|MSG00001|P|2.5
