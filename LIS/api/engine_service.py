@@ -1,5 +1,6 @@
 from datetime import datetime
 import logging
+from logging.handlers import RotatingFileHandler
 import re
 
 
@@ -11,6 +12,13 @@ import model
 
 router = APIRouter(tags=['Engine'])
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+formatter = logging.Formatter("%(asctime)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s")
+
+handler = RotatingFileHandler(r"logs/engine_service.log", maxBytes=1000000, backupCount=1)
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
 @router.post("/get/new-patient", status_code=status.HTTP_200_OK)
 async def add_patient(req: Request, db: Session = Depends(get_db)):
@@ -44,7 +52,7 @@ async def add_patient(req: Request, db: Session = Depends(get_db)):
         # HL7 is sent as plain text — read raw bytes and decode
         raw = await req.body()
         data = raw.decode("utf-8")
-        print(data)
+        logger.info(f"Received new patient HL7 message:\n{data}")
 
         _, path = hl7_extract_paths(segment=data.splitlines()[1])
         values = get_hl7_value_by_path(data, path)
@@ -66,14 +74,75 @@ async def add_patient(req: Request, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(patient)
 
+        logger.info(f"Patient added successfully: {patient.fname + " " + patient.lname} (MPI: {patient.mpi})")
         return {"message": "Patient Added sucessfully"}
 
-    except HTTPException:
+    except HTTPException as http_exp:
+        logger.error(f"HTTP error processing new patient HL7 message: {str(http_exp.detail)}")
         raise
     except Exception as exp:
+        logger.error(f"Error processing new patient HL7 message: {str(exp)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
 
-def hl7_extract_paths(segment):
+@router.post("/take_lab_order", status_code=status.HTTP_200_OK)
+async def take_lab_order(req: Request, db: Session = Depends(get_db)):
+    try:
+        """
+        MSH|^~\\&|EHR||LIS||20260203120000||ORM^O01|MSG00002|P|2.5"
+        PID|1||23|||||||||||
+        OBR|01|VID-01||2093-3^Total cholesterol||||||||||| # we can also add field in the OBR-4.3 as ^ln for telling that the system is loinc code.
+        """
+        raw = await req.body()
+        text_data = raw.decode("utf-8")
+        logger.info(f"Received new lab order HL7 message:\n{text_data}")
+
+        mpi = None
+        lab_orders = []
+        mpi_not_found = False
+        for segment in text_data.splitlines()[1:]:
+            _, paths = hl7_extract_paths(segment)
+            path_to_values = get_hl7_value_by_path(segment, paths) # paths and values for 1 segment
+
+            if "PID-1" in path_to_values.keys() and path_to_values["PID-1"] == "1":
+                mpi = path_to_values.get("PID-3")
+                continue
+            if "OBR-1" not in path_to_values.keys() or not mpi:
+                continue
+            
+            if db.get(model.Patient, mpi) is None: # if the mpi does not exists in the database.
+                mpi_not_found = True
+                break
+
+            lab_orders.append(model.LabTestRequest(
+                mpi = mpi,
+                test_name= path_to_values.get("OBR-4.2", "Unknown Test"), # OBR-4.2 is the component of OBR-4 which contains the test name, if not found then set it as unknown test.
+            ))
+        
+        if not mpi:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="MPI not found in the message")
+        
+        if mpi_not_found:
+            logging.critical(f"Lab order received for non-existent MPI: {mpi}. No orders were processed.")
+            return {"message": f"MPI {mpi} not found in the database"}
+        
+        if not lab_orders:
+            logger.warning(f"No lab orders found in the message for MPI: {mpi}")
+            return {"message": "No lab orders found in the message"}
+
+        db.add_all(lab_orders)
+        db.commit()
+        logger.info(f"Lab orders added successfully for MPI: {mpi}, Orders: {[order.test_name for order in lab_orders]}")
+
+        return {"message": "Lab order received successfully"}
+
+    except HTTPException as http_exp:
+        logger.error(f"HTTP error processing new lab order HL7 message: {str(http_exp.detail)}")
+        raise HTTPException(status_code=http_exp.status_code, detail=http_exp.detail)
+    except Exception as exp:
+        logger.error(f"Error processing new lab order HL7 message: {str(exp)}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
+
+def hl7_extract_paths(segment) -> tuple[str, list[str]]:
     """
     Parse a single HL7 segment string and return all field/component/subcomponent paths.
 
@@ -129,7 +198,8 @@ def get_hl7_value_by_path(hl7_message, paths):
         dict: A mapping of path -> extracted string value.
               Returns empty string for paths not found or out of bounds.
     """
-    segments = hl7_message.split('\n')[1:]
+    # segments = hl7_message.split('\n')[1:]
+    segments = hl7_message.split('\n')
     value = {}
     for segment in segments:
         for path in paths:

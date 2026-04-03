@@ -164,4 +164,92 @@ add_visit_note = { // ehr -> endpoint =>
             }
         ]
     }
+
+add_visit_note = { // phr -> endpoint => 
+        "resourceType": "Bundle",
+        "type": "message",
+        "id": "5e4d2222-11b8-4acc-9998-40a49e273c4e",
+        "entry": [
+            {
+                "resource": {
+                    "resourceType": "Practitioner",
+                    "id": "5e4d2222-11b8-4acc-9998-40a49e273c4e",
+                    "identifier" :[ {"value": "PRAC-001"} ],
+                    "name": [{"text": "Dr. Ayesha Khan"}],
+                    "telecom": [{"value": "+33 (237) 998327"}],
+                    "extension": [{
+                        "valueString": "General Practitioner with 10 years of experience in primary care, specializing in patient-centered treatment and preventive medicine."
+                    }]
+                }
+            },
+            {
+                "resource": {
+                    "resourceType": "PractitionerRole",
+                    "id": "5e4d2222-11b8-4acc-9998-40a49e273c4e",
+                    "specialty": [ { "coding": [{"display": "General Practitioner"}] } ],
+                    "practitioner": {"reference": "Practitioner/PRAC-001"}
+                }
+            },
+            {
+                "resource": {
+                    "resourceType": "Encounter",
+                    "id": "5e4d2222-11b8-4acc-9998-40a49e273c4e",
+                    "identifier": [
+                        {
+                            "value": "VID-2024-12345"
+                        }
+                    ],
+                    "status": "in-progress",
+                    "class": {
+                        "code": "AMB"
+                    },
+                    "type": [
+                        {
+                            "text": "General Consultation"
+                        }
+                    ],
+                    "reasonCode": [
+                        {
+                            "text": "Patient experiencing severe headache and dizziness"
+                        }
+                    ],
+                    "diagnosis": [
+                        {
+                            "condition": {
+                                "display": "Migraine"
+                            }
+                        }
+                    ],
+                    "subject": {"reference": "patient/32"},
+                    "extension": [{
+                            "valueString": "Patient responded well to medication. Follow-up advised in 2 weeks."
+                        }
+                    ]
+                }
+            },
+            {
+                "resource": {
+                    "resourceType": "ServiceRequest",
+                    "id": "5e4d2222-11b8-4acc-9998-40a49e273c4e",
+                    "status": "active",
+                    "intent": "order",
+                    "code":{
+                        "coding": [
+                            {
+                                "code": "73761001",
+                                "display": "Headache (disorder)"
+                            }
+                        ]
+                    },
+                    "subject": {"reference": "patient/32"}
+                }
+            }
+        ]
+    }
+
+add_visit_note = // lis => endpoint -> /take_lab_order
+"MSH|^~\\&|EHR||LIS||20260203120000||ORM^O01|MSG00002|P|2.5"
+"PID|1||23|||||||||||"
+"OBR|01|VID-01||2093-3^Total cholesterol|||||||||||"
+
 console.log(JSON.parse(JSON.stringify(json_data)));

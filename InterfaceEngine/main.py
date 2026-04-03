@@ -25,6 +25,19 @@ from validation.hl7_validation import build_hl7_message
 
 os.makedirs("logs", exist_ok=True)
 
+class HealthRequestFilter(logging.Filter):
+    """
+    Split noisy HTTP health-check request logs away from the main log.
+    """
+    def __init__(self, only_health: bool):
+        super().__init__()
+        self.only_health = only_health
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        message = record.getMessage()
+        is_health_request = "HTTP Request:" in message and "/health" in message
+        return is_health_request if self.only_health else not is_health_request
+
 class MidnightSingleFileHandler(TimedRotatingFileHandler):
     """
     A TimedRotatingFileHandler variant that clears the same file at midnight.
@@ -48,15 +61,28 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 logger.handlers.clear()
 
-log_handler = MidnightSingleFileHandler(
-    filename="logs/message.log",
+main_log_handler = MidnightSingleFileHandler(
+    filename="logs/main.log",
     when="midnight",
     interval=1,
     backupCount=0,
     encoding="utf-8",
 )
-log_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
-logger.addHandler(log_handler)
+main_log_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s"))
+main_log_handler.addFilter(HealthRequestFilter(only_health=False))
+
+health_log_handler = MidnightSingleFileHandler(
+    filename="logs/health_checks.log",
+    when="midnight",
+    interval=1,
+    backupCount=0,
+    encoding="utf-8",
+)
+health_log_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s"))
+health_log_handler.addFilter(HealthRequestFilter(only_health=True))
+
+logger.addHandler(main_log_handler)
+logger.addHandler(health_log_handler)
 
 @asynccontextmanager # handle lifespan events like startup or shutdown
 async def lifeSpan(app: FastAPI):
@@ -96,7 +122,7 @@ active_route_listners = {} # consist of all the running routes|Channels lisning 
 route_queue = {} # consist of each route key with that route value that it gets from source endpoint
 
 
-def _payload_preview(data, max_len: int = 240) -> str:
+def _payload_preview(data, max_len: int = 400) -> str:
     text = str(data)
     compact = " ".join(text.split())
     if len(compact) <= max_len:
@@ -122,20 +148,20 @@ async def route_manager():
                         route_queue[route.route_id] = asyncio.Queue() # make a async queue for a new route that is not listning
                         task = asyncio.create_task(route_worker(route)) # this start the listning the route.
                         active_route_listners[route.route_id] = task
-                        logging.info(f"route_worker start for route {route.name}")
+                        logger.info(f"route_worker start for route -> {route.name}")
                 await asyncio.sleep(5)
 
             except asyncio.CancelledError:
-                logging.info("Route_manager received Cancellation signal")
+                logger.info("Route_manager received Cancellation signal")
                 raise # Re-raise to properly exit
             
             except Exception as exp:
-                logging.error(f"Error in route_manager: {str(exp)}")
+                logger.error(f"Error in route_manager: {str(exp)}")
                 await asyncio.sleep(5)  # Continue running despite errors
     
     except asyncio.CancelledError:
 
-        logging.info(f"Route Manger shutting down")
+        logger.info(f"Route Manger shutting down")
         # Cleanup: cancle all route_worker tasks that we run above
         for route_id, task in active_route_listners.items():
             task.cancel()
@@ -179,7 +205,7 @@ async def route_worker(route):
         dest_id_to_path = {f.endpoint_field_id: f.path for f in dest_endpoint_fields}
         dest_path_to_resource = {f.path: f.resource for f in dest_endpoint_fields} # use resource for making messages.
 
-        logging.info(f"route_Worker Started for route {route.name}")
+        logger.info(f"route_Worker Started for route -> {route.name}")
 
         dest_endpoint_url = f"http://{dest_server.ip}:{dest_server.port}{dest_endpoint.url}"
 
@@ -190,6 +216,11 @@ async def route_worker(route):
             output_data = {} # contains the output fields with value
             concat_data = {} # contains single dest field id, and multiple mapping rule that concate multiple src into a single destination.
             split_data = {} # contain single src field id, and multiple mapping rule that split that single src into multiple destination.
+
+            # if dest_server.status == "Inactive" :
+            #         logger.error(f"Destination server {dest_server.name} is Inactive")
+            #         result_future.set_exception(Exception(err))
+            #         continue
 
             try:
                 for rule in mapping_rules_for_specific_route: # rule for each src-to-dest field mapping in the route
@@ -209,7 +240,7 @@ async def route_worker(route):
                         src_path = src_id_to_path[rule.src_field_id]
 
                         if src_path not in src_path_to_value:
-                            logging.info(f"The src path {src_path} not found in src_path_to_value: {src_path_to_value}")
+                            logger.info(f"The src path {src_path} not found in src_path_to_value: {src_path_to_value}")
                             continue
                     
                         value = src_path_to_value[src_path]
@@ -217,22 +248,19 @@ async def route_worker(route):
                         if rule.transform_type == 'map':
                             # here the first value will give me the map value, if the mapping value is not found then return the default value
                             value = rule.config.get(str(value).lower(), value) 
-                            print("mapped-value ---> ", value)
 
                         elif rule.transform_type == "regex":
                             value = regex_replace_with_template(value=value, pattern_from=rule.config["from"], pattern_to=rule.config["to"])
 
                         elif rule.transform_type == 'format':
                             try: # 2004-10-06 → 20041006 vice versa
-
                                 dt = datetime.strptime(str(value), rule.config["from"])
                                 value = dt.strftime(rule.config["to"])
-
                             except Exception as exp:
-                                logging.error(f"Error while transformation: {str(exp)}")
+                                logger.error(f"Error while transformation: {str(exp)}")
 
                         if rule.dest_field_id not in dest_id_to_path:
-                            logging.error(f"""The destination id in rule {rule.dest_field_id}
+                            logger.error(f"""The destination id in rule {rule.dest_field_id}
                                            does not matches with the destination map id {dest_id_to_path}""")
                             continue
                             
@@ -240,13 +268,17 @@ async def route_worker(route):
                         dest_path = increment_segment(dest_path) # here PID-5.1 will become PID[1]-5.1
                         output_data[dest_path] = value
 
+                logger.info(f"output data dictionary before concat and split transformation for route {route.name} -> {output_data}")
+                logger.info(f"concat_data for route {route.name} -> {concat_data}")
+                logger.info(f"split_data for route {route.name} -> {split_data}")
+
                 ################################## Concat Data ##################################
                 for dest_id , rules in concat_data.items(): 
                     values = []
 
                     for rule in rules:
                         if rule.src_field_id not in src_id_to_path:
-                            logging.error(f"""While Concatnation, The src_field id in rule {rule.src_field_id}
+                            logger.error(f"""While Concatnation, The src_field id in rule {rule.src_field_id}
                                         does not exists in the src_id_to_path {src_id_to_path}
                                         There must be a issue when you input data in database.""")
                             continue
@@ -257,14 +289,14 @@ async def route_worker(route):
                             values.append(str(src_path_to_value[src_path]))
 
                         else:
-                            logging.warning(f"while Concatnation, The src_path {src_path} not found in path data: {src_path_to_value}")
+                            logger.warning(f"while Concatnation, The src_path {src_path} not found in path data: {src_path_to_value}")
                             continue
                     
                     delimiter = rules[0].config.get('delimiter', " ") # concat on delimiter or by default with space " " 
                     concated_value = delimiter.join(values)
 
                     if rule.dest_field_id not in dest_id_to_path:
-                        logging.error(f"""While Concatnation, The destination id in rule {rule.dest_field_id}
+                        logger.error(f"""While Concatnation, The destination id in rule {rule.dest_field_id}
                                         does not matches with the destination map id {dest_id_to_path}
                                         There must be a issue when you input data in database""")
                         continue
@@ -277,7 +309,7 @@ async def route_worker(route):
                 for src_id, rules in split_data.items():
 
                     if src_id not in src_id_to_path:
-                        logging.error(f"""While Spliting, The src_field_id from route
+                        logger.error(f"""While Spliting, The src_field_id from route -> {route.name}    
                                         does not exists in the src_id_to_path {src_id_to_path}
                                         There must be a issue when you input data in database.""")
                         continue
@@ -285,7 +317,7 @@ async def route_worker(route):
 
                     src_path = src_id_to_path[src_id]
                     if src_path not in src_path_to_value:
-                        logging.warning(f"while Spliting, The src_path {src_path} not found in path data: {src_path_to_value}")
+                        logger.warning(f"while Spliting, The src_path {src_path} not found in path data: {src_path_to_value}")
                         continue
                     
                     # As rules 
@@ -295,7 +327,7 @@ async def route_worker(route):
                     for i, rule in enumerate(rules):
                         if i < len(parts):
                             if rule.dest_field_id not in dest_id_to_path:
-                                logging.error(f"""While Spliting, The destination id in rule {rule.dest_field_id}
+                                logger.error(f"""While Spliting, The destination id in rule {rule.dest_field_id}
                                             does not matches with the destination map id {dest_id_to_path}
                                             There must be a issue when you input data in database""")
                                 continue
@@ -306,8 +338,11 @@ async def route_worker(route):
                     
                     if len(parts) > len(rules): # here if the while spliting, if there is some data left concatenate it with the last path
                         dest_path = dest_id_to_path[rules[-1].dest_field_id] # take the last destination path
-                        print("destination path for remaining data ---> ", dest_path)
+                        dest_path = increment_segment(dest_path)
+                        logger.info(f"destination path for remaining data ---> {dest_path}")
                         output_data[dest_path] += " " + (' ').join(parts[len(rules):]) # join all the remaining parts with the remining data
+
+                logger.info(f"Output for route -> {route.name}: {output_data}")
 
                 # BUILD MESSAGE
                 if dest_server.protocol == "FHIR":
@@ -316,6 +351,7 @@ async def route_worker(route):
                 else:
                     msg = build_hl7_message(output_data=output_data, src=src_server.name,
                                                    dest=dest_server.name, msg_type=route.msg_type)
+                logger.info(f"Built message for route -> {route.name}:\n {msg}")
 
                 # DELIVER — resolve the future so ingest() knows the result
                 async with httpx.AsyncClient() as client:
@@ -330,15 +366,15 @@ async def route_worker(route):
                             headers={"Content-Type": "text/plain"}
                         )
                     if response.status_code in (200, 201):
-                        logging.info(f"Successfully sent to url: {dest_endpoint_url}")
+                        logger.info(f"Successfully sent to url: {dest_endpoint_url}")
                         result_future.set_result(True)
                     else:
                         err = f"Destination {dest_endpoint_url} returned {response.status_code}: {response.text}"
-                        logging.error(err)
+                        logger.error(err)
                         result_future.set_exception(Exception(err))
 
             except Exception as exp:
-                logging.error(f"{exp}\nThis came when processing/sending data for route {route.name}")
+                logger.error(f"{exp}\nThis came when processing/sending data for route -> {route.name}")
                 if not result_future.done():
                     result_future.set_exception(exp)
 
@@ -362,7 +398,7 @@ async def ingest(full_path: str, req: Request):
         routes = db.query(models.Route).filter(models.Route.src_endpoint_id == endpoint.endpoint_id).all()
         server = db.get(models.Server, endpoint.server_id)
         db.close()
-        logging.info(
+        logger.info(
             "trace=%s ingest_received path=/%s protocol=%s routes=%s",
             trace_id,
             full_path,
@@ -375,7 +411,7 @@ async def ingest(full_path: str, req: Request):
         # (either as text/plain bytes OR as a JSON-encoded string — we handle both).
         if server.protocol == "FHIR":
             payload = await req.json()  # dict
-            logging.info("trace=%s ingest_payload_preview=%s", trace_id, _payload_preview(payload))
+            logger.info("trace=%s ingest_payload_preview=%s", trace_id, _payload_preview(payload))
 
             is_valid, message = validate_unknown_fhir_resource(fhir_data=payload) # validating fhir message
             if not is_valid:
@@ -389,10 +425,10 @@ async def ingest(full_path: str, req: Request):
                     # Unexpected — treat whatever we got as a string
                     payload = str(payload)
             except Exception:
-                logging.info("trace=%s ingest_hl7_json_parse_failed_falling_back_to_text", trace_id)
+                logger.info("trace=%s ingest_hl7_json_parse_failed_falling_back_to_text", trace_id)
                 raw = await req.body()
                 payload = raw.decode("utf-8", errors="replace")
-            logging.info("trace=%s ingest_payload_preview=%s", trace_id, _payload_preview(payload))
+            logger.info("trace=%s ingest_payload_preview=%s", trace_id, _payload_preview(payload))
         
         # Extract paths based on the protocol, mirroring how add_fhir/hl7_endpoint_fields
         # parses paths during endpoint 
@@ -427,10 +463,10 @@ async def ingest(full_path: str, req: Request):
 
         # Data Validation --> here you can do any kind of step if data is not available
         # you can also return the msg back, if data is not valid. but right know we will just ignore it.
-        logging.info("trace=%s extracted_path_count=%s", trace_id, len(paths))
+        logger.info("trace=%s extracted_path_count=%s", trace_id, len(paths))
         for field in endpoint_fields:
             if field.path not in paths:
-                logging.warning("trace=%s missing_path=%s", trace_id, field.path)
+                logger.warning("trace=%s missing_path=%s", trace_id, field.path)
         
         # Extract value based on the path
         # Note: get_fhir_value_by_path strips the resource prefix internally
@@ -439,9 +475,9 @@ async def ingest(full_path: str, req: Request):
             # Use a single loop for both single resources and Bundles.
             # For Bundles, each full path maps to its entry resource object.
             for path in paths:
-                obj = bundle_path_to_resource.get(path, payload) if resource_type == "Bundle" else payload
+                obj = bundle_path_to_resource.get(path, payload) if resource_type == "Bundle" else payload # if the type is bundle then take the specific resource else take the whole payload as resource
                 value = get_fhir_value_by_path(obj=obj, path=path)
-                src_path_to_value[path] = value
+                src_path_to_value[path] = value # increment here...
         else:
             # For HL7, extract all values in one pass over the message segments
             src_path_to_value = get_hl7_value_by_path(hl7_message=payload, paths=paths)
@@ -456,7 +492,7 @@ async def ingest(full_path: str, req: Request):
                 await route_queue[route.route_id].put((src_path_to_value, future))
                 delivery_futures.append((route.route_id, future))
             else:
-                logging.warning("trace=%s route_queue_missing route_id=%s", trace_id, route.name)
+                logger.warning("trace=%s route_queue_missing route_id=%s", trace_id, route.name)
         
         # Wait for all route workers to finish delivery.
         # If any delivery failed, raise an error so the caller (EHR) knows to rollback.
@@ -468,17 +504,17 @@ async def ingest(full_path: str, req: Request):
                 errors.append(f"Route {route_id}: {str(exp)}")
         
         if errors:
-            logging.error("trace=%s delivery_failed errors=%s", trace_id, errors)
+            logger.error("trace=%s delivery_failed errors=%s", trace_id, errors)
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 detail=f"One or more downstream deliveries failed: {'; '.join(errors)}"
             )
-        logging.info("trace=%s ingest_delivery_succeeded destination_count=%s", trace_id, len(delivery_futures))
+        logger.info("trace=%s ingest_delivery_succeeded destination_count=%s", trace_id, len(delivery_futures))
         return {"message": "Successfully sent data to all destinations"}
     except HTTPException:
         raise  # re-raise HTTP exceptions as-is
     except Exception as exp:
-        logging.exception("trace=%s ingest_unhandled_error=%s", trace_id, str(exp))
+        logger.exception("trace=%s ingest_unhandled_error=%s", trace_id, str(exp))
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
 
 

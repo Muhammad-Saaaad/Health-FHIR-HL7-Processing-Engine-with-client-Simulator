@@ -165,3 +165,15 @@ entry.3.resource.id
 2026-04-01 23:15:56,479- INFO - [endpoint.py:248] - Mapped field patient_mpi to path ServiceRequest-subject.reference
 2026-04-01 23:15:56,509- INFO - [endpoint.py:262] - FHIR field extraction completed for endpoint_id=120, total_fields_added=18
 2026-04-01 23:15:56,509- INFO - [endpoint.py:150] - FHIR endpoint fields added successfully for endpoint_id=120
+2026-04-02 21:19:58,764- INFO - [endpoint.py:105] - Add endpoint request received: server_id=8, url=/take_lab_order, server_protocol=HL7
+2026-04-02 21:19:58,795- INFO - [endpoint.py:137] - Endpoint created and flushed successfully: endpoint_id=121
+2026-04-02 21:19:58,795- INFO - [endpoint.py:292] - HL7 field extraction started for endpoint_id=121
+2026-04-02 21:19:58,799- WARNING - [endpoint.py:358] - No canonical mapping found for path PID-1, skipping.
+2026-04-02 21:19:58,799- INFO - [endpoint.py:307] - Mapped field MPI to path PID-3
+2026-04-02 21:19:58,811- INFO - [endpoint.py:307] - Mapped field lab_order_set_id to path OBR-1
+2026-04-02 21:19:58,811- INFO - [endpoint.py:307] - Mapped field VID to path OBR-2
+2026-04-02 21:19:58,815- INFO - [endpoint.py:307] - Mapped field lab_order_code to path OBR-4.1
+2026-04-02 21:19:58,815- INFO - [endpoint.py:307] - Mapped field lab_order_name to path OBR-4.2
+2026-04-02 21:19:58,832- INFO - [endpoint.py:321] - HL7 field extraction completed for endpoint_id=121, total_fields_added=5
+2026-04-02 21:19:58,832- INFO - [endpoint.py:156] - HL7 endpoint fields added successfully for endpoint_id=121
+2026-04-02 21:26:57,882- WARNING - [endpoint.py:191] - Endpoint field paths rejected: endpoint id 121 does not exist

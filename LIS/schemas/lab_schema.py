@@ -11,7 +11,8 @@ class TestRequestStatusUpdate(BaseModel):
     decline_reason: str | None
 
 class TestRequestOut(BaseModel):
-    patient_id : int
+    test_req_id: int
+    mpi : int
     test_name: str
     status: str
     decline_reason: str | None

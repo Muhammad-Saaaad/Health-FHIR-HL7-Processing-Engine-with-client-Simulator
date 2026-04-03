@@ -1,3 +1,5 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi.middleware import SlowAPIMiddleware
@@ -7,6 +9,8 @@ from database import engine
 import model
 from api import auth, patient ,lab, billing, engine_service
 from rate_limiting import limiter, rate_limit_exceeded_handler
+
+os.makedirs("logs", exist_ok=True)
 
 app = FastAPI()
 
