@@ -265,7 +265,7 @@ async def route_worker(route):
                             continue
                             
                         dest_path = dest_id_to_path[rule.dest_field_id]
-                        dest_path = increment_segment(dest_path) # here PID-5.1 will become PID[1]-5.1
+                        dest_path = increment_segment(output_data, dest_path) # here PID-5.1 will become PID[1]-5.1
                         output_data[dest_path] = value
 
                 logger.info(f"output data dictionary before concat and split transformation for route {route.name} -> {output_data}")
@@ -302,7 +302,7 @@ async def route_worker(route):
                         continue
 
                     dest_path = dest_id_to_path[dest_id]
-                    dest_path = increment_segment(dest_path)
+                    dest_path = increment_segment(output_data, dest_path)
                     output_data[dest_path] = concated_value
                 
                 #################################### Spit Data ####################################
@@ -313,7 +313,6 @@ async def route_worker(route):
                                         does not exists in the src_id_to_path {src_id_to_path}
                                         There must be a issue when you input data in database.""")
                         continue
-
 
                     src_path = src_id_to_path[src_id]
                     if src_path not in src_path_to_value:
@@ -333,15 +332,14 @@ async def route_worker(route):
                                 continue
 
                             dest_path = dest_id_to_path[rule.dest_field_id]
-                            dest_path = increment_segment(dest_path)
+                            dest_path = increment_segment(output_data, dest_path)
                             output_data[dest_path] = parts[i]
                     
                     if len(parts) > len(rules): # here if the while spliting, if there is some data left concatenate it with the last path
                         dest_path = dest_id_to_path[rules[-1].dest_field_id] # take the last destination path
-                        dest_path = increment_segment(dest_path)
+                        dest_path = increment_segment(output_data, dest_path)
                         logger.info(f"destination path for remaining data ---> {dest_path}")
                         output_data[dest_path] += " " + (' ').join(parts[len(rules):]) # join all the remaining parts with the remining data
-
                 logger.info(f"Output for route -> {route.name}: {output_data}")
 
                 # BUILD MESSAGE
