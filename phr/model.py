@@ -9,7 +9,7 @@ Base = declarative_base()
 class Doctor(Base):
     __tablename__ = 'doctor'
 
-    doctor_id = Column(Integer, primary_key=True, index=True)
+    doctor_id = Column(String(20), primary_key=True, index=True)
 
     name = Column(String(100), nullable=False)
     specialization = Column(String(50), nullable=True)
@@ -23,7 +23,7 @@ class Doctor(Base):
 class Patient(Base):
     __tablename__ = 'patient'
 
-    mpi = Column(Integer, primary_key= True, index= True)
+    mpi = Column(String(20), primary_key= True, index= True)
 
     nic = Column(String(15), unique=True, nullable= False)
     password = Column(String(50), nullable= False, default="")
@@ -38,15 +38,15 @@ class Patient(Base):
 class VisitingNotes(Base):
     __tablename__ = 'visiting_notes'
 
-    note_id = Column(Integer, primary_key=True, index=True)
+    note_id = Column(String(20), primary_key=True, index=True)
 
-    mpi = Column(Integer,ForeignKey('patient.mpi'), nullable=False)
-    doctor_id = Column(Integer, ForeignKey('doctor.doctor_id'), nullable=False)
+    mpi = Column(String(20),ForeignKey('patient.mpi'), nullable=False)
+    doctor_id = Column(String(20), ForeignKey('doctor.doctor_id'), nullable=False)
 
     visit_date = Column(DateTime, default=datetime.now())
     note_title = Column(String(1000), nullable=True)
     patient_complaint = Column(String(255), nullable=True)
-    dignosis = Column(String(255), nullable=True)
+    diagnosis = Column(String(255), nullable=True)
     note_details = Column(String(1000), nullable=True)
     total_bill = Column(Float, default=0, nullable=True)
 
@@ -60,11 +60,13 @@ class LabReport(Base):
     __tablename__ = "lab_report"
 
     report_id = Column(Integer, primary_key=True, index=True)
-    visit_id = Column(Integer, ForeignKey('visiting_notes.note_id'), nullable=False)
+    visit_id = Column(String(20), ForeignKey('visiting_notes.note_id'), nullable=False)
 
     lab_name = Column(String(100), nullable=False)
+    test_code = Column(String(30), nullable=False)
     test_name = Column(String(100), nullable=False)
     test_status = Column(String(10), nullable=False, default="Pending") # Arrived, decline
+    test_bill = Column(Float, default=0, nullable=True)
     created_at = Column(DateTime, default=datetime.now())
     updated_at = Column(DateTime, default=datetime.now())
 

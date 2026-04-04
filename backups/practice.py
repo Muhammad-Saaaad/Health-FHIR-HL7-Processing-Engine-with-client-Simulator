@@ -77,6 +77,6 @@ print(f"Result: {result}")
 
 # # print(re.sub(pattern=r"patient/(\d+)", repl=r"\1", string=value))
 # print(re.sub(pattern=r"\d+", repl=r"patient/()", string=value))
-lines = ["hi there-", "how are you"]
-line = "\r\n".join(lines)
-print(line.splitlines()[1:])
+# lines = ["hi there-", "how are you"]
+# line = "\r\n".join(lines)
+# print(line.splitlines()[1:])

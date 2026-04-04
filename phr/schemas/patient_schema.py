@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from datetime import date
 
 class Patient(BaseModel):
-    mpi: int
+    mpi: str
     nic: str
     name: str
     phone_no: str | None
