@@ -1,3 +1,23 @@
+"""
+Here we generate suggestions (transform_type + config) based on the following flow:
+1. generate_single_suggestion
+    1. we take the src_server and dest_server profiles into account to get any specific 
+        info we can use for the mapping (e.g. date formats, code maps, etc.)
+    2. we use the canonical names of the src and dest fields to derive their types (e.g. date, boolean, gender_code, regex, etc.)
+    3. once we have the src_type and dest_type.
+
+2. get_field_type
+    1. we will give the canonical_names and it will give us what those names type is (refer to point 2 of generate_single_suggestion)
+
+3. get_suggestion
+    1. we will give the src_profile, dest_profile, src_type, dest_type, src_canonical_name, dest_canonical_name.
+    2. it will first check the type of both src and dest fields, if they are same then it will check the field types of 
+        both src and dest. if they also match then it will return copy as type and empty config.
+        If the field types don't match then it will return the appropriate transform type and config based on the field type.
+    
+    3. if the type is not mention, then by default it will be string, means it will be just the copy, with no transformation needed.
+"""
+
 def generate_single_suggestion(
     src_server: dict,
     dest_server: dict,
@@ -163,9 +183,19 @@ def get_field_type(canonical_name: str) -> str:
 
     # ── Explicit overrides for ambiguous names ────────────────────────────────
     EXPLICIT = {
-        # regex
-        "mpi":                         "regex",
-        "patient_mpi":                 "regex",
+        # regex (Here we say that different names can have the regex pattern type, so we will take the pattern from the profile based on the canonical name)
+        "MPI":                                "id_format",
+        "VID":                                "id_format",
+        "practitioner_id":                    "id_format",
+        "coverage_patient_ref":               "subject_reference_format",
+        "invoice_patient_ref":                "subject_reference_format",
+        "encounter_patient_ref":              "subject_reference_format",
+        "lab_order_patient_ref":              "subject_reference_format",
+
+        "practitioner_role_practitioner_ref": "practitioner_reference_format",
+        "invoice_participant_ref_id":         "practitioner_reference_format",
+
+        # "":  "encounter_reference_format",
 
         # dates
         "birth_date":                  "date",

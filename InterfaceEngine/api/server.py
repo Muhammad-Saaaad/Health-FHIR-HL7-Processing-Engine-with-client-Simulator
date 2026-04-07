@@ -70,8 +70,10 @@ async def add_server(server: AddUpdateServer, request: Request, response: Respon
                 "final": "final", "pending": "pending"
             },
             "boolean": {"true": "true", "false": "false"},
-            "id_format": "\\d+", # regex
-            "subject_refrence_format": "patient/\\d+" # e.g. patient/32, we will extract the mpi from this reference and then use it in the transformation
+            "id_format": ".+", # regex
+            "subject_refrence_format": "patient/.+", # e.g. patient/32, we will extract the mpi from this reference and then use it in the transformation
+            "practitioner_reference_format": "Practitioner/.+", # e.g. Practitioner/PRAC-001, we will extract the practitioner id from this reference and then use it in the transformation
+            "encounter_reference_format": "Encounter/.+" # e.g. Encounter/45, we will extract the encounter id from this reference and then use it in the transformation
         }
 
     if server.protocol == "HL7":
@@ -81,8 +83,10 @@ async def add_server(server: AddUpdateServer, request: Request, response: Respon
         config["gender_code"] = {"male": "M", "female": "F"}
         config["status_code"] = {"active": "A", "inactive": "I", "final": "F", "pending": "P" }
         config["boolean"] = {"true": "Y", "false": "N"}
-        config["id_format"]= "\\d+"
-        config["subject_refrence_format"] = "\\d+" # e.g. patient/32, we will extract the mpi from this reference and then use it in the transformation
+        config["id_format"]= ".+"
+        config["subject_refrence_format"] = ".+" # e.g. patient/32, we will extract the mpi from this reference and then use it in the transformation
+        config["practitioner_reference_format"] = ".+" # e.g. Practitioner/PRAC-001, we will extract the practitioner id from this reference and then use it in the transformation
+        config["encounter_reference_format"] = ".+" # e.g. Encounter/45, we will extract the encounter id from this reference and then use it in the transformation
 
     try:
         new_server = models.Server(

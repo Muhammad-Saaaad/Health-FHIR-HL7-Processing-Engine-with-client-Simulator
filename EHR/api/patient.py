@@ -1,3 +1,7 @@
+from uuid import uuid4
+import logging
+from logging.handlers import RotatingFileHandler
+
 from fastapi import APIRouter, Response, status, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
@@ -9,6 +13,15 @@ import model
 from rate_limiting import limiter
 
 router = APIRouter(tags=['Patient'])
+
+logger = logging.getLogger("patient_service")
+logger.setLevel(logging.INFO)
+formatter = logging.Formatter("%(asctime)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s")
+
+handler = RotatingFileHandler(r"logs/patient_service.log", maxBytes=1000000, backupCount=1)
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+
 
 @router.get("/patients", response_model=list[schema.get_patient], status_code=status.HTTP_200_OK)
 @limiter.limit("20/minute")
@@ -28,6 +41,7 @@ def get_patient(request: Request, response: Response, db: Session = Depends(get_
         all_patients = db.query(model.Patient).all()
         return all_patients
     except Exception as e:
+        logger.error(f"Error retrieving patients: {str(e)}")
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
     
 @router.post("/patients", status_code=status.HTTP_201_CREATED)
@@ -65,7 +79,8 @@ async def add_patient(patient: schema.post_patient, request: Request, response: 
         
         # select top 1 from patient where nic = patient.nic
         if db.query(model.Patient).filter(model.Patient.nic == patient.nic).first():
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"messsage":"nic already exists"})
+            logger.warning(f"Attempt to register patient with existing NIC: {patient.nic}")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"message":"nic already exists"})
 
         new_patient = model.Patient(
             nic = patient.nic,
@@ -78,14 +93,19 @@ async def add_patient(patient: schema.post_patient, request: Request, response: 
         db.add(new_patient)
         db.flush()
         db.refresh(new_patient)
-    
+        logger.info(f"New patient added in DB: {new_patient.name} (NIC: {new_patient.nic})")
+
+        unique_id = str(uuid4())
+
         fhir_patient = {
             "resourceType": "Bundle",
+            "id": unique_id,
             "type": "message",
             "entry": [
                 {
                     "resource": {
                         "resourceType": "Patient",
+                        "id": unique_id,
                         "identifier": [
                             { "type": { "coding": [{ "code": "MR" }]}, "value": str(new_patient.mpi)},
                             { "type": { "coding": [{ "code": "NI" }]}, "value": str(patient.nic)}
@@ -99,37 +119,42 @@ async def add_patient(patient: schema.post_patient, request: Request, response: 
                 },
                 {
                     "resource": {
-                    "resourceType": "Coverage",
-                    "identifier": [{"value": "3"}], # Plan number.
-                    "status": "active",
-                    "class": [
-                        {
-                            "type": { "coding": [{"code": "plan"}] },
-                            "value": patient.plan_type,
-                        }
-                    ],
-                    "beneficiary": {
-                        "reference": str(new_patient.mpi) # patient mpi
-                    },
-                    "subscriberId": str(patient.policy_number), # policy number
-                    "payor": [
-                        {
-                            "reference": "Organization/insurance-company-001" # insurance company id
-                        }
-                    ]
-                }
+                        "resourceType": "Coverage",
+                        "id": unique_id,
+                        "identifier": [{"value": "3"}], # Plan number.
+                        "status": "active",
+                        "class": [
+                            {
+                                "type": { "coding": [{"code": "plan"}] },
+                                "value": patient.plan_type,
+                            }
+                        ],
+                        "beneficiary": {
+                            "reference": str(new_patient.mpi) # patient mpi
+                        },
+                        "subscriberId": str(patient.policy_number), # policy number
+                        "payor": [
+                            {
+                                "reference": "Organization/insurance-company-001" # insurance company id
+                            }
+                        ]
+                    }
                 }
             ]
         }
-        response = engine_service.register_engine(fhir_patient)
+        logger.info(f"Registering patient in FHIR with data: {fhir_patient}")
+        response = engine_service.register_patient(fhir_patient)
         
         if response == "sucessfull":
             db.commit()
             # db.rollback()
+            logger.info(f"Patient registered successfully in FHIR: {new_patient.name} (NIC: {new_patient.nic})")
             return {"message": "data inserted sucessfully"}
         
         db.rollback()
+        logger.error(f"Failed to register patient in FHIR: {new_patient.name} (NIC: {new_patient.nic})")    
         return JSONResponse({"message": f"Error {response}"}, status_code=status.HTTP_400_BAD_REQUEST)
     except Exception as exp:
         db.rollback()
+        logger.error(f"Exception during patient registration: {str(exp)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(exp)}")

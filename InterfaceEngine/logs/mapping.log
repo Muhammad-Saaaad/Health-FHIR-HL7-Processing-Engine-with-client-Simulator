@@ -1,179 +1,45 @@
-2026-03-23 12:13:50,364- INFO - [endpoint.py:303] - Mapped field gender to path PID-8
-2026-03-23 12:13:50,374- INFO - [endpoint.py:303] - Mapped field plan_type to path IN1-15
-2026-03-23 12:13:50,374- INFO - [endpoint.py:303] - Mapped field copay_limit_days to path IN1-52
-2026-03-23 12:13:50,380- INFO - [endpoint.py:317] - HL7 field extraction completed for endpoint_id=113, total_fields_added=7
-2026-03-23 12:13:50,380- INFO - [endpoint.py:153] - HL7 endpoint fields added successfully for endpoint_id=113
-2026-03-23 12:24:44,939- WARNING - [endpoint.py:187] - Endpoint field paths rejected: endpoint id 113 does not exist
-2026-03-23 12:24:45,960- WARNING - [endpoint.py:187] - Endpoint field paths rejected: endpoint id 113 does not exist
-2026-03-23 12:24:47,984- WARNING - [endpoint.py:187] - Endpoint field paths rejected: endpoint id 113 does not exist
-2026-03-23 12:25:01,651- WARNING - [endpoint.py:187] - Endpoint field paths rejected: endpoint id 113 does not exist
-2026-03-23 12:25:13,250- INFO - [endpoint.py:102] - Add endpoint request received: server_id=10, url=/get/registed_patient, server_protocol=HL7
-2026-03-23 12:25:13,256- INFO - [endpoint.py:134] - Endpoint created and flushed successfully: endpoint_id=114
-2026-03-23 12:25:13,256- INFO - [endpoint.py:288] - HL7 field extraction started for endpoint_id=114
-2026-03-23 12:25:13,256- WARNING - [endpoint.py:354] - No canonical mapping found for path PID-1, skipping.
-2026-03-23 12:25:13,257- INFO - [endpoint.py:303] - Mapped field mpi to path PID-3
-2026-03-23 12:25:13,257- INFO - [endpoint.py:303] - Mapped field family_name to path PID-5.1
-2026-03-23 12:25:13,258- INFO - [endpoint.py:303] - Mapped field given_name to path PID-5.2
-2026-03-23 12:25:13,258- INFO - [endpoint.py:303] - Mapped field birth_date to path PID-7
-2026-03-23 12:25:13,258- INFO - [endpoint.py:303] - Mapped field gender to path PID-8
-2026-03-23 12:25:13,265- INFO - [endpoint.py:303] - Mapped field plan_type to path IN1-15
-2026-03-23 12:25:13,265- INFO - [endpoint.py:303] - Mapped field policy_number to path IN1-36
-2026-03-23 12:25:13,270- INFO - [endpoint.py:317] - HL7 field extraction completed for endpoint_id=114, total_fields_added=7
-2026-03-23 12:25:13,271- INFO - [endpoint.py:153] - HL7 endpoint fields added successfully for endpoint_id=114
-2026-03-24 10:42:50,260- INFO - [endpoint.py:102] - Add endpoint request received: server_id=7, url=/fhir/add-patient, server_protocol=FHIR
-2026-03-24 10:42:50,310- INFO - [endpoint.py:134] - Endpoint created and flushed successfully: endpoint_id=115
-2026-03-24 10:42:50,733- INFO - [endpoint.py:219] - FHIR field extraction started for endpoint_id=115
-2026-03-24 10:42:50,733- INFO - [endpoint.py:244] - Mapped field mpi_type to path Patient-identifier[0].type.coding[0].code
-2026-03-24 10:42:50,735- INFO - [endpoint.py:244] - Mapped field mpi to path Patient-identifier[0].value
-2026-03-24 10:42:50,735- INFO - [endpoint.py:244] - Mapped field nic_type to path Patient-identifier[1].type.coding[0].code
-2026-03-24 10:42:50,737- INFO - [endpoint.py:244] - Mapped field nic to path Patient-identifier[1].value
-2026-03-24 10:42:50,737- INFO - [endpoint.py:244] - Mapped field fullname to path Patient-name[0].text
-2026-03-24 10:42:50,739- INFO - [endpoint.py:244] - Mapped field gender to path Patient-gender
-2026-03-24 10:42:50,739- INFO - [endpoint.py:244] - Mapped field birth_date to path Patient-birthDate
-2026-03-24 10:42:50,741- INFO - [endpoint.py:244] - Mapped field address to path Patient-address[0].text
-2026-03-24 10:42:50,741- INFO - [endpoint.py:244] - Mapped field phone to path Patient-telecom[0].value
-2026-03-24 10:42:50,741- INFO - [endpoint.py:244] - Mapped field patient_member_number to path Coverage-identifier[0].value
-2026-03-24 10:42:50,741- INFO - [endpoint.py:244] - Mapped field coverage_status to path Coverage-status
-2026-03-24 10:42:50,741- INFO - [endpoint.py:244] - Mapped field plan_type_code to path Coverage-class[0].type.coding[0].code
-2026-03-24 10:42:50,741- INFO - [endpoint.py:244] - Mapped field plan_type to path Coverage-class[0].value
-2026-03-24 10:42:50,741- INFO - [endpoint.py:244] - Mapped field coverage_patient to path Coverage-beneficiary.reference
-2026-03-24 10:42:50,741- INFO - [endpoint.py:244] - Mapped field policy_number to path Coverage-subscriberId
-2026-03-24 10:42:50,741- INFO - [endpoint.py:244] - Mapped field insurance_company_id to path Coverage-payor[0].reference
-2026-03-24 10:42:50,783- INFO - [endpoint.py:258] - FHIR field extraction completed for endpoint_id=115, total_fields_added=16
-2026-03-24 10:42:50,783- INFO - [endpoint.py:147] - FHIR endpoint fields added successfully for endpoint_id=115
-2026-03-24 11:08:49,180- INFO - [endpoint.py:102] - Add endpoint request received: server_id=9, url=/add/patient, server_protocol=FHIR
-2026-03-24 11:08:49,193- INFO - [endpoint.py:134] - Endpoint created and flushed successfully: endpoint_id=116
-2026-03-24 11:08:49,195- INFO - [endpoint.py:219] - FHIR field extraction started for endpoint_id=116
-2026-03-24 11:08:49,195- INFO - [endpoint.py:244] - Mapped field mpi_type to path Patient-identifier[0].type.coding[0].code
-2026-03-24 11:08:49,196- INFO - [endpoint.py:244] - Mapped field mpi to path Patient-identifier[0].value
-2026-03-24 11:08:49,196- INFO - [endpoint.py:244] - Mapped field nic_type to path Patient-identifier[1].type.coding[0].code
-2026-03-24 11:08:49,197- INFO - [endpoint.py:244] - Mapped field nic to path Patient-identifier[1].value
-2026-03-24 11:08:49,197- INFO - [endpoint.py:244] - Mapped field fullname to path Patient-name[0].text
-2026-03-24 11:08:49,197- INFO - [endpoint.py:244] - Mapped field gender to path Patient-gender
-2026-03-24 11:08:49,198- INFO - [endpoint.py:244] - Mapped field birth_date to path Patient-birthDate
-2026-03-24 11:08:49,198- INFO - [endpoint.py:244] - Mapped field address to path Patient-address[0].text
-2026-03-24 11:08:49,199- INFO - [endpoint.py:244] - Mapped field phone to path Patient-telecom[0].value
-2026-03-24 11:08:49,208- INFO - [endpoint.py:258] - FHIR field extraction completed for endpoint_id=116, total_fields_added=9
-2026-03-24 11:08:49,209- INFO - [endpoint.py:147] - FHIR endpoint fields added successfully for endpoint_id=116
-2026-03-24 15:56:04,691- INFO - [endpoint.py:102] - Add endpoint request received: server_id=10, url=/get/registed_patient, server_protocol=HL7
-2026-03-24 15:56:04,709- INFO - [endpoint.py:134] - Endpoint created and flushed successfully: endpoint_id=117
-2026-03-24 15:56:04,709- INFO - [endpoint.py:288] - HL7 field extraction started for endpoint_id=117
-2026-03-24 15:56:04,711- WARNING - [endpoint.py:354] - No canonical mapping found for path PID-1, skipping.
-2026-03-24 15:56:04,711- INFO - [endpoint.py:303] - Mapped field mpi to path PID-3
-2026-03-24 15:56:04,712- INFO - [endpoint.py:303] - Mapped field family_name to path PID-5.1
-2026-03-24 15:56:04,712- INFO - [endpoint.py:303] - Mapped field given_name to path PID-5.2
-2026-03-24 15:56:04,712- INFO - [endpoint.py:303] - Mapped field birth_date to path PID-7
-2026-03-24 15:56:04,713- INFO - [endpoint.py:303] - Mapped field gender to path PID-8
-2026-03-24 15:56:04,713- INFO - [endpoint.py:303] - Mapped field phone to path PID-13
-2026-03-24 15:56:04,726- INFO - [endpoint.py:303] - Mapped field plan_type to path IN1-15
-2026-03-24 15:56:04,726- INFO - [endpoint.py:303] - Mapped field policy_number to path IN1-36
-2026-03-24 15:56:04,731- INFO - [endpoint.py:317] - HL7 field extraction completed for endpoint_id=117, total_fields_added=8
-2026-03-24 15:56:04,731- INFO - [endpoint.py:153] - HL7 endpoint fields added successfully for endpoint_id=117
-2026-04-01 23:08:31,026- INFO - [endpoint.py:105] - Add endpoint request received: server_id=7, url=/add/visit-note, server_protocol=FHIR
-2026-04-01 23:08:31,040- INFO - [endpoint.py:137] - Endpoint created and flushed successfully: endpoint_id=118
-2026-04-01 23:08:31,237- ERROR - [endpoint.py:143] - Invalid FHIR sample message: Validation Failed: 5 validation errors for Bundle
-id
-  String should match pattern '^[A-Za-z0-9\-.]+$' [type=string_pattern_mismatch, input_value='unique_id', input_type=str]
-    For further information visit https://errors.pydantic.dev/2.12/v/string_pattern_mismatch
-entry.0.resource.id
-  String should match pattern '^[A-Za-z0-9\-.]+$' [type=string_pattern_mismatch, input_value='unique_id', input_type=str]
-    For further information visit https://errors.pydantic.dev/2.12/v/string_pattern_mismatch
-entry.1.resource.id
-  String should match pattern '^[A-Za-z0-9\-.]+$' [type=string_pattern_mismatch, input_value='unique_id', input_type=str]
-    For further information visit https://errors.pydantic.dev/2.12/v/string_pattern_mismatch
-entry.2.resource.id
-  String should match pattern '^[A-Za-z0-9\-.]+$' [type=string_pattern_mismatch, input_value='unique_id', input_type=str]
-    For further information visit https://errors.pydantic.dev/2.12/v/string_pattern_mismatch
-entry.3.resource.id
-  String should match pattern '^[A-Za-z0-9\-.]+$' [type=string_pattern_mismatch, input_value='unique_id', input_type=str]
-    For further information visit https://errors.pydantic.dev/2.12/v/string_pattern_mismatch
-2026-04-01 23:08:31,239- ERROR - [endpoint.py:161] - Add endpoint failed for url=/add/visit-note: 400: Validation Failed: 5 validation errors for Bundle
-id
-  String should match pattern '^[A-Za-z0-9\-.]+$' [type=string_pattern_mismatch, input_value='unique_id', input_type=str]
-    For further information visit https://errors.pydantic.dev/2.12/v/string_pattern_mismatch
-entry.0.resource.id
-  String should match pattern '^[A-Za-z0-9\-.]+$' [type=string_pattern_mismatch, input_value='unique_id', input_type=str]
-    For further information visit https://errors.pydantic.dev/2.12/v/string_pattern_mismatch
-entry.1.resource.id
-  String should match pattern '^[A-Za-z0-9\-.]+$' [type=string_pattern_mismatch, input_value='unique_id', input_type=str]
-    For further information visit https://errors.pydantic.dev/2.12/v/string_pattern_mismatch
-entry.2.resource.id
-  String should match pattern '^[A-Za-z0-9\-.]+$' [type=string_pattern_mismatch, input_value='unique_id', input_type=str]
-    For further information visit https://errors.pydantic.dev/2.12/v/string_pattern_mismatch
-entry.3.resource.id
-  String should match pattern '^[A-Za-z0-9\-.]+$' [type=string_pattern_mismatch, input_value='unique_id', input_type=str]
-    For further information visit https://errors.pydantic.dev/2.12/v/string_pattern_mismatch
-2026-04-01 23:11:26,387- INFO - [endpoint.py:105] - Add endpoint request received: server_id=9, url=/add/visit-note, server_protocol=FHIR
-2026-04-01 23:11:26,395- INFO - [endpoint.py:137] - Endpoint created and flushed successfully: endpoint_id=119
-2026-04-01 23:11:26,397- ERROR - [endpoint.py:143] - Invalid FHIR sample message: Validation Failed: 5 validation errors for Bundle
-id
-  String should match pattern '^[A-Za-z0-9\-.]+$' [type=string_pattern_mismatch, input_value='unique_id', input_type=str]
-    For further information visit https://errors.pydantic.dev/2.12/v/string_pattern_mismatch
-entry.0.resource.id
-  String should match pattern '^[A-Za-z0-9\-.]+$' [type=string_pattern_mismatch, input_value='unique_id', input_type=str]
-    For further information visit https://errors.pydantic.dev/2.12/v/string_pattern_mismatch
-entry.1.resource.id
-  String should match pattern '^[A-Za-z0-9\-.]+$' [type=string_pattern_mismatch, input_value='unique_id', input_type=str]
-    For further information visit https://errors.pydantic.dev/2.12/v/string_pattern_mismatch
-entry.2.resource.id
-  String should match pattern '^[A-Za-z0-9\-.]+$' [type=string_pattern_mismatch, input_value='unique_id', input_type=str]
-    For further information visit https://errors.pydantic.dev/2.12/v/string_pattern_mismatch
-entry.3.resource.id
-  String should match pattern '^[A-Za-z0-9\-.]+$' [type=string_pattern_mismatch, input_value='unique_id', input_type=str]
-    For further information visit https://errors.pydantic.dev/2.12/v/string_pattern_mismatch
-2026-04-01 23:11:26,398- ERROR - [endpoint.py:161] - Add endpoint failed for url=/add/visit-note: 400: Validation Failed: 5 validation errors for Bundle
-id
-  String should match pattern '^[A-Za-z0-9\-.]+$' [type=string_pattern_mismatch, input_value='unique_id', input_type=str]
-    For further information visit https://errors.pydantic.dev/2.12/v/string_pattern_mismatch
-entry.0.resource.id
-  String should match pattern '^[A-Za-z0-9\-.]+$' [type=string_pattern_mismatch, input_value='unique_id', input_type=str]
-    For further information visit https://errors.pydantic.dev/2.12/v/string_pattern_mismatch
-entry.1.resource.id
-  String should match pattern '^[A-Za-z0-9\-.]+$' [type=string_pattern_mismatch, input_value='unique_id', input_type=str]
-    For further information visit https://errors.pydantic.dev/2.12/v/string_pattern_mismatch
-entry.2.resource.id
-  String should match pattern '^[A-Za-z0-9\-.]+$' [type=string_pattern_mismatch, input_value='unique_id', input_type=str]
-    For further information visit https://errors.pydantic.dev/2.12/v/string_pattern_mismatch
-entry.3.resource.id
-  String should match pattern '^[A-Za-z0-9\-.]+$' [type=string_pattern_mismatch, input_value='unique_id', input_type=str]
-    For further information visit https://errors.pydantic.dev/2.12/v/string_pattern_mismatch
-2026-04-01 23:15:55,927- INFO - [endpoint.py:105] - Add endpoint request received: server_id=7, url=add/visit-note, server_protocol=FHIR
-2026-04-01 23:15:55,966- INFO - [endpoint.py:137] - Endpoint created and flushed successfully: endpoint_id=120
-2026-04-01 23:15:56,464- INFO - [endpoint.py:223] - FHIR field extraction started for endpoint_id=120
-2026-04-01 23:15:56,465- WARNING - [endpoint.py:358] - No canonical mapping found for path Practitioner-id, skipping.
-2026-04-01 23:15:56,465- INFO - [endpoint.py:248] - Mapped field practitioner_npi to path Practitioner-identifier[0].value
-2026-04-01 23:15:56,466- INFO - [endpoint.py:248] - Mapped field practitioner_fullname to path Practitioner-name[0].text
-2026-04-01 23:15:56,466- INFO - [endpoint.py:248] - Mapped field practitioner_phone to path Practitioner-telecom[0].value
-2026-04-01 23:15:56,467- WARNING - [endpoint.py:358] - No canonical mapping found for path Practitioner-extension[0].valueString, skipping.
-2026-04-01 23:15:56,467- WARNING - [endpoint.py:358] - No canonical mapping found for path PractitionerRole-id, skipping.
-2026-04-01 23:15:56,468- INFO - [endpoint.py:248] - Mapped field practitioner_role_specialty_display to path PractitionerRole-specialty[0].coding[0].display
-2026-04-01 23:15:56,468- INFO - [endpoint.py:248] - Mapped field practitioner_role_practitioner_ref to path PractitionerRole-practitioner.reference
-2026-04-01 23:15:56,469- WARNING - [endpoint.py:358] - No canonical mapping found for path Encounter-id, skipping.
-2026-04-01 23:15:56,469- INFO - [endpoint.py:248] - Mapped field visit_number to path Encounter-identifier[0].value
-2026-04-01 23:15:56,470- INFO - [endpoint.py:248] - Mapped field encounter_status to path Encounter-status
-2026-04-01 23:15:56,471- INFO - [endpoint.py:248] - Mapped field patient_class to path Encounter-class.code
-2026-04-01 23:15:56,471- INFO - [endpoint.py:248] - Mapped field encounter_title to path Encounter-type[0].text
-2026-04-01 23:15:56,472- INFO - [endpoint.py:248] - Mapped field encounter_complaint to path Encounter-reasonCode[0].text
-2026-04-01 23:15:56,473- INFO - [endpoint.py:248] - Mapped field encounter_diagnosis_display to path Encounter-diagnosis[0].condition.display
-2026-04-01 23:15:56,474- INFO - [endpoint.py:248] - Mapped field mpi to path Encounter-subject.reference
-2026-04-01 23:15:56,474- INFO - [endpoint.py:248] - Mapped field encounter_notes to path Encounter-extension[0].valueString
-2026-04-01 23:15:56,475- WARNING - [endpoint.py:358] - No canonical mapping found for path ServiceRequest-id, skipping.
-2026-04-01 23:15:56,476- INFO - [endpoint.py:248] - Mapped field lab_order_status to path ServiceRequest-status
-2026-04-01 23:15:56,477- INFO - [endpoint.py:248] - Mapped field lab_order_intent to path ServiceRequest-intent
-2026-04-01 23:15:56,477- INFO - [endpoint.py:248] - Mapped field lab_order_code to path ServiceRequest-code.coding[0].code
-2026-04-01 23:15:56,478- INFO - [endpoint.py:248] - Mapped field lab_order_name to path ServiceRequest-code.coding[0].display
-2026-04-01 23:15:56,479- INFO - [endpoint.py:248] - Mapped field patient_mpi to path ServiceRequest-subject.reference
-2026-04-01 23:15:56,509- INFO - [endpoint.py:262] - FHIR field extraction completed for endpoint_id=120, total_fields_added=18
-2026-04-01 23:15:56,509- INFO - [endpoint.py:150] - FHIR endpoint fields added successfully for endpoint_id=120
-2026-04-02 21:19:58,764- INFO - [endpoint.py:105] - Add endpoint request received: server_id=8, url=/take_lab_order, server_protocol=HL7
-2026-04-02 21:19:58,795- INFO - [endpoint.py:137] - Endpoint created and flushed successfully: endpoint_id=121
-2026-04-02 21:19:58,795- INFO - [endpoint.py:292] - HL7 field extraction started for endpoint_id=121
-2026-04-02 21:19:58,799- WARNING - [endpoint.py:358] - No canonical mapping found for path PID-1, skipping.
-2026-04-02 21:19:58,799- INFO - [endpoint.py:307] - Mapped field MPI to path PID-3
-2026-04-02 21:19:58,811- INFO - [endpoint.py:307] - Mapped field lab_order_set_id to path OBR-1
-2026-04-02 21:19:58,811- INFO - [endpoint.py:307] - Mapped field VID to path OBR-2
-2026-04-02 21:19:58,815- INFO - [endpoint.py:307] - Mapped field lab_order_code to path OBR-4.1
-2026-04-02 21:19:58,815- INFO - [endpoint.py:307] - Mapped field lab_order_name to path OBR-4.2
-2026-04-02 21:19:58,832- INFO - [endpoint.py:321] - HL7 field extraction completed for endpoint_id=121, total_fields_added=5
-2026-04-02 21:19:58,832- INFO - [endpoint.py:156] - HL7 endpoint fields added successfully for endpoint_id=121
-2026-04-02 21:26:57,882- WARNING - [endpoint.py:191] - Endpoint field paths rejected: endpoint id 121 does not exist
+2026-04-07 15:38:21,932- INFO - [endpoint.py:250] - Mapped path Coverage-subscriberId to canonical name policy_number
+2026-04-07 15:38:21,933- INFO - [endpoint.py:250] - Mapped path Coverage-payor[0].reference to canonical name insurance_company_id
+2026-04-07 15:38:21,945- INFO - [endpoint.py:264] - FHIR field extraction completed for endpoint_id=126, total_fields_added=16
+2026-04-07 15:38:21,946- INFO - [endpoint.py:150] - FHIR endpoint fields added successfully for endpoint_id=126
+2026-04-07 15:38:55,521- INFO - [endpoint.py:105] - Add endpoint request received: server_id=14, url=/get/new-patient, server_protocol=HL7
+2026-04-07 15:38:55,530- INFO - [endpoint.py:137] - Endpoint created and flushed successfully: endpoint_id=127
+2026-04-07 15:38:55,530- INFO - [endpoint.py:294] - HL7 field extraction started for endpoint_id=127
+2026-04-07 15:38:55,530- WARNING - [endpoint.py:360] - No canonical mapping found for path PID-1, skipping.
+2026-04-07 15:38:55,530- INFO - [endpoint.py:309] - Mapped path PID-3 to canonical name MPI
+2026-04-07 15:38:55,531- INFO - [endpoint.py:309] - Mapped path PID-5.1 to canonical name family_name
+2026-04-07 15:38:55,531- INFO - [endpoint.py:309] - Mapped path PID-5.2 to canonical name given_name
+2026-04-07 15:38:55,531- INFO - [endpoint.py:309] - Mapped path PID-7 to canonical name birth_date
+2026-04-07 15:38:55,532- INFO - [endpoint.py:309] - Mapped path PID-8 to canonical name gender
+2026-04-07 15:38:55,532- INFO - [endpoint.py:309] - Mapped path PID-13 to canonical name phone
+2026-04-07 15:38:55,541- INFO - [endpoint.py:323] - HL7 field extraction completed for endpoint_id=127, total_fields_added=6
+2026-04-07 15:38:55,541- INFO - [endpoint.py:156] - HL7 endpoint fields added successfully for endpoint_id=127
+2026-04-07 15:40:46,631- INFO - [endpoint.py:105] - Add endpoint request received: server_id=13, url=/add/patient, server_protocol=FHIR
+2026-04-07 15:40:46,638- INFO - [endpoint.py:137] - Endpoint created and flushed successfully: endpoint_id=128
+2026-04-07 15:40:46,639- INFO - [endpoint.py:223] - FHIR field extraction started for endpoint_id=128
+2026-04-07 15:40:46,640- INFO - [endpoint.py:240] - Path Extraction Completed for endpoint_id=128, withh paths:
+['Patient-identifier[0].type.coding[0].code', 'Patient-identifier[0].value', 'Patient-identifier[1].type.coding[0].code', 'Patient-identifier[1].value', 'Patient-name[0].text', 'Patient-gender', 'Patient-birthDate', 'Patient-address[0].text', 'Patient-telecom[0].value']
+2026-04-07 15:40:46,640- INFO - [endpoint.py:250] - Mapped path Patient-identifier[0].type.coding[0].code to canonical name MPI_type
+2026-04-07 15:40:46,640- INFO - [endpoint.py:250] - Mapped path Patient-identifier[0].value to canonical name MPI
+2026-04-07 15:40:46,641- INFO - [endpoint.py:250] - Mapped path Patient-identifier[1].type.coding[0].code to canonical name nic_type
+2026-04-07 15:40:46,641- INFO - [endpoint.py:250] - Mapped path Patient-identifier[1].value to canonical name nic
+2026-04-07 15:40:46,642- INFO - [endpoint.py:250] - Mapped path Patient-name[0].text to canonical name fullname
+2026-04-07 15:40:46,642- INFO - [endpoint.py:250] - Mapped path Patient-gender to canonical name gender
+2026-04-07 15:40:46,642- INFO - [endpoint.py:250] - Mapped path Patient-birthDate to canonical name birth_date
+2026-04-07 15:40:46,643- INFO - [endpoint.py:250] - Mapped path Patient-address[0].text to canonical name address
+2026-04-07 15:40:46,643- INFO - [endpoint.py:250] - Mapped path Patient-telecom[0].value to canonical name phone
+2026-04-07 15:40:46,651- INFO - [endpoint.py:264] - FHIR field extraction completed for endpoint_id=128, total_fields_added=9
+2026-04-07 15:40:46,651- INFO - [endpoint.py:150] - FHIR endpoint fields added successfully for endpoint_id=128
+2026-04-07 15:41:14,570- INFO - [endpoint.py:105] - Add endpoint request received: server_id=15, url=/get/registed_patient, server_protocol=HL7
+2026-04-07 15:41:14,578- INFO - [endpoint.py:137] - Endpoint created and flushed successfully: endpoint_id=129
+2026-04-07 15:41:14,578- INFO - [endpoint.py:294] - HL7 field extraction started for endpoint_id=129
+2026-04-07 15:41:14,579- WARNING - [endpoint.py:360] - No canonical mapping found for path PID-1, skipping.
+2026-04-07 15:41:14,579- INFO - [endpoint.py:309] - Mapped path PID-3 to canonical name MPI
+2026-04-07 15:41:14,579- INFO - [endpoint.py:309] - Mapped path PID-5.1 to canonical name family_name
+2026-04-07 15:41:14,580- INFO - [endpoint.py:309] - Mapped path PID-5.2 to canonical name given_name
+2026-04-07 15:41:14,581- INFO - [endpoint.py:309] - Mapped path PID-7 to canonical name birth_date
+2026-04-07 15:41:14,581- INFO - [endpoint.py:309] - Mapped path PID-8 to canonical name gender
+2026-04-07 15:41:14,587- INFO - [endpoint.py:309] - Mapped path IN1-15 to canonical name plan_type
+2026-04-07 15:41:14,588- INFO - [endpoint.py:309] - Mapped path IN1-36 to canonical name policy_number
+2026-04-07 15:41:14,592- INFO - [endpoint.py:323] - HL7 field extraction completed for endpoint_id=129, total_fields_added=7
+2026-04-07 15:41:14,593- INFO - [endpoint.py:156] - HL7 endpoint fields added successfully for endpoint_id=129

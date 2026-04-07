@@ -237,6 +237,8 @@ def add_fhir_endpoint_fields(endpoint_id: int, sample_msg: str,  db: Session) ->
                 # Prefix with resource type for the same reason as above.
                 paths.extend([f"{resource_type}-{p}" for p in raw_paths]
         )
+        logger.info(f"Path Extraction Completed for endpoint_id={endpoint_id}, withh paths:\n{paths}")
+
         if len(paths) > 0:
             endpoint_fields = {}
             for path in paths:
@@ -244,11 +246,11 @@ def add_fhir_endpoint_fields(endpoint_id: int, sample_msg: str,  db: Session) ->
                 name = resolve_canonical_name(full_path=path)
                 if not name:
                     continue
-                endpoint_fields[name] = path
-                logger.info(f"Mapped field {name} to path {path}")
+                endpoint_fields[path] = name 
+                logger.info(f"Mapped path {path} to canonical name {name}")
             
             new_fields = []
-            for name, path in endpoint_fields.items():
+            for path, name in endpoint_fields.items():
                 field = models.EndpointFields(
                     endpoint_id=endpoint_id,
                     resource=path.split("-")[0].strip(), # resource type is the prefix before the first dash
@@ -303,11 +305,11 @@ def add_hl7_endpoint_fields(endpoint_id: int, sample_msg: str,  db: Session) -> 
                 name = resolve_canonical_name(full_path=path)
                 if not name:
                     continue
-                endpoint_fields[name] = path
-                logger.info(f"Mapped field {name} to path {path}")
+                endpoint_fields[path] = name
+                logger.info(f"Mapped path {path} to canonical name {name}")
                
             new_fields = []
-            for name, path in endpoint_fields.items():
+            for path, name in endpoint_fields.items():
                 field = models.EndpointFields(
                     endpoint_id=endpoint_id,
                     resource=segment_type,

@@ -173,11 +173,13 @@ async def get_visit_note(req: Request, db: Session = Depends(get_db)):
                 if lab_mpi.split("/")[-1] != visit_note['mpi']:
                     logger.warning(f"Patient reference in lab test does not match with the patient reference in visit note: \n {lab_test}")
                     continue
+                lab_id = resource.get("performer", [{"reference": None}])[0].get("reference", None).split("/")[-1]
+                lab_name = resource.get("performer", [{"display": None}])[0].get("display", None)
 
                 test_payload = {
-                    # "lab_name": resource.get("requester", {"display": None}).get("display", None),
+                    "lab_id": lab_id,
                     "visit_id": visit_note['note_id'],
-                    "lab_name": "Unknown Lab",
+                    "lab_name": lab_name or "Unknown Lab",
                     "test_code": test_code,
                     "test_name": test_name
                 }
@@ -228,6 +230,7 @@ async def get_visit_note(req: Request, db: Session = Depends(get_db)):
 
             lab_report_obj = model.LabReport(
                 visit_id = lab_test['visit_id'],
+                lab_id = lab_test['lab_id'],
                 lab_name = lab_test['lab_name'],
                 test_code = lab_test['test_code'],
                 test_name = lab_test['test_name']

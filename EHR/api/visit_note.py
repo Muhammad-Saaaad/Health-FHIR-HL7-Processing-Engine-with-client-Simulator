@@ -1,14 +1,25 @@
 from uuid import uuid4
+import logging
+from logging.handlers import RotatingFileHandler
 
 from fastapi import APIRouter, status, Depends, HTTPException, Request, Response
 from sqlalchemy.orm import Session
 
+from .engine_service import send_visit_note_to_engine
 from schemas import visit_note_schema as schema
+from schemas import lab_schema
 from database import get_db
 import model
 from rate_limiting import limiter
 
 router = APIRouter(tags=['Visit Note'])
+
+logger = logging.getLogger("visit_note_logger")
+logger.setLevel(logging.INFO)
+formater = logging.Formatter("%(asctime)s- %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s")
+handler = RotatingFileHandler("logs/visit_note.log", maxBytes=5*1024*1024, backupCount=2) # 5 MB per file, keep 2 backups
+handler.setFormatter(formater)
+logger.addHandler(handler)
 
 @router.post("/visit-note-add", status_code=status.HTTP_201_CREATED)
 @limiter.limit("10/minute")
@@ -40,6 +51,7 @@ def add_visit_note(visit_note: schema.VisitNote ,request: Request, response: Res
     - `400 Bad Request`: Bill creation failed internally, or any unexpected database error
     """
     try:
+        logger.info(f"Received request to add visit note for patient MPI: {visit_note.mpi} by doctor ID: {visit_note.doctor_id}")
         new_bill = model.Bill(
             insurance_amount = visit_note.bill_amount,
             bill_status = False,
@@ -49,11 +61,15 @@ def add_visit_note(visit_note: schema.VisitNote ,request: Request, response: Res
         db.flush()
 
         bill_id = new_bill.bill_id
-        if not db.get(model.Bill, bill_id):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="bill not added due to internal issues")
+        logger.info(f"Created bill with ID: {bill_id}")
         
+        if not db.get(model.Patient, visit_note.mpi):
+            logger.error(f"Invalid patient MPI provided: {visit_note.mpi}")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid patient MPI")
+
         is_doctor = db.query(model.Doctor).filter(model.Doctor.doctor_id == visit_note.doctor_id).first()
         if not is_doctor:
+            logger.error(f"Invalid doctor ID provided: {visit_note.doctor_id}")
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid doctor ID")
 
         new_visit_note = model.VisitingNotes(
@@ -67,23 +83,11 @@ def add_visit_note(visit_note: schema.VisitNote ,request: Request, response: Res
             note_details = visit_note.note_details,
         )
         db.add(new_visit_note)
-
-        if visit_note.test_names:
-            
-            lab_models = []
-            for test in visit_note.test_names:
-                lab_models.append(
-                    model.LabReport(
-                        visit_id = new_visit_note.note_id,
-                        lab_name = visit_note.lab_name,
-                        test_name = test
-                    )
-                )
-            db.add_all(lab_models)
         db.flush()
 
-        unique_id = str(uuid4())
+        logger.info("Visit note added to session, preparing FHIR message for synchronization")
 
+        unique_id = str(uuid4())
         patient_visit = {
             "resourceType": "Bundle",
             "type": "message",
@@ -94,7 +98,7 @@ def add_visit_note(visit_note: schema.VisitNote ,request: Request, response: Res
                         "resourceType": "Practitioner",
                         "id": unique_id,
                         "identifier" :[ {"value": str(is_doctor.doctor_id)} ],
-                        "name": [{"text": is_doctor.doctor_name}],
+                        "name": [{"text": is_doctor.name}],
                         "telecom": [{"value": str(is_doctor.phone_no)}],
                         "extension": [{
                             "valueString": is_doctor.about
@@ -142,7 +146,7 @@ def add_visit_note(visit_note: schema.VisitNote ,request: Request, response: Res
                                 }
                             }
                         ],
-                        "subject": {"reference": f"patient/{str(visit_note.mpi)}"}, # reference to the patient resource (with mpi = 32 in this case)
+                        "subject": {"reference": f"Patient/{str(visit_note.mpi)}"}, # reference to the patient resource (with mpi = 32 in this case)
                         # 4. CONSULTATION NOTES
                         "extension": [{
                                 "valueString": new_visit_note.note_details
@@ -152,31 +156,103 @@ def add_visit_note(visit_note: schema.VisitNote ,request: Request, response: Res
                 },
                 {
                     "resource": {
-                        "resourceType": "ServiceRequest",
-                        "id": unique_id,
-                        "status": "active",
-                        "intent": "order",
-                        "code":{
-                            "coding": [
-                                {
-                                    "code": "73761001",
-                                    "display": "Headache (disorder)"
-                                }
-                            ]
-                        },
-                        "subject": {"reference": f"patient/{str(visit_note.mpi)}"}
+                        "resourceType": "Invoice",
+                        "id": "5e4d2222-11b8-4acc-9998-40a49e273c4e",
+                        "status": "issued",
+                        "subject": {"reference": f"Patient/{str(visit_note.mpi)}"},
+                        "participant": [{"actor": {"reference": f"Practitioner/{str(is_doctor.doctor_id)}" } }],
+                        "totalNet": {"value": str(visit_note.bill_amount)} # "currency": "USD", this can also be added.
                     }
                 }
             ]
         }
 
-        db.commit()
-        db.refresh(new_visit_note)
+        if visit_note.test_names and visit_note.lab_name: # if both lab name and test are provided, then only process lab tests
+            
+            is_sucess, patient_visit = get_test_report(
+                unique_id = unique_id,
+                fhir_message = patient_visit,
+                visit_id = new_visit_note.note_id,
+                mpi = visit_note.mpi,
+                lab_name = visit_note.lab_name,
+                test_details = visit_note.test_names,
+                db = db
+            )
+            if not is_sucess:
+                logger.error("Failed to process lab test details for visit note")
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to process lab test details")    
+            logger.info("Lab test details processed successfully and added to FHIR message")
+        
+        logger.info(f"Final FHIR message for synchronization: {patient_visit}")
+
+        # ----- Send the complete FHIR message to the engine for synchronization -----
+        sucess_message = send_visit_note_to_engine(patient_visit)
+
+        if sucess_message == "sucessfull":
+            db.commit()
+            db.refresh(new_visit_note)
+            logger.info(f"Visit note with ID {new_visit_note.note_id} committed to database and synchronized with engine successfully")
+        else:
+            logger.error(f"Failed to synchronize visit note with engine: {sucess_message}")
+            db.rollback()
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Failed to synchronize with engine: {sucess_message}")
         return {"message": "data inserted sucessfully"}
         
     except Exception as exp:
         db.rollback()
+        logger.error(f"Error occurred while adding visit note: {str(exp)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(exp)}")
+
+def get_test_report(
+        unique_id: str,
+        fhir_message: dict,
+        visit_id: int,
+        mpi: int,
+        lab_name: str, 
+        test_details: list[lab_schema.LoincMaster], 
+        db: Session) -> tuple[bool , dict[str, str]]:
+    """
+        Here I take the lab tests, and check if they exisits in the loinc master table, if yes then I will
+        add them to the database as well as in the fhir message.
+    """
+
+    logger.info(f"Processing lab test details for visit ID: {visit_id}, patient MPI: {mpi}, lab name: {lab_name}")
+
+    lab_reports = []
+    for test_detail in test_details:
+        loinc_entry = db.query(model.LoincMaster).filter(model.LoincMaster.loinc_code == test_detail.loinc_code).first()
+        if not loinc_entry:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"LOINC code {test_detail.loinc_code} not found for test: {test_detail.long_common_name}")
+        
+        lab_report = model.LabReport(
+            visit_id=visit_id,
+            loinc_code=test_detail.loinc_code,
+            lab_name=lab_name,
+            test_name=test_detail.long_common_name,
+        )
+        lab_reports.append(lab_report)
+        fhir_message["entry"].append(
+            {
+                "resource": {
+                    "resourceType": "ServiceRequest",
+                    "id": unique_id,
+                    "status": "active",
+                    "intent": "order",
+                    "code":{
+                        "coding": [
+                            {
+                                "code": test_detail.loinc_code,
+                                "display": test_detail.long_common_name
+                            }
+                        ]
+                    },
+                    "subject": {"reference": f"Patient/{str(mpi)}"}
+                }
+            }
+        )
+    db.add_all(lab_reports)
+    db.flush()
+    return True, fhir_message
 
 
 @router.get("/all-visit-notes{doc_id}/{pid}", response_model=list[schema.ViewNote] ,status_code=status.HTTP_200_OK)

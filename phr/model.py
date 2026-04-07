@@ -61,8 +61,9 @@ class LabReport(Base):
 
     report_id = Column(Integer, primary_key=True, index=True)
     visit_id = Column(String(20), ForeignKey('visiting_notes.note_id'), nullable=False)
+    lab_id = Column(String(20), nullable=False) # the id for the lab from which the test is done.
 
-    lab_name = Column(String(100), nullable=False)
+    lab_name = Column(String(100), nullable=False) # from which lab the test is done
     test_code = Column(String(30), nullable=False)
     test_name = Column(String(100), nullable=False)
     test_status = Column(String(10), nullable=False, default="Pending") # Arrived, decline

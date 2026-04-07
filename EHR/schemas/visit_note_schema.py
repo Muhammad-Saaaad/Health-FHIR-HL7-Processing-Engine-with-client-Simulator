@@ -1,6 +1,8 @@
 from datetime import datetime
 from pydantic import BaseModel
 
+from .lab_schema import LoincMaster
+
 class VisitNote(BaseModel):
     mpi : int
     doctor_id : int
@@ -12,7 +14,7 @@ class VisitNote(BaseModel):
     bill_amount : float
 
     lab_name: str | None
-    test_names: list[str] | None
+    test_names: list[LoincMaster] | None
 
     model_config = {"from_attributes": True}
 

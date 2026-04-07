@@ -488,18 +488,18 @@ async def ingest(full_path: str, req: Request):
             if route.route_id in route_queue:
                 future = loop.create_future()
                 await route_queue[route.route_id].put((src_path_to_value, future))
-                delivery_futures.append((route.route_id, future))
+                delivery_futures.append((route.route_id, route.name, future))
             else:
                 logger.warning("trace=%s route_queue_missing route_id=%s", trace_id, route.name)
         
         # Wait for all route workers to finish delivery.
         # If any delivery failed, raise an error so the caller (EHR) knows to rollback.
         errors = []
-        for route_id, future in delivery_futures:
+        for route_id, route_name, future in delivery_futures:
             try:
                 await future
             except Exception as exp:
-                errors.append(f"Route {route_id}: {str(exp)}")
+                errors.append(f"Route -> {route_name}: {str(exp)}")
         
         if errors:
             logger.error("trace=%s delivery_failed errors=%s", trace_id, errors)

@@ -1,5 +1,6 @@
 from datetime import datetime
 import logging
+from logging.handlers import RotatingFileHandler
 import re
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -11,6 +12,17 @@ from database import get_db
 import models
 
 router = APIRouter(tags=["Engine"])
+
+logger = logging.getLogger("engine_service")
+logger.setLevel(logging.INFO)
+formater = logging.Formatter("%(asctime)s- %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s")
+handler = RotatingFileHandler(
+    r"logs\engine_service.log",
+    maxBytes=20000, # 20KB
+    backupCount=1
+)
+handler.setFormatter(formater)
+logger.addHandler(handler)
 
 # MSH|^~\\&|EHR||payer||20260203120000||ADT^A01|MSG00001|P|2.5
 # PID|1||23||saad^Muhammad||20041006|M|||||
@@ -53,16 +65,19 @@ async def get_registed_patient(req: Request, db: Session = Depends(get_db)):
         # HL7 is sent as plain text — read raw bytes and decode
         raw = await req.body()
         data = raw.decode("utf-8", errors="replace")
+        logger.info(f"Received HL7 message for patient registration: {data}")
 
         # Parse all segments
         all_values = {}
         for segment in data.splitlines()[1:]:
             if not segment.strip():
+                logger.warning(f"Skipping empty HL7 segment in message: {data}")
                 continue
             _, paths = hl7_extract_paths(segment=segment)
             segment_values = get_hl7_value_by_path(data, paths)
             all_values.update(segment_values)
 
+        logger.info(f"Extracted values from HL7 message: {all_values}")
         # --- Extract from PID ---
         dt = datetime.strptime(all_values['PID-7'], "%Y%m%d")
         date_of_birth = dt.strftime("%Y-%m-%d")
@@ -77,9 +92,11 @@ async def get_registed_patient(req: Request, db: Session = Depends(get_db)):
         
         phone_no = all_values.get('PID-13') or all_values.get('PID-14') or None
 
-    except HTTPException:
+    except HTTPException as http_exp:
+        logger.error(f"HTTPException: {http_exp.detail} while processing HL7 message: {data}")
         raise
     except Exception as exp:
+        logger.error(f"Unexpected error while processing HL7 message: {data}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
 
     # --- Upsert logic ---
@@ -87,7 +104,18 @@ async def get_registed_patient(req: Request, db: Session = Depends(get_db)):
     # policy_id from IN1 maps to InsurancePolicy.policy_id
     policy_id = all_values.get('IN1-36') or all_values.get('IN1-2')
     plan_type = all_values.get('IN1-15') or all_values.get('IN1-3')
+    if not all_values.get("PID-3"):
+        logger.error(f"Missing required PID-3 field in HL7 message: {data}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing required PID-3 field")
     mpi = int(all_values['PID-3'].strip())
+
+    if not policy_id:
+        logger.warning(f"Missing policy ID in IN1 segment of HL7 message: {data}. Cannot match patient without policy ID.")
+        policy_id= "0"
+    if not plan_type:
+        logger.warning(f"Missing plan type in IN1 segment of HL7 message: {data}. Cannot match patient without plan type.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing required IN1-15 or IN1-3 field for plan type")
+        
     existing_patient = (
         db.query(models.Patient)
         .join(models.InsurancePolicy, models.InsurancePolicy.policy_id == int(str(policy_id).strip()))
@@ -102,6 +130,7 @@ async def get_registed_patient(req: Request, db: Session = Depends(get_db)):
 
     if existing_patient:
         # Patient already registered in Payer — just update the MPI
+        logger.info(f"Found existing patient for HL7 data. Updating MPI to {mpi} for patient ID {existing_patient.id}")
         existing_patient.mpi = mpi
         db.commit()
         db.refresh(existing_patient)
@@ -109,6 +138,7 @@ async def get_registed_patient(req: Request, db: Session = Depends(get_db)):
         return JSONResponse(content={"message": "Patient MPI updated successfully"}, status_code=status.HTTP_200_OK)
     else:
         # raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found")
+        logger.info(f"Patient not found for HL7 data. Attempting to register new patient.")
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 "http://localhost:8003/reg_patient",
@@ -123,19 +153,17 @@ async def get_registed_patient(req: Request, db: Session = Depends(get_db)):
                 }
             )
             if response.status_code == 201:
+                logger.info(f"Successfully registered new patient via /reg_patient endpoint for HL7 data: {data}")
                 return JSONResponse(
                     content={"message": "Patient not found, but registration endpoint was called to create a new patient."},
                     status_code=status.HTTP_200_OK
                 )
             else:
+                logger.error(f"Failed to register new patient via /reg_patient endpoint for HL7 data: {data}")
                 return JSONResponse(
                     content={"message": "Patient not found, and registration endpoint failed to create a new patient. error: " + response.text},
                     status_code=status.HTTP_404_NOT_FOUND
                 )
-            
-                
-
-
 
 def hl7_extract_paths(segment):
     """

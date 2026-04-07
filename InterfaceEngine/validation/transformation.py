@@ -95,28 +95,30 @@ def increment_segment(output_data: dict, segment_path: str) -> str:
 
 if __name__ == "__main__":
 
-    output_data = {
-        "Patient[1]-name": "John Doe",
-        "Patient[2]-name": "Jane Doe",
+    # output_data = {
+    #     "Patient[1]-name": "John Doe",
+    #     "Patient[2]-name": "Jane Doe",
 
-        "Patient-identifier[1].value": "12345",
-        "Patient-identifier[2].value": "67890",
+    #     "Patient-identifier[1].value": "12345",
+    #     "Patient-identifier[2].value": "67890",
 
-        "PID[1]-5.1": "John",
-        "PID[2]-5.1": "Jane",
-        "ServiceRequest[2]-name": "Blood Test"
-    }
+    #     "PID[1]-5.1": "John",
+    #     "PID[2]-5.1": "Jane",
+    #     "ServiceRequest[2]-name": "Blood Test"
+    # }
 
-    print("Patient-identifier[1].value -> ",increment_segment(output_data, "Patient-identifier[1].value"))
-    print("\nPatient[1]-identifier[0].type.coding[0].code -> ",increment_segment(output_data, "Patient[1]-identifier[0].type.coding[0].code"))
-    print("\nPatient-name.text -> ",increment_segment(output_data, "Patient-name.text"))
-    print("\nPatient[1]-name.text -> ",increment_segment(output_data, "Patient[1]-name.text"))
-    print("\nPatient[2]-name -> ",increment_segment(output_data, "Patient[2]-name"))
-    print("\nPID-5.1 -> ",increment_segment(output_data, "PID-5.1"))
-    print("\nPID[2]-5.2 -> ",increment_segment(output_data, "PID[2]-5.2"))
-    print("\nServiceRequest[2]-name -> ",increment_segment(output_data, "ServiceRequest-name"))
-    print("\nTest-name -> ",increment_segment(output_data, "Test-name"))
+    # print("Patient-identifier[1].value -> ",increment_segment(output_data, "Patient-identifier[1].value"))
+    # print("\nPatient[1]-identifier[0].type.coding[0].code -> ",increment_segment(output_data, "Patient[1]-identifier[0].type.coding[0].code"))
+    # print("\nPatient-name.text -> ",increment_segment(output_data, "Patient-name.text"))
+    # print("\nPatient[1]-name.text -> ",increment_segment(output_data, "Patient[1]-name.text"))
+    # print("\nPatient[2]-name -> ",increment_segment(output_data, "Patient[2]-name"))
+    # print("\nPID-5.1 -> ",increment_segment(output_data, "PID-5.1"))
+    # print("\nPID[2]-5.2 -> ",increment_segment(output_data, "PID[2]-5.2"))
+    # print("\nServiceRequest[2]-name -> ",increment_segment(output_data, "ServiceRequest-name"))
+    # print("\nTest-name -> ",increment_segment(output_data, "Test-name"))
 
     # string = "Patient[23]"
     # pattern = r"\[(\d+)\]"
     # print(re.search(pattern, string).group(1))
+    print(regex_replace_with_template("Practitioner/a123-c", "Practitioner/.+", ".+"))
+    print(regex_replace_with_template("a123-c/VID", ".+", "Practitioner/.+"))

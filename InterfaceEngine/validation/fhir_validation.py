@@ -317,7 +317,7 @@ if __name__ == "__main__":
                     "resourceType": "PractitionerRole",
                     "id": "5e4d2222-11b8-4acc-9998-40a49e273c4e",
                     "specialty": [ { "coding": [{"display": "General Practitioner"}] } ],
-                    "practitioner": {"reference": f"Practitioner/{"PRAC-001"}"}
+                    "practitioner": {"reference": f"Practitioner/PRAC-001"}
                 }
             },
             {
@@ -363,6 +363,16 @@ if __name__ == "__main__":
             },
             {
                 "resource": {
+                    "resourceType": "Invoice",
+                    "id": "5e4d2222-11b8-4acc-9998-40a49e273c4e",
+                    "status": "issued",
+                    "subject": {"reference": "Patient/32"},
+                    "participant": [{"actor": {"reference": "Practitioner/PRAC-001"}}],
+                    "totalNet": {"value": "150.00"} # "currency": "USD", this can also be added.
+                }
+            },
+            {
+                "resource": {
                     "resourceType": "ServiceRequest",
                     "id": "5e4d2222-11b8-4acc-9998-40a49e273c4e",
                     "status": "active",
@@ -376,7 +386,8 @@ if __name__ == "__main__":
                             }
                         ]
                     },
-                    "subject": {"reference": "patient/32"}
+                    "subject": {"reference": "patient/32"},
+                    "performer": [{"reference": "Organization/PRAC-001", "display": "IDC"}]
                 }
             }
         ]

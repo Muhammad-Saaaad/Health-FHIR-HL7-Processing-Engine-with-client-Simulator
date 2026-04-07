@@ -2,7 +2,7 @@
 mappings.py
 ===========
 Canonical name dictionaries for the FHIR <-> HL7 interface engine.
-Targets FHIR R4B (v4.3.0).
+Targets FHIR R4B (v4.3.0) only.
 
 FHIR R4B vs R4 — what actually changed:
     R4B changes are confined to the Medication Definition module and Substance
@@ -10,7 +10,7 @@ FHIR R4B vs R4 — what actually changed:
     Every resource in this file — Patient, Practitioner, Organization, Encounter,
     Condition, Observation, DiagnosticReport, ServiceRequest, Coverage, Claim,
     ExplanationOfBenefit, MedicationRequest, AllergyIntolerance, Immunization,
-    Procedure — is IDENTICAL between R4 and R4B.
+    Procedure, Invoice — is IDENTICAL between R4 and R4B.
 
     Coverage-specific R4/R4B clarifications applied here:
         - identifier   = Business Identifier for the coverage (Member ID /
@@ -52,7 +52,7 @@ Collision rules enforced throughout:
 # Resources covered:
 #   Patient, Practitioner, Organization, Encounter, Condition,
 #   Observation, DiagnosticReport, ServiceRequest, Coverage,
-#   Claim, ExplanationOfBenefit, MedicationRequest,
+#   Invoice, Claim, ExplanationOfBenefit, MedicationRequest,
 #   AllergyIntolerance, Immunization, Procedure
 
 # COLLECTION_MAPPING_TYPE : list[str] = [
@@ -193,7 +193,7 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
     "Encounter-type[0].coding[0].display":                           "admission_type_name",
     "Encounter-serviceType.coding[0].code":                          "hospital_service",
     "Encounter-priority.coding[0].code":                             "encounter_priority",
-    "Encounter-subject.reference":                                   "MPI", # this will map to the patient MPI.
+    "Encounter-subject.reference":                                   "encounter_patient_ref", # this will map to the patient MPI.
     "Encounter-participant[0].type[0].coding[0].code":               "encounter_participant_type",
     "Encounter-participant[0].individual.reference":                 "encounter_provider",
     "Encounter-period.start":                                        "admit_datetime",
@@ -340,14 +340,15 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
     "ServiceRequest-code.coding[0].code":                     "lab_order_code",
     "ServiceRequest-code.coding[0].display":                  "lab_order_name",
     "ServiceRequest-code.coding[0].system":                   "lab_order_coding_system",
-    "ServiceRequest-subject.reference":                       "patient_MPI", # this will map to the patient MPI.
+    "ServiceRequest-subject.reference":                       "lab_order_patient_ref", # this will map to the patient MPI.
     "ServiceRequest-encounter.reference":                     "lab_order_encounter",
     "ServiceRequest-occurrenceDateTime":                      "observation_start_datetime",
     "ServiceRequest-occurrencePeriod.start":                  "lab_order_start",
     "ServiceRequest-occurrencePeriod.end":                    "lab_order_end",
     "ServiceRequest-authoredOn":                              "requested_datetime",
     "ServiceRequest-requester.reference":                     "ordering_provider",
-    "ServiceRequest-performer[0].reference":                  "lab_order_performer",
+    "ServiceRequest-performer[0].reference":                  "lab_order_performer_id",
+    "ServiceRequest-performer[0].display":                    "lab_order_performer_name",
     "ServiceRequest-performerType.coding[0].code":            "lab_order_performer_type",
     "ServiceRequest-locationReference[0].reference":          "lab_order_location",
     "ServiceRequest-reasonCode[0].coding[0].code":            "reason_code",
@@ -398,7 +399,7 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
     # subscriberId = cardholder's policy ID — aligns with IN1-36
     "Coverage-subscriberId":                                  "policy_number",
     "Coverage-subscriber.reference":                          "subscriber",
-    "Coverage-beneficiary.reference":                         "coverage_patient",
+    "Coverage-beneficiary.reference":                         "coverage_patient_ref",
     "Coverage-dependent":                                     "dependent_number",
     "Coverage-relationship.coding[0].code":                   "subscriber_relationship",
     "Coverage-relationship.coding[0].display":                "subscriber_relationship_name",
@@ -438,6 +439,44 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
     "Coverage-costToBeneficiary[0].valueQuantity.unit":       "coinsurance",
 
     "Coverage-contract[0].reference":                         "coverage_contract",
+
+    # ── Invoice (R4B only) ───────────────────────────────────────────────────
+    # Uses the R4B Invoice shape with line items and invoice-level totals.
+    # "Invoice-id":                                            "invoice_fhir_id",
+    "Invoice-identifier[0].value":                           "invoice_identifier",
+    "Invoice-identifier[0].type.coding[0].code":             "invoice_identifier_type",
+    "Invoice-status":                                        "invoice_status",
+    "Invoice-cancelledReason":                               "invoice_cancelled_reason",
+    "Invoice-type.coding[0].code":                           "invoice_type",
+    "Invoice-type.coding[0].display":                        "invoice_type_name",
+    "Invoice-type.coding[0].system":                         "invoice_type_system",
+    "Invoice-subject.reference":                             "invoice_patient_ref",
+    "Invoice-recipient.reference":                           "invoice_recipient",
+    "Invoice-date":                                          "invoice_date",
+    "Invoice-participant[0].role.coding[0].code":            "invoice_participant_role",
+    "Invoice-participant[0].actor.reference":                "invoice_participant_ref_id",
+    "Invoice-issuer.reference":                              "invoice_issuer",
+    "Invoice-account.reference":                             "invoice_account",
+    "Invoice-lineItem[0].sequence":                          "invoice_line_seq",
+    "Invoice-lineItem[0].chargeItemReference.reference":     "invoice_charge_item_ref",
+    "Invoice-lineItem[0].chargeItemCodeableConcept.coding[0].code":    "invoice_line_code",
+    "Invoice-lineItem[0].chargeItemCodeableConcept.coding[0].display": "invoice_line_name",
+    "Invoice-lineItem[0].priceComponent[0].type":            "invoice_line_price_type",
+    "Invoice-lineItem[0].priceComponent[0].code.coding[0].code": "invoice_line_price_code",
+    "Invoice-lineItem[0].priceComponent[0].factor":          "invoice_line_factor",
+    "Invoice-lineItem[0].priceComponent[0].amount.value":    "invoice_line_amount",
+    "Invoice-lineItem[0].priceComponent[0].amount.currency": "invoice_line_currency",
+    "Invoice-totalPriceComponent[0].type":                   "invoice_total_price_type",
+    "Invoice-totalPriceComponent[0].code.coding[0].code":    "invoice_total_price_code",
+    "Invoice-totalPriceComponent[0].factor":                 "invoice_total_factor",
+    "Invoice-totalPriceComponent[0].amount.value":           "invoice_total_component_amount",
+    "Invoice-totalPriceComponent[0].amount.currency":        "invoice_total_component_currency",
+    "Invoice-totalNet.value":                                "invoice_total_net",
+    "Invoice-totalNet.currency":                             "invoice_total_net_currency",
+    "Invoice-totalGross.value":                              "invoice_total_gross",
+    "Invoice-totalGross.currency":                           "invoice_total_gross_currency",
+    "Invoice-paymentTerms":                                  "invoice_payment_terms",
+    "Invoice-note[0].text":                                  "invoice_notes",
 
     # ── Claim (Billing to Insurance) ──────────────────────────────────────────
     # "Claim-id":                                               "claim_fhir_id",

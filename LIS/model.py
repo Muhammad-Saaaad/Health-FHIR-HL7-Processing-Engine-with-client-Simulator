@@ -95,7 +95,7 @@ class LoincMaster(base):
 
     loinc_code       = Column(String(10),  primary_key=True, index=True)
     long_common_name = Column(Text, nullable=False)
-    short_name       = Column(String(150), nullable=True)
+    short_name       = Column(String(150), nullable=True) # short name is not always available so it will be just for frontend.
     component        = Column(String(200), nullable=True)  # what is being measured ("WBC, RBC, Glucose")
     system           = Column(String(100), nullable=True)  # The specimen from which the measurement is taken (Blood, Urine, etc.)
     

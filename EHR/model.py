@@ -91,7 +91,7 @@ class LabReport(Base):
     lab_name = Column(String(100), nullable=False)
     test_name = Column(String(150), nullable=False) # the short name of the Loinc test
     description = Column(String(255), nullable=True) # added this for lab result description.
-    test_status = Column(String(10), nullable=False, default="Pending") # Arrived, decline
+    test_status = Column(String(10), default="Pending") # Arrived, decline
     created_at = Column(DateTime, default=datetime.now())
     updated_at = Column(DateTime, default=datetime.now())
 

@@ -83,7 +83,7 @@ add_patient = // Payer -> endpoint => /get/registed_patient
 
 // -----------------------------------------------------------------------------------------------------------------------------------------
 
-add_visit_note = { // ehr -> endpoint => 
+add_visit_note = { // ehr -> endpoint => /fhir/add-visit-note
         "resourceType": "Bundle",
         "type": "message",
         "id": "5e4d2222-11b8-4acc-9998-40a49e273c4e",
@@ -143,6 +143,16 @@ add_visit_note = { // ehr -> endpoint =>
                             "valueString": "Patient responded well to medication. Follow-up advised in 2 weeks."
                         }
                     ]
+                }
+            },
+            {
+                "resource": {
+                    "resourceType": "Invoice",
+                    "id": "5e4d2222-11b8-4acc-9998-40a49e273c4e",
+                    "status": "issued",
+                    "subject": {"reference": "Patient/32"},
+                    "participant": [{"actor": {"reference": "Practitioner/PRAC-001"}}],
+                    "totalNet": {"value": "150.00"}
                 }
             },
             {
@@ -229,6 +239,16 @@ add_visit_note = { // phr -> endpoint =>
             },
             {
                 "resource": {
+                    "resourceType": "Invoice",
+                    "id": "5e4d2222-11b8-4acc-9998-40a49e273c4e",
+                    "status": "issued",
+                    "subject": {"reference": "Patient/32"},
+                    "participant": [{"actor": {"reference": "Practitioner/PRAC-001"}}],
+                    "totalNet": {"value": "150.00"}
+                }
+            },
+            {
+                "resource": {
                     "resourceType": "ServiceRequest",
                     "id": "5e4d2222-11b8-4acc-9998-40a49e273c4e",
                     "status": "active",
@@ -241,7 +261,8 @@ add_visit_note = { // phr -> endpoint =>
                             }
                         ]
                     },
-                    "subject": {"reference": "patient/32"}
+                    "subject": {"reference": "patient/32"},
+                    "performer": [{"reference": "Organization/PRAC-001", "display": "IDC"}]
                 }
             }
         ]

@@ -1,3 +1,5 @@
+import os
+
 from fastapi import FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware 
 from slowapi.middleware import SlowAPIMiddleware
@@ -7,6 +9,8 @@ from database import engine
 import models
 from api import auth, claims, engine_service, patient, policy
 from rate_limiting import limiter, rate_limit_exceeded_handler
+
+os.makedirs(r"logs", exist_ok=True)
 
 app = FastAPI(title="Hospital Insurance System")
 app.add_middleware(

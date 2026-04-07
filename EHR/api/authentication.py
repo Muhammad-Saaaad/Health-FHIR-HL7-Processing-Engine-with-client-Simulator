@@ -78,6 +78,14 @@ def login_doctor(doctor: schema.Login, request: Request, response: Response, db 
     
     return {"message": "login sucessfully"}
 
+@router.get("/get-all-doctors/", status_code=status.HTTP_200_OK)
+def get_all_doctors(request: Request, response: Response, db: Session = Depends(get_db)):
+    try:
+        return db.query(model.Doctor).all()
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
+    
+
 @router.get("/get-doctor/{email}/{password}", status_code=status.HTTP_200_OK)
 @limiter.limit("40/minute")
 def get_doctor(email: str, password: str, request: Request, response: Response, db: Session = Depends(get_db)):
