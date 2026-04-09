@@ -1,105 +1,17 @@
-2026-04-02 15:23:00,153- ERROR - [engine_service.py:73] - Error processing FHIR data: 'identifier[0].value'
-2026-04-02 15:24:36,674- ERROR - [engine_service.py:73] - Error processing FHIR data: 'identifier[0].value'
-2026-04-02 15:25:39,756- ERROR - [engine_service.py:73] - Error processing FHIR data: 'identifier[0].value'
-2026-04-02 15:29:00,488- ERROR - [engine_service.py:73] - Error processing FHIR data: 'identifier[0].value'
-2026-04-02 15:41:13,510- ERROR - [engine_service.py:73] - Error processing FHIR data: 'identifier[0].value'
-2026-04-02 15:49:04,484- ERROR - [engine_service.py:73] - Error processing FHIR data: 'identifier[0].value'
-2026-04-02 16:07:32,202- ERROR - [engine_service.py:73] - Error processing FHIR data: (pyodbc.IntegrityError) ('23000', "[23000] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Violation of UNIQUE KEY constraint 'UQ__patient__DF97D0F5DD918521'. Cannot insert duplicate key in object 'dbo.patient'. The duplicate key value is (37201-7612231-2). (2627) (SQLExecDirectW); [23000] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]The statement has been terminated. (3621)")
-[SQL: INSERT INTO patient (mpi, nic, password, name, phone_no, gender, date_of_birth, address) VALUES (?, ?, ?, ?, ?, ?, ?, ?)]
-[parameters: ('1191', '37201-7612231-2', '', 'moiz akbar ahmed', '+92-361-7423412', 'male', '2008-01-21', 'Kalar Khar')]
-(Background on this error at: https://sqlalche.me/e/20/gkpj)
-2026-04-02 16:23:26,148- ERROR - [engine_service.py:73] - Error processing FHIR data: (pyodbc.IntegrityError) ('23000', "[23000] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Violation of UNIQUE KEY constraint 'UQ__patient__DF97D0F5DD918521'. Cannot insert duplicate key in object 'dbo.patient'. The duplicate key value is (37201-7231231-2). (2627) (SQLExecDirectW); [23000] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]The statement has been terminated. (3621)")
-[SQL: INSERT INTO patient (mpi, nic, password, name, phone_no, gender, date_of_birth, address) VALUES (?, ?, ?, ?, ?, ?, ?, ?)]
-[parameters: ('1195', '37201-7231231-2', '', 'moiz akbarrrr', '+92-391-7413412', 'male', '2008-01-13', 'Kalar Khar')]
-(Background on this error at: https://sqlalche.me/e/20/gkpj)
-2026-04-02 16:23:43,987- ERROR - [engine_service.py:73] - Error processing FHIR data: (pyodbc.IntegrityError) ('23000', "[23000] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Violation of UNIQUE KEY constraint 'UQ__patient__DF97D0F5DD918521'. Cannot insert duplicate key in object 'dbo.patient'. The duplicate key value is (37201-7231231-2). (2627) (SQLExecDirectW); [23000] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]The statement has been terminated. (3621)")
-[SQL: INSERT INTO patient (mpi, nic, password, name, phone_no, gender, date_of_birth, address) VALUES (?, ?, ?, ?, ?, ?, ?, ?)]
-[parameters: ('1196', '37201-7231231-2', '', 'moiz akaasrrr', '+92-391-7213412', 'male', '2008-01-16', 'Kalar Khar')]
-(Background on this error at: https://sqlalche.me/e/20/gkpj)
-2026-04-04 11:16:52,384- ERROR - [engine_service.py:241] - Error processing FHIR data: 'list' object has no attribute 'get'
-2026-04-04 11:21:25,567- ERROR - [engine_service.py:241] - Error processing FHIR data: 'list' object has no attribute 'get'
-2026-04-04 11:37:43,253- ERROR - [engine_service.py:245] - Error processing FHIR data: 'list' object has no attribute 'get'
+2026-04-09 11:47:49,480- ERROR - [engine_service.py:247] - Invalid numeric identifier in payload: Expecting value: line 1 column 1 (char 0)
 Traceback (most recent call last):
-  File "E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\phr\api\engine_service.py", line 114, in get_visit_note
-    doctor["specialization"] = resource.get("specialty", {"coding": [{ "display": None }]}).get("coding", [{ "display": None }])[0].get("display", None)
-                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-AttributeError: 'list' object has no attribute 'get'
-2026-04-04 11:43:09,399- ERROR - [engine_service.py:245] - Error processing FHIR data: 'list' object has no attribute 'get'
-Traceback (most recent call last):
-  File "E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\phr\api\engine_service.py", line 130, in get_visit_note
-    note_title = resource.get("type", {"text": None}).get("text", None)
-                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-AttributeError: 'list' object has no attribute 'get'
-2026-04-04 11:44:37,742- ERROR - [engine_service.py:242] - Invalid numeric identifier in payload: invalid literal for int() with base 10: 'VID-2024-12345'
-Traceback (most recent call last):
-  File "E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\phr\api\engine_service.py", line 159, in get_visit_note
-    visit_note['note_id'] = int(visit_note['note_id'])
-                            ^^^^^^^^^^^^^^^^^^^^^^^^^^
-ValueError: invalid literal for int() with base 10: 'VID-2024-12345'
-2026-04-04 11:47:32,495- ERROR - [engine_service.py:248] - Invalid numeric identifier in payload: invalid literal for int() with base 10: '2024-12345'
-Traceback (most recent call last):
-  File "E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\phr\api\engine_service.py", line 159, in get_visit_note
-    visit_note['note_id'] = int(visit_note['note_id'])
-                            ^^^^^^^^^^^^^^^^^^^^^^^^^^
-ValueError: invalid literal for int() with base 10: '2024-12345'
-2026-04-04 11:49:05,610- ERROR - [engine_service.py:251] - Error processing FHIR data: 'doctor_id'
-Traceback (most recent call last):
-  File "E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\phr\api\engine_service.py", line 160, in get_visit_note
-    visit_note['doctor_id'] = int(visit_note['doctor_id'])
-                                  ~~~~~~~~~~^^^^^^^^^^^^^
-KeyError: 'doctor_id'
-2026-04-04 12:21:36,651- ERROR - [engine_service.py:247] - Error processing FHIR data: 'str' object has no attribute 'get'
-Traceback (most recent call last):
-  File "E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\phr\api\engine_service.py", line 163, in get_visit_note
-    if resource and resource.get("resourceType") == "ServiceRequest":
-                    ^^^^^^^^^^^^
-AttributeError: 'str' object has no attribute 'get'
-2026-04-04 12:23:56,643- ERROR - [engine_service.py:247] - Error processing FHIR data: 'str' object has no attribute 'get'
-Traceback (most recent call last):
-  File "E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\phr\api\engine_service.py", line 165, in get_visit_note
-    test_code = resource.get("code", {"coding": [{"code": None}]}).get("coding", [{"code": None}])[0].get("code", None)
-                ^^^^^^^^^^^^
-AttributeError: 'str' object has no attribute 'get'
-2026-04-04 12:25:27,938- WARNING - [engine_service.py:192] - No patient found with MPI in database: 32
-2026-04-04 12:26:41,522- WARNING - [engine_service.py:174] - Patient reference in lab test does not match with the patient reference in visit note: 
- {'resource': {'resourceType': 'ServiceRequest', 'id': '5e4d2222-11b8-4acc-9998-40a49e273c4e', 'status': 'active', 'intent': 'order', 'code': {'coding': [{'code': '73761001', 'display': 'Headache (disorder)'}]}, 'subject': {'reference': 'patient/32'}}}
-2026-04-04 12:26:41,564- ERROR - [engine_service.py:247] - Error processing FHIR data: 'doctor_id'
-Traceback (most recent call last):
-  File "E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\phr\api\engine_service.py", line 215, in get_visit_note
-    doctor_id = visit_note['doctor_id'],
-                ~~~~~~~~~~^^^^^^^^^^^^^
-KeyError: 'doctor_id'
-2026-04-04 12:27:45,762- WARNING - [engine_service.py:174] - Patient reference in lab test does not match with the patient reference in visit note: 
- {'resource': {'resourceType': 'ServiceRequest', 'id': '5e4d2222-11b8-4acc-9998-40a49e273c4e', 'status': 'active', 'intent': 'order', 'code': {'coding': [{'code': '73761001', 'display': 'Headache (disorder)'}]}, 'subject': {'reference': 'patient/32'}}}
-2026-04-04 12:27:45,829- ERROR - [engine_service.py:247] - Error processing FHIR data: 'Doctor' object is not subscriptable
-Traceback (most recent call last):
-  File "E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\phr\api\engine_service.py", line 215, in get_visit_note
-    doctor_id = doctor['doctor_id'],
-                ~~~~~~^^^^^^^^^^^^^
-TypeError: 'Doctor' object is not subscriptable
-2026-04-04 12:29:05,539- WARNING - [engine_service.py:174] - Patient reference in lab test does not match with the patient reference in visit note: 
- {'resource': {'resourceType': 'ServiceRequest', 'id': '5e4d2222-11b8-4acc-9998-40a49e273c4e', 'status': 'active', 'intent': 'order', 'code': {'coding': [{'code': '73761001', 'display': 'Headache (disorder)'}]}, 'subject': {'reference': 'patient/32'}}}
-2026-04-04 12:29:05,641- ERROR - [engine_service.py:247] - Error processing FHIR data: 'Doctor' object is not subscriptable
-Traceback (most recent call last):
-  File "E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\phr\api\engine_service.py", line 211, in get_visit_note
-    print(doctor['doctor_id'])
-          ~~~~~~^^^^^^^^^^^^^
-TypeError: 'Doctor' object is not subscriptable
-2026-04-04 12:31:19,721- WARNING - [engine_service.py:176] - Patient reference in lab test does not match with the patient reference in visit note: 
- {'resource': {'resourceType': 'ServiceRequest', 'id': '5e4d2222-11b8-4acc-9998-40a49e273c4e', 'status': 'active', 'intent': 'order', 'code': {'coding': [{'code': '73761001', 'display': 'Headache (disorder)'}]}, 'subject': {'reference': 'patient/32'}}}
-2026-04-04 12:31:19,787- ERROR - [engine_service.py:249] - Error processing FHIR data: 'Doctor' object is not subscriptable
-Traceback (most recent call last):
-  File "E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\phr\api\engine_service.py", line 217, in get_visit_note
-    doctor_id = doctor['doctor_id'],
-                ~~~~~~^^^^^^^^^^^^^
-TypeError: 'Doctor' object is not subscriptable
-2026-04-04 12:34:00,455- WARNING - [engine_service.py:174] - Patient reference in lab test does not match with the patient reference in visit note: 
- {'resource': {'resourceType': 'ServiceRequest', 'id': '5e4d2222-11b8-4acc-9998-40a49e273c4e', 'status': 'active', 'intent': 'order', 'code': {'coding': [{'code': '73761001', 'display': 'Headache (disorder)'}]}, 'subject': {'reference': 'patient/32'}}}
-2026-04-07 16:30:06,232- ERROR - [engine_service.py:73] - Error processing FHIR data: (pyodbc.IntegrityError) ('23000', "[23000] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Violation of UNIQUE KEY constraint 'UQ__patient__DF97D0F5DD918521'. Cannot insert duplicate key in object 'dbo.patient'. The duplicate key value is (37201-7686231-2). (2627) (SQLExecDirectW); [23000] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]The statement has been terminated. (3621)")
-[SQL: INSERT INTO patient (mpi, nic, password, name, phone_no, gender, date_of_birth, address) VALUES (?, ?, ?, ?, ?, ?, ?, ?)]
-[parameters: ('1207', '37201-7686231-2', '', 'habib akbar', '+92-314-27152212', 'male', '1997-12-23', 'post office tatral tehsial and district chakwal')]
-(Background on this error at: https://sqlalche.me/e/20/gkpj)
-2026-04-07 16:46:35,327- ERROR - [engine_service.py:73] - Error processing FHIR data: (pyodbc.IntegrityError) ('23000', "[23000] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Violation of UNIQUE KEY constraint 'UQ__patient__DF97D0F5DD918521'. Cannot insert duplicate key in object 'dbo.patient'. The duplicate key value is (37201-78232-2). (2627) (SQLExecDirectW); [23000] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]The statement has been terminated. (3621)")
-[SQL: INSERT INTO patient (mpi, nic, password, name, phone_no, gender, date_of_birth, address) VALUES (?, ?, ?, ?, ?, ?, ?, ?)]
-[parameters: ('1210', '37201-78232-2', '', 'Muhammad Saad', '+92-3123-2132', 'male', '1987-04-23', 'post office tatral tehsial and district chakwal')]
-(Background on this error at: https://sqlalche.me/e/20/gkpj)
+  File "E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\phr\api\engine_service.py", line 79, in get_visit_note
+    json_data = await req.json()
+                ^^^^^^^^^^^^^^^^
+  File "E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\health-venv\Lib\site-packages\starlette\requests.py", line 251, in json
+    self._json = json.loads(body)
+                 ^^^^^^^^^^^^^^^^
+  File "E:\Ananconda\Lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Ananconda\Lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Ananconda\Lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)

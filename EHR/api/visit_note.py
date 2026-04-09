@@ -246,7 +246,8 @@ def get_test_report(
                             }
                         ]
                     },
-                    "subject": {"reference": f"Patient/{str(mpi)}"}
+                    "subject": {"reference": f"Patient/{str(mpi)}"},
+                    "performer": [{"identifier": {"value": "PRAC-001"}, "display": lab_name.strip()}] # for now it is set to this dummy data.
                 }
             }
         )

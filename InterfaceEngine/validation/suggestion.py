@@ -18,6 +18,8 @@ Here we generate suggestions (transform_type + config) based on the following fl
     3. if the type is not mention, then by default it will be string, means it will be just the copy, with no transformation needed.
 """
 
+from api.endpoint import logger
+
 def generate_single_suggestion(
     src_server: dict,
     dest_server: dict,
@@ -25,7 +27,7 @@ def generate_single_suggestion(
     dest_canonical_names: list
 ):
     """
-        Returns transform type + config for one src→dest field pair.
+        Returns transform type + config for one src->dest field pair.
         Uses both server profiles to build the correct config.
     """
     src_profile = src_server.profile if src_server.profile else {}
@@ -35,6 +37,7 @@ def generate_single_suggestion(
 
         src_field_type = get_field_type(src_canonical_names[0])
         dest_field_type = get_field_type(dest_canonical_names[0])
+        logger.info(f"Generating suggestion for {src_canonical_names[0]} ({src_field_type}) -> {dest_canonical_names[0]} ({dest_field_type})")
         return get_suggestion(src_profile, dest_profile, src_field_type, dest_field_type, src_canonical_names[0], dest_canonical_names[0])
     
     elif len(src_canonical_names) == 1 and len(dest_canonical_names) > 1:
@@ -47,9 +50,10 @@ def generate_single_suggestion(
             suggestion = get_suggestion(src_profile, dest_profile, src_field_type, dest_field_type, src_canonical_names[0], dest_canonical_names[index])
             if len(suggestion) > 0:
                 if previous_suggestion and (previous_suggestion['transform'] != suggestion['transform'] or previous_suggestion['config'] != suggestion['config']):
-                    raise ValueError(f"Conflicting suggestions for {src_canonical_names[0]} → {dest_canonical_names[index]}: {previous_suggestion} vs {suggestion}")
+                    raise ValueError(f"Conflicting suggestions for {src_canonical_names[0]} -> {dest_canonical_names[index]}: {previous_suggestion} vs {suggestion}")
             
             previous_suggestion = suggestion
+        logger.info(f"Final suggestion for {src_canonical_names[0]} -> {dest_canonical_names}: {previous_suggestion}")
         return previous_suggestion if previous_suggestion else {"transform": "copy", "config": {}}
     
     elif len(src_canonical_names) > 1 and len(dest_canonical_names) == 1:
@@ -62,9 +66,10 @@ def generate_single_suggestion(
             suggestion = get_suggestion(src_profile, dest_profile, src_field_type, dest_field_type, src_canonical_names[index], dest_canonical_names[0])
             if len(suggestion) > 0:
                 if previous_suggestion and (previous_suggestion['transform'] != suggestion['transform'] or previous_suggestion['config'] != suggestion['config']):
-                    raise ValueError(f"Conflicting suggestions for {src_canonical_names[index]} → {dest_canonical_names[0]}: {previous_suggestion} vs {suggestion}")
+                    raise ValueError(f"Conflicting suggestions for {src_canonical_names[index]} -> {dest_canonical_names[0]}: {previous_suggestion} vs {suggestion}")
             
             previous_suggestion = suggestion
+        logger.info(f"Final suggestion for {src_canonical_names}: -> {dest_canonical_names[0]}: {previous_suggestion}")
         return previous_suggestion if previous_suggestion else {"transform": "copy", "config": {}}
 
 
@@ -95,16 +100,6 @@ def get_suggestion(src_profile: dict, dest_profile: dict, src_field_type: str, d
                 "config": {"from": src_fmt, "to": dest_fmt}
             }
         
-        # _________________ regex ____________________
-        elif src_field_type in ("id_format", "subject_refrence_format"):
-            src_pattern = src_profile.get(src_field_type, {})
-            dest_pattern = dest_profile.get(dest_field_type, {})
-
-            if src_pattern == dest_pattern:
-                return {"transform": "copy", "config": {}}
-            
-            return {"transform": "regex", "config": {"from": src_pattern, "to": dest_pattern}}
-        
         # _________________  any code map (gender, boolean, status, marital, race, relationship) ____________________
 
         elif src_field_type in ("gender_code", "boolean", "status_code",
@@ -119,7 +114,7 @@ def get_suggestion(src_profile: dict, dest_profile: dict, src_field_type: str, d
             # src_map = {"male":"1", "female" : "0"} , dest_map = {"male":"M", "female" : "F"}
             # config = {"1": "M", "0": "F"}
 
-            # inv_src = {"male":"1"} → config = {"1": "M"}
+            # inv_src = {"male":"1"} -> config = {"1": "M"}
             inv_src = { v: k for k, v in src_map.items() } if src_map else {}
             config  = {}
             if inv_src and dest_map:
@@ -135,43 +130,75 @@ def get_suggestion(src_profile: dict, dest_profile: dict, src_field_type: str, d
             if not config:
                 return { "transform": "copy", "config": {} }
             return { "transform": "map", "config": config }
-            
-    # ── name ─────────────────────────────────────────────────────────────────
-    elif src_field_type == "name_full" and dest_field_type == "name_part":
-        return {
-            "transform": "split",
-            "config": {
-                "delimiter": dest_profile.get("name_delimiter", " ")
-            }
-        }
+        
+        # _________________ regex ____________________
+        elif src_field_type in ("id_format", "subject_reference_format", "practitioner_reference_format"):
+            if dest_field_type in ("id_format", "subject_reference_format", "practitioner_reference_format"):
 
-    elif src_field_type == "name_part" and dest_field_type == "name_full":
-        src_style = src_profile.get("name_style", "")
-        if src_style == "concat":
+                src_pattern = src_profile.get(src_field_type, {})
+                dest_pattern = dest_profile.get(dest_field_type, {})
+
+                if src_pattern == dest_pattern:
+                    return {"transform": "copy", "config": {}}
+                
+                return {"transform": "regex", "config": {"from": src_pattern, "to": dest_pattern}}
+            else:
+                logger.error(f"Type mismatch for regex-based field: {src_canonical_name} ({src_field_type}) -> {dest_canonical_name} ({dest_field_type})")
+                raise ValueError(f"Type mismatch between {src_canonical_name} ({src_field_type}) and {dest_canonical_name} ({dest_field_type})")
+                
+    else:
+        # here the src_field_type and dest_field_types are different.
+        # _________________ regex ____________________
+        if src_field_type in ("id_format", "subject_reference_format", "practitioner_reference_format"):
+            if dest_field_type in ("id_format", "subject_reference_format", "practitioner_reference_format"):
+
+                src_pattern = src_profile.get(src_field_type, {})
+                dest_pattern = dest_profile.get(dest_field_type, {})
+
+                if src_pattern == dest_pattern:
+                    return {"transform": "copy", "config": {}}
+                
+                return {"transform": "regex", "config": {"from": src_pattern, "to": dest_pattern}}
+            else:
+                logger.error(f"Type mismatch for regex-based field: {src_canonical_name} ({src_field_type}) -> {dest_canonical_name} ({dest_field_type})")
+                raise ValueError(f"Type mismatch between {src_canonical_name} ({src_field_type}) and {dest_canonical_name} ({dest_field_type})")
+                
+        # ── name ─────────────────────────────────────────────────────────────────
+        elif src_field_type == "name_full" and dest_field_type == "name_part":
             return {
-                "transform": "concat",
+                "transform": "split",
                 "config": {
-                    "delimiter": src_profile.get("name_delimiter", " ")
+                    "delimiter": dest_profile.get("name_delimiter", " ")
                 }
             }
 
-    # ── address ───────────────────────────────────────────────────────────────
-    elif src_field_type == "address_full" and dest_field_type == "address_part":
-        return {
-            "transform": "split",
-            "config": { "delimiter": ", " }
-        }
+        elif src_field_type == "name_part" and dest_field_type == "name_full":
+            src_style = src_profile.get("name_style", "")
+            if src_style == "concat":
+                return {
+                    "transform": "concat",
+                    "config": {
+                        "delimiter": src_profile.get("name_delimiter", " ")
+                    }
+                }
 
-    elif src_field_type == "address_part" and dest_field_type == "address_full":
-        return {
-            "transform": "concat",
-            "config": { "delimiter": ", " }
-        }
+        # ── address ───────────────────────────────────────────────────────────────
+        elif src_field_type == "address_full" and dest_field_type == "address_part":
+            return {
+                "transform": "split",
+                "config": { "delimiter": ", " }
+            }
 
-    if src_field_type != dest_field_type:
-        raise ValueError(f"Type mismatch between {src_canonical_name} ({src_field_type}) and {dest_canonical_name} ({dest_field_type})")
+        elif src_field_type == "address_part" and dest_field_type == "address_full":
+            return {
+                "transform": "concat",
+                "config": { "delimiter": ", " }
+            }
 
-    return {"transform": "copy", "config": {}}
+        if src_field_type != dest_field_type:
+            raise ValueError(f"Type mismatch between {src_canonical_name} ({src_field_type}) and {dest_canonical_name} ({dest_field_type})")
+
+        return {"transform": "copy", "config": {}}
 
 
 def get_field_type(canonical_name: str) -> str:

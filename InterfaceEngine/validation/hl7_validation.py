@@ -260,41 +260,6 @@ def build_hl7_message(output_data: dict[str, str],
 
     return "\r\n".join(lines)
 
-
-
-# async def build_hl7_message(output_data, src, dest, msg_type):
-#     segments = {}
-#     date = datetime.now()
-#     dt = datetime.strptime(str(date), "%Y-%m-%d %H:%M:%S.%f")
-#     date = dt.strftime("%Y%m%d%H%M%S")
-
-#     header = f"MSH|^~\&|{src}||{dest}||{date}||{msg_type}|MSG{str(uuid.uuid4())}|P|2.5"
-#     for path, value in output_data.items():
-#         # example: PID-5.1
-#         segment = path.split("-")[0]
-#         field = int(path.split("-")[1].split(".")[0])
-#         comp = int(path.split(".")[1]) if "." in path else None
-
-#         segments.setdefault(segment, [])
-
-#         while len(segments[segment]) < field:
-#             segments[segment].append("")
-
-#         if comp:
-#             comps = segments[segment][field-1].split("^")
-#             while len(comps) < comp:
-#                 comps.append("")
-#             comps[comp-1] = str(value)
-#             segments[segment][field-1] = "^".join(comps)
-#         else:
-#             segments[segment][field-1] = str(value)
-
-#     msg = ""
-#     for seg, fields in segments.items():
-#         msg += seg + "|" + "|".join(fields) + "\n"
-#     msg = header+"\n"+msg
-#     return msg
-
 if __name__ == "__main__":
 
     final_output = build_hl7_message(
@@ -325,5 +290,3 @@ if __name__ == "__main__":
     )
 
     print(final_output)
-
-    pass

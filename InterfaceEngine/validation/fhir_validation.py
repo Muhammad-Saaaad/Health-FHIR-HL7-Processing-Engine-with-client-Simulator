@@ -387,7 +387,7 @@ if __name__ == "__main__":
                         ]
                     },
                     "subject": {"reference": "patient/32"},
-                    "performer": [{"reference": "Organization/PRAC-001", "display": "IDC"}]
+                    "performer": [{"identifier": {"value": "PRAC-001"}, "display": "IDC"}]
                 }
             }
         ]

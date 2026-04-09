@@ -213,6 +213,7 @@ async def route_worker(route):
             # Each queue item is a (data, future) tuple.
             # The future lets ingest() know whether delivery succeeded or failed.
             src_path_to_value, result_future = await route_queue[route.route_id].get()
+            logger.info(f"route_worker for route -> {route.name} received data: {src_path_to_value}")
             output_data = {} # contains the output fields with value
             concat_data = {} # contains single dest field id, and multiple mapping rule that concate multiple src into a single destination.
             split_data = {} # contain single src field id, and multiple mapping rule that split that single src into multiple destination.
@@ -323,6 +324,7 @@ async def route_worker(route):
                     delimiter= rules[0].config.get('delimiter', ' ') # concat on delimiter or by default with space " " 
                     parts = str(src_path_to_value[src_path]).split(delimiter)
 
+                    last_dest_path = None
                     for i, rule in enumerate(rules):
                         if i < len(parts):
                             if rule.dest_field_id not in dest_id_to_path:
@@ -334,14 +336,20 @@ async def route_worker(route):
                             dest_path = dest_id_to_path[rule.dest_field_id]
                             dest_path = increment_segment(output_data, dest_path)
                             output_data[dest_path] = parts[i]
+                            last_dest_path = dest_path
                     
                     if len(parts) > len(rules): # here if the while spliting, if there is some data left concatenate it with the last path
-                        dest_path = dest_id_to_path[rules[-1].dest_field_id] # take the last destination path
-                        dest_path = increment_segment(output_data, dest_path)
-                        logger.info(f"destination path for remaining data ---> {dest_path}")
-                        output_data[dest_path] += " " + (' ').join(parts[len(rules):]) # join all the remaining parts with the remining data
+                        logger.info(f"destination path for remaining data ---> {last_dest_path}")
+                        output_data[last_dest_path] += " " + (' ').join(parts[len(rules):]) # join all the remaining parts with the remining data
                 logger.info(f"Output for route -> {route.name}: {output_data}")
 
+            except Exception as exp:
+                logger.error(f"{exp}\nThis came when processing data for route -> {route.name}")
+                if not result_future.done():
+                    result_future.set_exception(exp)
+                    continue
+
+            try:
                 # BUILD MESSAGE
                 if dest_server.protocol == "FHIR":
                     msg = build_fhir_message(output_data, dest_path_to_resource) # make a fhir message with the data
@@ -372,7 +380,7 @@ async def route_worker(route):
                         result_future.set_exception(Exception(err))
 
             except Exception as exp:
-                logger.error(f"{exp}\nThis came when processing/sending data for route -> {route.name}")
+                logger.error(f"{exp}\nThis came when sending data for route -> {route.name}")
                 if not result_future.done():
                     result_future.set_exception(exp)
 

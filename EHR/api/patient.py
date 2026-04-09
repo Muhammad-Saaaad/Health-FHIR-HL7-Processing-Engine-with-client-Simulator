@@ -148,11 +148,11 @@ async def add_patient(patient: schema.post_patient, request: Request, response: 
         if response == "sucessfull":
             db.commit()
             # db.rollback()
-            logger.info(f"Patient registered successfully in FHIR: {new_patient.name} (NIC: {new_patient.nic})")
+            logger.info(f"Patient registered successfully in FHIR: {new_patient.name} (NIC: {new_patient.mpi})")
             return {"message": "data inserted sucessfully"}
         
         db.rollback()
-        logger.error(f"Failed to register patient in FHIR: {new_patient.name} (NIC: {new_patient.nic})")    
+        logger.error(f"Failed to register patient in FHIR: {new_patient.name} (NIC: {new_patient.mpi})")    
         return JSONResponse({"message": f"Error {response}"}, status_code=status.HTTP_400_BAD_REQUEST)
     except Exception as exp:
         db.rollback()

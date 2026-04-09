@@ -80,3 +80,5 @@ print(f"Result: {result}")
 # lines = ["hi there-", "how are you"]
 # line = "\r\n".join(lines)
 # print(line.splitlines()[1:])
+l = ["hi there-", "how are you"]
+print(" " +" ".join(l[1:]))

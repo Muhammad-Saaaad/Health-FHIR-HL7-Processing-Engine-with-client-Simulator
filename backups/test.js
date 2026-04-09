@@ -169,13 +169,14 @@ add_visit_note = { // ehr -> endpoint => /fhir/add-visit-note
                             }
                         ]
                     },
-                    "subject": {"reference": "patient/32"}
+                    "subject": {"reference": "patient/32"},
+                    "performer": [{"identifier": {"value": "PRAC-001"}, "display": "IDC"}]
                 }
             }
         ]
     }
 
-add_visit_note = { // phr -> endpoint => 
+add_visit_note = { // phr -> endpoint => /get-visit-note
         "resourceType": "Bundle",
         "type": "message",
         "id": "5e4d2222-11b8-4acc-9998-40a49e273c4e",
@@ -262,7 +263,7 @@ add_visit_note = { // phr -> endpoint =>
                         ]
                     },
                     "subject": {"reference": "patient/32"},
-                    "performer": [{"reference": "Organization/PRAC-001", "display": "IDC"}]
+                    "performer": [{"identifier": {"value": "PRAC-001"}, "display": "IDC"}]
                 }
             }
         ]
