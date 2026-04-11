@@ -87,3 +87,13 @@
 2026-04-09 11:31:24,381- INFO - [suggestion.py:40] - Generating suggestion for MPI_type (string) -> phone (phone)
 2026-04-09 11:31:26,426- INFO - [suggestion.py:40] - Generating suggestion for MPI_type (string) -> phone (phone)
 2026-04-09 11:31:30,476- INFO - [suggestion.py:40] - Generating suggestion for MPI_type (string) -> phone (phone)
+2026-04-09 12:33:03,108 - ingest_func - INFO - Ingest function module loaded, logger initialized.
+2026-04-09 12:33:58,433- INFO - [ingest_func.py:26] - Ingest function module loaded, logger initialized.
+2026-04-10 19:59:35,161- INFO - [suggestion.py:40] - Generating suggestion for encounter_patient_ref (subject_reference_format) -> MPI (id_format)
+2026-04-10 20:00:24,442- INFO - [suggestion.py:40] - Generating suggestion for VID (id_format) -> VID (id_format)
+2026-04-10 20:00:28,189- INFO - [suggestion.py:40] - Generating suggestion for lab_order_code (string) -> lab_order_code (string)
+2026-04-10 20:00:31,367- INFO - [suggestion.py:40] - Generating suggestion for lab_order_name (string) -> lab_order_name (string)
+2026-04-10 20:03:34,903- INFO - [suggestion.py:40] - Generating suggestion for encounter_patient_ref (subject_reference_format) -> MPI (id_format)
+2026-04-10 20:03:41,569- INFO - [suggestion.py:40] - Generating suggestion for VID (id_format) -> VID (id_format)
+2026-04-10 20:03:44,283- INFO - [suggestion.py:40] - Generating suggestion for lab_order_code (string) -> lab_order_code (string)
+2026-04-10 20:03:47,753- INFO - [suggestion.py:40] - Generating suggestion for lab_order_name (string) -> lab_order_name (string)

@@ -1,6 +1,22 @@
 from datetime import datetime
+import logging
+from logging.handlers import RotatingFileHandler
 import re
 from uuid import uuid4
+
+from .transformation import increment_segment
+
+logger = logging.getLogger("hl7_validation")
+logger.setLevel(logging.DEBUG)
+handler = RotatingFileHandler(
+    r"validation_logs\hl7_validation.log",
+    maxBytes=5*1024*1024,  # 5 MB
+    backupCount=1
+)
+formatter = logging.Formatter('%(asctime)s - [%(filename)s:%(lineno)d] -%(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+
 
 def hl7_extract_paths(segment) -> list:
     """
@@ -20,6 +36,7 @@ def hl7_extract_paths(segment) -> list:
             - `paths`: list of dot-notation path strings for all non-empty fields
     """
     paths = []
+    logger.debug(f"Extracting paths from segment: {segment}")
 
     # for segment in segments[1:]
     fields = segment.split('|')
@@ -41,6 +58,9 @@ def hl7_extract_paths(segment) -> list:
         else:
             path = f"{segment_type}-{i}"
             paths.append(path)
+    
+    logger.debug(f"Extracted paths for segment {segment_type}: {paths}\n\n")
+
     return (segment_type, paths)
 
 def get_hl7_value_by_path(hl7_message, paths): 
@@ -62,25 +82,23 @@ def get_hl7_value_by_path(hl7_message, paths):
     if segments and segments[0].startswith("MSH"):
         segments = segments[1:]
 
-    value = {}
+    logger.info(f"Extracting values for paths: {paths} from HL7 message with {len(segments)} segments")
+
+    path_to_value = {}
     for segment in segments:
-        for path in paths:
+        for main_path in paths:
+            
+            # main_path is like PID[1]-5.1
+            path = main_path.split("-", 1)[1] # 5.1
+            segment_name = main_path.split("-", 1)[0].split("[", 1)[0] # PID
+            path = segment_name + "-" + path # PID-5.1
+
             sp_path = re.split(r"-|\.", path) # [PID, 5, 2, 1]
+            logger.debug(f"Processing path: {path}")
            
             fields = segment.split("|")
 
             if fields[0] == sp_path[0]:
-
-                # if "^" in fields[int(sp_path[1])]:
-                #     components = fields[int(sp_path[1])].split("^")
-                    
-                #     if "&" in components[int(sp_path[2])-1]:
-                #         sub_components = components[int(sp_path[2])-1].split("&")
-                #         value[path] = sub_components[int(sp_path[3])-1]
-                #     else:
-                #         value[path] = components[int(sp_path[2])-1] 
-                # else:
-                #     value[path] = fields[int(sp_path[1])]
 
                 if "^" in fields[int(sp_path[1])]:
                     components = fields[int(sp_path[1])].split("^")
@@ -89,16 +107,18 @@ def get_hl7_value_by_path(hl7_message, paths):
                         comp = components[int(sp_path[2])-1] if int(sp_path[2])-1 < len(components) else ""
 
                         if "&" in comp:
-                            sub_components = comp.split("&")
-                            value[path] = sub_components[int(sp_path[3])-1] if int(sp_path[3])-1 < len(sub_components) else ""
+                            sub_components = comp.split("&"),
+
+                            path_to_value[main_path] = sub_components[int(sp_path[3])-1] if int(sp_path[3])-1 < len(sub_components) else ""
                         else:
-                            value[path] = comp
+                            path_to_value[main_path] = comp
                     else:
-                        value[path] = fields[int(sp_path[1])]  # field-level, return raw
+                        path_to_value[main_path] = fields[int(sp_path[1])]  # field-level, return raw
                 else:
-                    value[path] = fields[int(sp_path[1])]
-        
-    return value
+                    path_to_value[main_path] = fields[int(sp_path[1])]
+    
+    logger.info(f"Extracted values for paths: {paths} -> {path_to_value}\n\n")
+    return path_to_value
 
 # this output_data contains all the data of the entire hl7 message of every segment,
 # with fields and values in a flat structure e.g. {"PID-5.1": "Smith", "PID-3": "12345", "PID-3.4.1": "X"}
@@ -127,6 +147,7 @@ def build_hl7_message(output_data: dict[str, str],
     Returns:
         Complete HL7 message string.
     """
+    logger.info(f"Building HL7 message with src: {src}, dest: {dest}, msg_type: {msg_type}, output_data keys: {list(output_data.keys())}")
     dt = datetime.now().strftime("%Y%m%d%H%M%S")
     control_id = f"MSG{uuid4()}"
 
@@ -190,6 +211,7 @@ def build_hl7_message(output_data: dict[str, str],
         seg_data[seg][occurrence][field].setdefault(comp, {})
         seg_data[seg][occurrence][field][comp][sub] = str_value
 
+    logger.debug(f"Segment data structure after parsing output_data: {seg_data}")
     # ── Serialise each segment ────────────────────────────────────────────────
     # HL7 segment order: MSH first, then alphabetical (reasonable default)
     SEGMENT_ORDER = [
@@ -221,6 +243,7 @@ def build_hl7_message(output_data: dict[str, str],
 
         # {"PID": 1, "OBX": 2} means the generated message have 1 pid semgnet and 2 obx segments.
         segment_counter[seg_name] = 1 if segment_counter.get(seg_name) is None else segment_counter[seg_name] + 1
+        logger.info(f"segment {seg_name} occurrence count: {segment_counter[seg_name]}")
 
         for occ in sorted(occurrence_map.keys()):
             fields_map = occurrence_map[occ] # contain all the fields of one segment
@@ -234,6 +257,7 @@ def build_hl7_message(output_data: dict[str, str],
 
                 comp_map = fields_map[f_idx]
                 max_comp = max(comp_map.keys())
+                logger.info(f"Processing field index {f_idx}")
                 comp_strs: list[str] = []
 
                 for c_idx in range(1, max_comp + 1):
@@ -243,6 +267,7 @@ def build_hl7_message(output_data: dict[str, str],
 
                     sub_map = comp_map[c_idx]
                     max_sub = max(sub_map.keys())
+                    logger.info(f"Processing component index {c_idx}")
 
                     if max_sub == 1:
                         comp_strs.append(sub_map[1])
@@ -253,10 +278,14 @@ def build_hl7_message(output_data: dict[str, str],
                 field_strs.append("^".join(comp_strs) if max_comp > 1 else comp_strs[0])
 
             if min(fields_map.keys()) > 1 and seg_name in SEGMENT_HAVE_SET:
-                # this will allow those fields whose first field is was not present, and they have were allow to have a set id. 
-                lines.append(f"{seg_name}|" + str(occ) + "|".join(field_strs))
+                # this will allow those fields whose first field is was not present, and they have were allow to have a set id.
+                line =  f"{seg_name}|" + str(occ) + "|".join(field_strs)
+                logger.info(f"appending line {line}")
+                lines.append(line)
             else:
-                lines.append(f"{seg_name}|" + "|".join(field_strs))
+                line = f"{seg_name}|" + "|".join(field_strs)
+                logger.info(f"appending line {line}")
+                lines.append(line)
 
     return "\r\n".join(lines)
 

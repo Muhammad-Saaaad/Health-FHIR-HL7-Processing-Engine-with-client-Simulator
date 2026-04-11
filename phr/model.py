@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Date, Float
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Date, Float, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -44,10 +44,10 @@ class VisitingNotes(Base):
     doctor_id = Column(String(20), ForeignKey('doctor.doctor_id'), nullable=False)
 
     visit_date = Column(DateTime, default=datetime.now())
-    note_title = Column(String(1000), nullable=True)
+    note_title = Column(Text, nullable=True)
     patient_complaint = Column(String(255), nullable=True)
     diagnosis = Column(String(255), nullable=True)
-    note_details = Column(String(1000), nullable=True)
+    note_details = Column(Text, nullable=True)
     total_bill = Column(Float, default=0, nullable=True)
 
     doctor = relationship("Doctor", back_populates="visiting_notes")
@@ -65,7 +65,7 @@ class LabReport(Base):
 
     lab_name = Column(String(100), nullable=False) # from which lab the test is done
     test_code = Column(String(30), nullable=False)
-    test_name = Column(String(100), nullable=False)
+    test_name = Column(Text, nullable=False)
     test_status = Column(String(10), nullable=False, default="Pending") # Arrived, decline
     test_bill = Column(Float, default=0, nullable=True)
     created_at = Column(DateTime, default=datetime.now())

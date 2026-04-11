@@ -1,136 +1,17 @@
-2026-04-07 16:37:46,592- INFO - [route.py:59] - All routes request received
-2026-04-07 16:37:46,609- INFO - [route.py:74] - All routes fetched successfully: total_routes=3
-2026-04-07 16:37:51,054- INFO - [route.py:59] - All routes request received
-2026-04-07 16:37:51,075- INFO - [route.py:74] - All routes fetched successfully: total_routes=3
-2026-04-07 19:18:51,176- INFO - [route.py:59] - All routes request received
-2026-04-07 19:18:51,189- INFO - [route.py:74] - All routes fetched successfully: total_routes=3
-2026-04-07 19:19:42,994- INFO - [route.py:59] - All routes request received
-2026-04-07 19:19:43,019- INFO - [route.py:74] - All routes fetched successfully: total_routes=3
-2026-04-07 19:21:26,699- INFO - [route.py:59] - All routes request received
-2026-04-07 19:21:26,711- INFO - [route.py:74] - All routes fetched successfully: total_routes=3
-2026-04-08 08:32:39,139- INFO - [route.py:59] - All routes request received
-2026-04-08 08:32:39,260- INFO - [route.py:74] - All routes fetched successfully: total_routes=3
-2026-04-08 08:45:47,021- INFO - [route.py:409] - Add route request received: name=Add-Encounter(EHR-PHR), src_endpoint_id=132, dest_endpoint_id=133, msg_type=ORM
-2026-04-08 08:45:47,074- INFO - [route.py:455] - Route created and flushed successfully with route_id=1032
-2026-04-08 08:45:47,119- INFO - [route.py:510] - Add route completed successfully: route_id=1032, total_mapping_rules=24
-2026-04-08 08:45:47,814- INFO - [route.py:59] - All routes request received
-2026-04-08 08:45:47,843- INFO - [route.py:74] - All routes fetched successfully: total_routes=4
-2026-04-08 08:45:49,373- INFO - [route.py:137] - Mapping rules request received for route_id=1032
-2026-04-08 08:45:49,499- INFO - [route.py:254] - Mapping rules fetched successfully for route_id=1032: total_rules=24
-2026-04-08 08:52:41,386- INFO - [route.py:137] - Mapping rules request received for route_id=1032
-2026-04-08 08:52:41,524- INFO - [route.py:254] - Mapping rules fetched successfully for route_id=1032: total_rules=24
-2026-04-08 08:53:44,262- INFO - [route.py:137] - Mapping rules request received for route_id=1032
-2026-04-08 08:53:44,387- INFO - [route.py:254] - Mapping rules fetched successfully for route_id=1032: total_rules=24
-2026-04-08 08:54:44,405- INFO - [route.py:137] - Mapping rules request received for route_id=1032
-2026-04-08 08:54:44,511- INFO - [route.py:254] - Mapping rules fetched successfully for route_id=1032: total_rules=24
-2026-04-08 13:56:58,784- INFO - [route.py:137] - Mapping rules request received for route_id=1032
-2026-04-08 13:56:59,650- INFO - [route.py:254] - Mapping rules fetched successfully for route_id=1032: total_rules=24
-2026-04-08 13:57:19,659- INFO - [route.py:137] - Mapping rules request received for route_id=1032
-2026-04-08 13:57:20,284- INFO - [route.py:254] - Mapping rules fetched successfully for route_id=1032: total_rules=24
-2026-04-08 13:57:51,953- INFO - [route.py:59] - All routes request received
-2026-04-08 13:57:52,000- INFO - [route.py:74] - All routes fetched successfully: total_routes=4
-2026-04-08 13:57:53,716- INFO - [route.py:137] - Mapping rules request received for route_id=1031
-2026-04-08 13:57:53,785- INFO - [route.py:254] - Mapping rules fetched successfully for route_id=1031: total_rules=6
-2026-04-08 13:57:57,789- INFO - [route.py:59] - All routes request received
-2026-04-08 13:57:57,849- INFO - [route.py:74] - All routes fetched successfully: total_routes=4
-2026-04-08 13:58:04,616- INFO - [route.py:137] - Mapping rules request received for route_id=1032
-2026-04-08 13:58:04,777- INFO - [route.py:254] - Mapping rules fetched successfully for route_id=1032: total_rules=24
-2026-04-08 13:58:13,318- INFO - [route.py:137] - Mapping rules request received for route_id=1032
-2026-04-08 13:58:13,492- INFO - [route.py:254] - Mapping rules fetched successfully for route_id=1032: total_rules=24
-2026-04-08 13:58:19,158- INFO - [route.py:137] - Mapping rules request received for route_id=1032
-2026-04-08 13:58:19,350- INFO - [route.py:254] - Mapping rules fetched successfully for route_id=1032: total_rules=24
-2026-04-08 13:58:27,453- INFO - [route.py:137] - Mapping rules request received for route_id=1032
-2026-04-08 13:58:27,677- INFO - [route.py:254] - Mapping rules fetched successfully for route_id=1032: total_rules=24
-2026-04-08 13:58:54,189- INFO - [route.py:137] - Mapping rules request received for route_id=1032
-2026-04-08 13:58:54,591- INFO - [route.py:254] - Mapping rules fetched successfully for route_id=1032: total_rules=24
-2026-04-08 14:00:31,638- INFO - [route.py:137] - Mapping rules request received for route_id=1032
-2026-04-08 14:00:31,790- INFO - [route.py:254] - Mapping rules fetched successfully for route_id=1032: total_rules=24
-2026-04-08 14:00:33,620- INFO - [route.py:137] - Mapping rules request received for route_id=1032
-2026-04-08 14:00:33,718- INFO - [route.py:254] - Mapping rules fetched successfully for route_id=1032: total_rules=24
-2026-04-08 14:00:36,106- INFO - [route.py:137] - Mapping rules request received for route_id=1032
-2026-04-08 14:00:36,255- INFO - [route.py:254] - Mapping rules fetched successfully for route_id=1032: total_rules=24
-2026-04-08 14:00:36,910- INFO - [route.py:137] - Mapping rules request received for route_id=1032
-2026-04-08 14:00:36,997- INFO - [route.py:254] - Mapping rules fetched successfully for route_id=1032: total_rules=24
-2026-04-08 14:00:43,004- INFO - [route.py:137] - Mapping rules request received for route_id=1032
-2026-04-08 14:00:43,243- INFO - [route.py:254] - Mapping rules fetched successfully for route_id=1032: total_rules=24
-2026-04-08 14:00:44,283- INFO - [route.py:137] - Mapping rules request received for route_id=1032
-2026-04-08 14:00:44,392- INFO - [route.py:254] - Mapping rules fetched successfully for route_id=1032: total_rules=24
-2026-04-08 14:00:56,071- INFO - [route.py:137] - Mapping rules request received for route_id=1032
-2026-04-08 14:00:56,214- INFO - [route.py:254] - Mapping rules fetched successfully for route_id=1032: total_rules=24
-2026-04-09 09:30:03,307- INFO - [route.py:59] - All routes request received
-2026-04-09 09:30:03,345- INFO - [route.py:74] - All routes fetched successfully: total_routes=4
-2026-04-09 10:31:36,868- INFO - [route.py:59] - All routes request received
-2026-04-09 10:31:36,941- INFO - [route.py:74] - All routes fetched successfully: total_routes=4
-2026-04-09 10:31:47,947- INFO - [route.py:59] - All routes request received
-2026-04-09 10:31:47,968- INFO - [route.py:74] - All routes fetched successfully: total_routes=4
-2026-04-09 10:33:37,308- INFO - [route.py:59] - All routes request received
-2026-04-09 10:33:37,331- INFO - [route.py:74] - All routes fetched successfully: total_routes=4
-2026-04-09 10:35:53,822- WARNING - [route.py:335] - Mapping suggestion rejected due to validation error: Type mismatch between encounter_patient_ref (subject_reference_format) and MPI (id_format)
-2026-04-09 10:35:54,843- WARNING - [route.py:335] - Mapping suggestion rejected due to validation error: Type mismatch between encounter_patient_ref (subject_reference_format) and MPI (id_format)
-2026-04-09 10:35:56,859- WARNING - [route.py:335] - Mapping suggestion rejected due to validation error: Type mismatch between encounter_patient_ref (subject_reference_format) and MPI (id_format)
-2026-04-09 10:37:50,850- WARNING - [route.py:335] - Mapping suggestion rejected due to validation error: Type mismatch between encounter_patient_ref (subject_reference_format) and MPI (id_format)
-2026-04-09 10:45:38,848- WARNING - [route.py:335] - Mapping suggestion rejected due to validation error: Type mismatch between encounter_patient_ref (subject_reference_format) and MPI (id_format)
-2026-04-09 10:45:39,860- WARNING - [route.py:335] - Mapping suggestion rejected due to validation error: Type mismatch between encounter_patient_ref (subject_reference_format) and MPI (id_format)
-2026-04-09 10:45:41,875- WARNING - [route.py:335] - Mapping suggestion rejected due to validation error: Type mismatch between encounter_patient_ref (subject_reference_format) and MPI (id_format)
-2026-04-09 10:45:51,019- WARNING - [route.py:335] - Mapping suggestion rejected due to validation error: Type mismatch between encounter_patient_ref (subject_reference_format) and MPI (id_format)
-2026-04-09 10:48:37,946- WARNING - [route.py:335] - Mapping suggestion rejected due to validation error: Type mismatch between encounter_patient_ref (subject_reference_format) and MPI (id_format)
-2026-04-09 10:48:39,815- WARNING - [route.py:335] - Mapping suggestion rejected due to validation error: Type mismatch between encounter_patient_ref (subject_reference_format) and MPI (id_format)
-2026-04-09 10:48:44,734- WARNING - [route.py:335] - Mapping suggestion rejected due to validation error: Type mismatch between encounter_patient_ref (subject_reference_format) and MPI (id_format)
-2026-04-09 10:48:48,780- WARNING - [route.py:335] - Mapping suggestion rejected due to validation error: Type mismatch between encounter_patient_ref (subject_reference_format) and MPI (id_format)
-2026-04-09 10:49:11,963- WARNING - [route.py:335] - Mapping suggestion rejected due to validation error: Type mismatch between encounter_patient_ref (subject_reference_format) and MPI (id_format)
-2026-04-09 10:49:12,977- WARNING - [route.py:335] - Mapping suggestion rejected due to validation error: Type mismatch between encounter_patient_ref (subject_reference_format) and MPI (id_format)
-2026-04-09 10:49:24,931- WARNING - [route.py:335] - Mapping suggestion rejected due to validation error: Type mismatch between encounter_patient_ref (subject_reference_format) and MPI (id_format)
-2026-04-09 10:49:29,275- WARNING - [route.py:335] - Mapping suggestion rejected due to validation error: Type mismatch between encounter_patient_ref (subject_reference_format) and MPI (id_format)
-2026-04-09 10:58:21,793- WARNING - [route.py:335] - Mapping suggestion rejected due to validation error: Type mismatch between encounter_patient_ref (subject_reference_format) and MPI (id_format)
-2026-04-09 11:00:08,383- WARNING - [route.py:335] - Mapping suggestion rejected due to validation error: Type mismatch between encounter_patient_ref (subject_reference_format) and MPI (id_format)
-2026-04-09 11:05:15,517- ERROR - [route.py:338] - Error retrieving mapping suggestion: 'NoneType' object is not subscriptable
-2026-04-09 11:05:16,580- ERROR - [route.py:338] - Error retrieving mapping suggestion: 'NoneType' object is not subscriptable
-2026-04-09 11:05:18,646- ERROR - [route.py:338] - Error retrieving mapping suggestion: 'NoneType' object is not subscriptable
-2026-04-09 11:05:43,676- ERROR - [route.py:338] - Error retrieving mapping suggestion: 'NoneType' object is not subscriptable
-2026-04-09 11:13:48,783- ERROR - [route.py:338] - Error retrieving mapping suggestion: 'NoneType' object is not subscriptable
-2026-04-09 11:13:49,828- ERROR - [route.py:338] - Error retrieving mapping suggestion: 'NoneType' object is not subscriptable
-2026-04-09 11:13:59,218- ERROR - [route.py:338] - Error retrieving mapping suggestion: 'NoneType' object is not subscriptable
-2026-04-09 11:14:10,816- ERROR - [route.py:338] - Error retrieving mapping suggestion: 'NoneType' object is not subscriptable
-2026-04-09 11:17:29,539- INFO - [route.py:59] - All routes request received
-2026-04-09 11:17:29,571- INFO - [route.py:74] - All routes fetched successfully: total_routes=4
-2026-04-09 11:17:51,272- ERROR - [route.py:338] - Error retrieving mapping suggestion: 'NoneType' object is not subscriptable
-2026-04-09 11:17:52,305- ERROR - [route.py:338] - Error retrieving mapping suggestion: 'NoneType' object is not subscriptable
-2026-04-09 11:17:54,336- ERROR - [route.py:338] - Error retrieving mapping suggestion: 'NoneType' object is not subscriptable
-2026-04-09 11:17:58,373- ERROR - [route.py:338] - Error retrieving mapping suggestion: 'NoneType' object is not subscriptable
-2026-04-09 11:19:58,692- ERROR - [route.py:338] - Error retrieving mapping suggestion: 'NoneType' object is not subscriptable
-2026-04-09 11:19:59,724- ERROR - [route.py:338] - Error retrieving mapping suggestion: 'NoneType' object is not subscriptable
-2026-04-09 11:20:12,501- ERROR - [route.py:338] - Error retrieving mapping suggestion: 'NoneType' object is not subscriptable
-2026-04-09 11:20:16,933- ERROR - [route.py:338] - Error retrieving mapping suggestion: 'NoneType' object is not subscriptable
-2026-04-09 11:26:12,795- INFO - [route.py:409] - Add route request received: name=Lab-Order(ehr-lis), src_endpoint_id=132, dest_endpoint_id=134, msg_type=ORM
-2026-04-09 11:26:12,854- INFO - [route.py:455] - Route created and flushed successfully with route_id=1033
-2026-04-09 11:26:12,891- INFO - [route.py:510] - Add route completed successfully: route_id=1033, total_mapping_rules=4
-2026-04-09 11:26:13,505- INFO - [route.py:59] - All routes request received
-2026-04-09 11:26:13,543- INFO - [route.py:74] - All routes fetched successfully: total_routes=5
-2026-04-09 11:26:16,272- INFO - [route.py:137] - Mapping rules request received for route_id=1033
-2026-04-09 11:26:16,295- INFO - [route.py:254] - Mapping rules fetched successfully for route_id=1033: total_rules=3
-2026-04-09 11:26:19,257- INFO - [route.py:59] - All routes request received
-2026-04-09 11:26:19,289- INFO - [route.py:74] - All routes fetched successfully: total_routes=5
-2026-04-09 11:26:29,714- INFO - [route.py:59] - All routes request received
-2026-04-09 11:26:29,757- INFO - [route.py:74] - All routes fetched successfully: total_routes=5
-2026-04-09 11:26:36,012- INFO - [route.py:59] - All routes request received
-2026-04-09 11:26:36,074- INFO - [route.py:74] - All routes fetched successfully: total_routes=5
-2026-04-09 11:28:18,324- INFO - [route.py:59] - All routes request received
-2026-04-09 11:28:18,426- INFO - [route.py:74] - All routes fetched successfully: total_routes=5
-2026-04-09 11:28:21,146- INFO - [route.py:59] - All routes request received
-2026-04-09 11:28:21,210- INFO - [route.py:74] - All routes fetched successfully: total_routes=5
-2026-04-09 11:30:07,899- INFO - [route.py:59] - All routes request received
-2026-04-09 11:30:07,968- INFO - [route.py:74] - All routes fetched successfully: total_routes=5
-2026-04-09 11:30:22,596- INFO - [route.py:59] - All routes request received
-2026-04-09 11:30:22,672- INFO - [route.py:74] - All routes fetched successfully: total_routes=5
-2026-04-09 11:30:39,642- INFO - [route.py:59] - All routes request received
-2026-04-09 11:30:39,687- INFO - [route.py:74] - All routes fetched successfully: total_routes=5
-2026-04-09 11:30:48,898- INFO - [route.py:59] - All routes request received
-2026-04-09 11:30:48,944- INFO - [route.py:74] - All routes fetched successfully: total_routes=5
-2026-04-09 11:31:23,340- WARNING - [route.py:335] - Mapping suggestion rejected due to validation error: Type mismatch between MPI_type (string) and phone (phone)
-2026-04-09 11:31:24,381- WARNING - [route.py:335] - Mapping suggestion rejected due to validation error: Type mismatch between MPI_type (string) and phone (phone)
-2026-04-09 11:31:26,426- WARNING - [route.py:335] - Mapping suggestion rejected due to validation error: Type mismatch between MPI_type (string) and phone (phone)
-2026-04-09 11:31:30,476- WARNING - [route.py:335] - Mapping suggestion rejected due to validation error: Type mismatch between MPI_type (string) and phone (phone)
-2026-04-09 11:42:44,424- INFO - [route.py:59] - All routes request received
-2026-04-09 11:42:44,482- INFO - [route.py:74] - All routes fetched successfully: total_routes=5
-2026-04-09 11:43:58,021- INFO - [route.py:59] - All routes request received
-2026-04-09 11:43:58,091- INFO - [route.py:74] - All routes fetched successfully: total_routes=5
+2026-04-10 20:21:24,929- INFO - [route.py:74] - All routes fetched successfully: total_routes=5
+2026-04-10 20:21:45,904- INFO - [route.py:59] - All routes request received
+2026-04-10 20:21:45,920- INFO - [route.py:74] - All routes fetched successfully: total_routes=5
+2026-04-10 20:21:53,883- INFO - [route.py:59] - All routes request received
+2026-04-10 20:21:53,896- INFO - [route.py:74] - All routes fetched successfully: total_routes=5
+2026-04-10 20:22:01,583- INFO - [route.py:59] - All routes request received
+2026-04-10 20:22:01,601- INFO - [route.py:74] - All routes fetched successfully: total_routes=5
+2026-04-10 20:22:08,317- INFO - [route.py:59] - All routes request received
+2026-04-10 20:22:08,342- INFO - [route.py:74] - All routes fetched successfully: total_routes=5
+2026-04-10 20:22:36,373- INFO - [route.py:59] - All routes request received
+2026-04-10 20:22:36,394- INFO - [route.py:74] - All routes fetched successfully: total_routes=5
+2026-04-10 20:22:39,749- INFO - [route.py:59] - All routes request received
+2026-04-10 20:22:39,768- INFO - [route.py:74] - All routes fetched successfully: total_routes=5
+2026-04-10 20:29:55,073- INFO - [route.py:59] - All routes request received
+2026-04-10 20:29:55,143- INFO - [route.py:74] - All routes fetched successfully: total_routes=5
+2026-04-11 05:44:22,184- INFO - [route.py:59] - All routes request received
+2026-04-11 05:44:22,245- INFO - [route.py:74] - All routes fetched successfully: total_routes=5

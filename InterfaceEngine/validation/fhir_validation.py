@@ -78,7 +78,7 @@ def get_fhir_value_by_path(obj, path): # give the entire fhir msg and it will ex
 
     Args:
         obj (dict): The root FHIR JSON object to traverse.
-        path (str): Dot/bracket notation path string (e.g., `"name[0].family"`, `"gender"`).
+        path (str): Dot/bracket notation path string (e.g., `"Patient[1]-name[0].family"`, `"gender"`).
 
     Returns:
         The value at the specified path, or `None` if any key/index along the path is missing.
@@ -353,7 +353,7 @@ if __name__ == "__main__":
                             }
                         }
                     ],
-                    "subject": {"reference": "patient/32"}, # reference to the patient resource (with mpi = 32 in this case)
+                    "subject": {"reference": "Patient/32"}, # reference to the patient resource (with mpi = 32 in this case)
                     # 4. CONSULTATION NOTES
                     "extension": [{
                             "valueString": "Patient responded well to medication. Follow-up advised in 2 weeks."
@@ -386,7 +386,7 @@ if __name__ == "__main__":
                             }
                         ]
                     },
-                    "subject": {"reference": "patient/32"},
+                    "subject": {"reference": "Patient/32"},
                     "performer": [{"identifier": {"value": "PRAC-001"}, "display": "IDC"}]
                 }
             }

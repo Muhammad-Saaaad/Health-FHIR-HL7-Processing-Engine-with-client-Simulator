@@ -80,5 +80,6 @@ print(f"Result: {result}")
 # lines = ["hi there-", "how are you"]
 # line = "\r\n".join(lines)
 # print(line.splitlines()[1:])
-l = ["hi there-", "how are you"]
-print(" " +" ".join(l[1:]))
+l = ["hi there-"]
+for i in range(len(l)) if len(l) > 1 else l:
+    print(i)

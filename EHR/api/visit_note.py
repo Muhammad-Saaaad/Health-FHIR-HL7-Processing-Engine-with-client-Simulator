@@ -17,7 +17,7 @@ router = APIRouter(tags=['Visit Note'])
 logger = logging.getLogger("visit_note_logger")
 logger.setLevel(logging.INFO)
 formater = logging.Formatter("%(asctime)s- %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s")
-handler = RotatingFileHandler("logs/visit_note.log", maxBytes=5*1024*1024, backupCount=2) # 5 MB per file, keep 2 backups
+handler = RotatingFileHandler(r"logs/visit_note.log", maxBytes=5*1024*1024, backupCount=2) # 5 MB per file, keep 2 backups
 handler.setFormatter(formater)
 logger.addHandler(handler)
 
@@ -146,7 +146,7 @@ def add_visit_note(visit_note: schema.VisitNote ,request: Request, response: Res
                                 }
                             }
                         ],
-                        "subject": {"reference": f"Patient/{str(visit_note.mpi)}"}, # reference to the patient resource (with mpi = 32 in this case)
+                        "subject": {"reference": f"patient/{str(visit_note.mpi)}"}, # reference to the patient resource (with mpi = 32 in this case)
                         # 4. CONSULTATION NOTES
                         "extension": [{
                                 "valueString": new_visit_note.note_details
@@ -159,7 +159,7 @@ def add_visit_note(visit_note: schema.VisitNote ,request: Request, response: Res
                         "resourceType": "Invoice",
                         "id": "5e4d2222-11b8-4acc-9998-40a49e273c4e",
                         "status": "issued",
-                        "subject": {"reference": f"Patient/{str(visit_note.mpi)}"},
+                        "subject": {"reference": f"patient/{str(visit_note.mpi)}"},
                         "participant": [{"actor": {"reference": f"Practitioner/{str(is_doctor.doctor_id)}" } }],
                         "totalNet": {"value": str(visit_note.bill_amount)} # "currency": "USD", this can also be added.
                     }
@@ -246,7 +246,7 @@ def get_test_report(
                             }
                         ]
                     },
-                    "subject": {"reference": f"Patient/{str(mpi)}"},
+                    "subject": {"reference": f"patient/{str(mpi)}"},
                     "performer": [{"identifier": {"value": "PRAC-001"}, "display": lab_name.strip()}] # for now it is set to this dummy data.
                 }
             }

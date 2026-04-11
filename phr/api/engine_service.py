@@ -11,6 +11,7 @@ import model
 router = APIRouter(tags=["Engine-Service"])
 
 logger = logging.getLogger("get_data")
+logger.setLevel(logging.INFO)
 formater = logging.Formatter("%(asctime)s- %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s")
 
 if not logger.handlers:

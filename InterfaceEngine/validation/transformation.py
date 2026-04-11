@@ -52,20 +52,23 @@ def get_segment_name_and_counter(segment: str) -> tuple[str, int, str]:
         segment_name, counter = (segment_name, 0) if "[" not in segment_name else (segment_name.split("[")[0], int(re.search(r"\[(\d+)\]", segment_name).group(1)))
         return segment_name, counter, segment_core_path
 
-def increment_segment(output_data: dict, segment_path: str) -> str:
+def increment_segment(output_data: dict | None=None, segment_path: str="", list_data: list | None = None) -> str:
     """
+    this can work with both fhir and hl7 and data can be in list or dictionary.
     """
+    if output_data is None and list_data is None:
+        raise ValueError("Either output_data or list_data must be provided.")
 
     input_segment_name, input_segment_counter, input_segment_core_path = get_segment_name_and_counter(segment_path)
 
-    for key in output_data.keys(): # the key also contain the path.
+    for key in output_data.keys() if list_data is None else list_data: # the key also contain the path.
         output_segment_name, output_segment_counter, output_segment_core_path = get_segment_name_and_counter(key)
 
         if (output_segment_name == input_segment_name) and (output_segment_core_path == input_segment_core_path):
            input_segment_counter = max(output_segment_counter , input_segment_counter)
     
-    final_data = input_segment_name + f"[{input_segment_counter + 1}]" + "-" + input_segment_core_path
-    return final_data
+    final_path = input_segment_name + f"[{input_segment_counter + 1}]" + "-" + input_segment_core_path
+    return final_path
 
 # def increment_segment(segment : str) -> str:
 #     """
@@ -95,21 +98,21 @@ def increment_segment(output_data: dict, segment_path: str) -> str:
 
 if __name__ == "__main__":
 
-    # output_data = {
-    #     "Patient[1]-name": "John Doe",
-    #     "Patient[2]-name": "Jane Doe",
+    output_data = {
+        "Patient[1]-name": "John Doe",
+        "Patient[2]-name": "Jane Doe",
 
-    #     "Patient-identifier[1].value": "12345",
-    #     "Patient-identifier[2].value": "67890",
+        "Patient-identifier[1].value": "12345",
+        "Patient-identifier[2].value": "67890",
 
-    #     "PID[1]-5.1": "John",
-    #     "PID[2]-5.1": "Jane",
-    #     "ServiceRequest[2]-name": "Blood Test"
-    # }
+        "PID[1]-5.1": "John",
+        "PID[2]-5.1": "Jane",
+        "ServiceRequest[2]-name": "Blood Test"
+    }
 
     # print("Patient-identifier[1].value -> ",increment_segment(output_data, "Patient-identifier[1].value"))
     # print("\nPatient[1]-identifier[0].type.coding[0].code -> ",increment_segment(output_data, "Patient[1]-identifier[0].type.coding[0].code"))
-    # print("\nPatient-name.text -> ",increment_segment(output_data, "Patient-name.text"))
+    print("\nPatient-name -> ",increment_segment(output_data, "Patient-name"))
     # print("\nPatient[1]-name.text -> ",increment_segment(output_data, "Patient[1]-name.text"))
     # print("\nPatient[2]-name -> ",increment_segment(output_data, "Patient[2]-name"))
     # print("\nPID-5.1 -> ",increment_segment(output_data, "PID-5.1"))
@@ -120,5 +123,5 @@ if __name__ == "__main__":
     # string = "Patient[23]"
     # pattern = r"\[(\d+)\]"
     # print(re.search(pattern, string).group(1))
-    print(regex_replace_with_template("Practitioner/a123-c", "Practitioner/.+", ".+"))
-    print(regex_replace_with_template("a123-c/VID", ".+", "Practitioner/.+"))
+    # print(regex_replace_with_template("Practitioner/a123-c", "Practitioner/.+", ".+"))
+    # print(regex_replace_with_template("a123-c/VID", ".+", "Practitioner/.+"))

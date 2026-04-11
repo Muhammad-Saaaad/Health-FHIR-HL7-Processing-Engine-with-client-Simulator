@@ -39,7 +39,7 @@ class LabTestRequest(base):
     test_req_id = Column(Integer, primary_key=True, index=True)
     mpi = Column(Integer, ForeignKey("patient.mpi"), nullable=False) # every test req will have a patient assign to it
 
-    test_name = Column(String(50), nullable=False)
+    test_name = Column(Text, nullable=False)
     status = Column(String(10), nullable=False, default='Pending') #pending or accepted or rejected
     decline_reason = Column(String(100), nullable=True)
     locked_by = Column(Integer, ForeignKey('users.user_id'), nullable=True)
@@ -84,7 +84,7 @@ class MiniLabResult(base):
     mini_test_id = Column(Integer, primary_key=True, index= True)
     result_id = Column(Integer, ForeignKey("test_result.result_id"), nullable=False)
 
-    test_name = Column(String(50), nullable=False)
+    test_name = Column(String(100), nullable=False)
     normal_range = Column(String(20), nullable=False)
     result_value = Column(String(7), nullable=False)
 
