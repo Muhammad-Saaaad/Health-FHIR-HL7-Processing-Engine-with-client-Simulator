@@ -1,103 +1,14 @@
-2026-04-09 11:47:49,480- ERROR - [engine_service.py:247] - Invalid numeric identifier in payload: Expecting value: line 1 column 1 (char 0)
-Traceback (most recent call last):
-  File "E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\phr\api\engine_service.py", line 79, in get_visit_note
-    json_data = await req.json()
-                ^^^^^^^^^^^^^^^^
-  File "E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\health-venv\Lib\site-packages\starlette\requests.py", line 251, in json
-    self._json = json.loads(body)
-                 ^^^^^^^^^^^^^^^^
-  File "E:\Ananconda\Lib\json\__init__.py", line 346, in loads
-    return _default_decoder.decode(s)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "E:\Ananconda\Lib\json\decoder.py", line 337, in decode
-    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "E:\Ananconda\Lib\json\decoder.py", line 355, in raw_decode
-    raise JSONDecodeError("Expecting value", s, err.value) from None
-json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
-2026-04-10 20:22:52,140- ERROR - [engine_service.py:250] - Error processing FHIR data: (pyodbc.ProgrammingError) ('42000', "[42000] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]String or binary data would be truncated in table 'PHR.dbo.lab_report', column 'test_name'. Truncated value: 'Clotting time of Blood by Thromboelastography.rotational.extrinsic coagulation system activated.plat'. (2628) (SQLExecDirectW); [42000] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]The statement has been terminated. (3621)")
-[SQL: INSERT INTO lab_report (visit_id, lab_id, lab_name, test_code, test_name, test_status, test_bill, created_at, updated_at) OUTPUT inserted.report_id VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)]
-[parameters: ('40', 'PRAC-001', 'any lab', '100346-6', 'Clotting time of Blood by Thromboelastography.rotational.extrinsic coagulation system activated.platelets inhibited', 'Pending', 0, datetime.datetime(2026, 4, 9, 11, 43, 15, 376204), datetime.datetime(2026, 4, 9, 11, 43, 15, 376204))]
-(Background on this error at: https://sqlalche.me/e/20/f405)
-Traceback (most recent call last):
-  File "E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\health-venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
-    self.dialect.do_execute(
-  File "E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\health-venv\Lib\site-packages\sqlalchemy\engine\default.py", line 951, in do_execute
-    cursor.execute(statement, parameters)
-pyodbc.ProgrammingError: ('42000', "[42000] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]String or binary data would be truncated in table 'PHR.dbo.lab_report', column 'test_name'. Truncated value: 'Clotting time of Blood by Thromboelastography.rotational.extrinsic coagulation system activated.plat'. (2628) (SQLExecDirectW); [42000] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]The statement has been terminated. (3621)")
-
-The above exception was the direct cause of the following exception:
-
-Traceback (most recent call last):
-  File "E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\phr\api\engine_service.py", line 239, in get_visit_note
-    db.commit()
-  File "E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\health-venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2030, in commit
-    trans.commit(_to_root=True)
-  File "<string>", line 2, in commit
-  File "E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\health-venv\Lib\site-packages\sqlalchemy\orm\state_changes.py", line 137, in _go
-    ret_value = fn(self, *arg, **kw)
-                ^^^^^^^^^^^^^^^^^^^^
-  File "E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\health-venv\Lib\site-packages\sqlalchemy\orm\session.py", line 1311, in commit
-    self._prepare_impl()
-  File "<string>", line 2, in _prepare_impl
-  File "E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\health-venv\Lib\site-packages\sqlalchemy\orm\state_changes.py", line 137, in _go
-    ret_value = fn(self, *arg, **kw)
-                ^^^^^^^^^^^^^^^^^^^^
-  File "E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\health-venv\Lib\site-packages\sqlalchemy\orm\session.py", line 1286, in _prepare_impl
-    self.session.flush()
-  File "E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\health-venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4331, in flush
-    self._flush(objects)
-  File "E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\health-venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4466, in _flush
-    with util.safe_reraise():
-  File "E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\health-venv\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 224, in __exit__
-    raise exc_value.with_traceback(exc_tb)
-  File "E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\health-venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4427, in _flush
-    flush_context.execute()
-  File "E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\health-venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 466, in execute
-    rec.execute(self)
-  File "E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\health-venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 642, in execute
-    util.preloaded.orm_persistence.save_obj(
-  File "E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\health-venv\Lib\site-packages\sqlalchemy\orm\persistence.py", line 93, in save_obj
-    _emit_insert_statements(
-  File "E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\health-venv\Lib\site-packages\sqlalchemy\orm\persistence.py", line 1233, in _emit_insert_statements
-    result = connection.execute(
-             ^^^^^^^^^^^^^^^^^^^
-  File "E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\health-venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1419, in execute
-    return meth(
-           ^^^^^
-  File "E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\health-venv\Lib\site-packages\sqlalchemy\sql\elements.py", line 526, in _execute_on_connection
-    return connection._execute_clauseelement(
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\health-venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1641, in _execute_clauseelement
-    ret = self._execute_context(
-          ^^^^^^^^^^^^^^^^^^^^^^
-  File "E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\health-venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1846, in _execute_context
-    return self._exec_single_context(
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\health-venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1986, in _exec_single_context
-    self._handle_dbapi_exception(
-  File "E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\health-venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2355, in _handle_dbapi_exception
-    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
-  File "E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\health-venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
-    self.dialect.do_execute(
-  File "E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\health-venv\Lib\site-packages\sqlalchemy\engine\default.py", line 951, in do_execute
-    cursor.execute(statement, parameters)
-sqlalchemy.exc.ProgrammingError: (pyodbc.ProgrammingError) ('42000', "[42000] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]String or binary data would be truncated in table 'PHR.dbo.lab_report', column 'test_name'. Truncated value: 'Clotting time of Blood by Thromboelastography.rotational.extrinsic coagulation system activated.plat'. (2628) (SQLExecDirectW); [42000] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]The statement has been terminated. (3621)")
-[SQL: INSERT INTO lab_report (visit_id, lab_id, lab_name, test_code, test_name, test_status, test_bill, created_at, updated_at) OUTPUT inserted.report_id VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)]
-[parameters: ('40', 'PRAC-001', 'any lab', '100346-6', 'Clotting time of Blood by Thromboelastography.rotational.extrinsic coagulation system activated.platelets inhibited', 'Pending', 0, datetime.datetime(2026, 4, 9, 11, 43, 15, 376204), datetime.datetime(2026, 4, 9, 11, 43, 15, 376204))]
-(Background on this error at: https://sqlalche.me/e/20/f405)
-2026-04-11 08:08:25,122- INFO - [engine_service.py:83] - Recieved FHIR Data: {'resourceType': 'Bundle', 'type': 'message', 'entry': [{'resource': {'resourceType': 'Practitioner', 'identifier': [{'value': '1'}], 'name': [{'text': 'Kainat'}], 'telecom': [{'value': 'None'}]}}, {'resource': {'resourceType': 'PractitionerRole', 'specialty': [{'coding': [{'display': 'None'}]}], 'practitioner': {'reference': 'Practitioner/1'}}}, {'resource': {'resourceType': 'Encounter', 'identifier': [{'value': '43'}], 'status': 'in-progress', 'class': {'code': 'AMB'}, 'type': [{'text': 'Test1'}], 'reasonCode': [{'text': 'Bain pain'}], 'diagnosis': [{'condition': {'display': 'abc'}}], 'extension': [{'valueString': 'stringggabc'}], 'subject': {'reference': 'patient/1227'}}}, {'resource': {'resourceType': 'Invoice', 'status': 'issued', 'subject': {'reference': 'patient/1227'}, 'participant': [{'actor': {'reference': 'Practitioner/1'}}], 'totalNet': {'value': '20.0'}}}, {'resource': {'resourceType': 'ServiceRequest', 'status': 'active', 'intent': 'order', 'code': {'coding': [{'code': '100346-6', 'display': 'Clotting time of Blood by Thromboelastography.rotational.extrinsic coagulation system activated.platelets inhibited'}]}, 'subject': {'reference': 'patient/1227'}, 'performer': [{'identifier': {'value': 'PRAC-001'}, 'display': 'any lab'}]}}]}
-2026-04-11 08:08:25,130- INFO - [engine_service.py:189] - Extracted Doctor Data: {'doctor_id': '1', 'name': 'Kainat', 'phone_no': 'None', 'about': None, 'specialization': 'None'}
-2026-04-11 08:08:25,133- INFO - [engine_service.py:190] - Extracted Visit Note Data: {'note_id': '43', 'mpi': '1227', 'note_title': 'Test1', 'patient_complaint': 'Bain pain', 'diagnosis': 'abc', 'note_details': 'stringggabc'}
-2026-04-11 08:08:25,133- INFO - [engine_service.py:191] - Extracted Lab Tests Data: [{'lab_id': 'PRAC-001', 'visit_id': '43', 'lab_name': 'any lab', 'test_code': '100346-6', 'test_name': 'Clotting time of Blood by Thromboelastography.rotational.extrinsic coagulation system activated.platelets inhibited'}]
-2026-04-11 08:08:25,357- INFO - [engine_service.py:241] - Visit note and lab tests added to DB for patient MPI: 1227
-2026-04-11 08:58:42,605- INFO - [engine_service.py:83] - Recieved FHIR Data: {'resourceType': 'Bundle', 'type': 'message', 'entry': [{'resource': {'resourceType': 'Practitioner', 'identifier': [{'value': '1'}], 'name': [{'text': 'Kainat'}], 'telecom': [{'value': 'None'}]}}, {'resource': {'resourceType': 'PractitionerRole', 'specialty': [{'coding': [{'display': 'None'}]}], 'practitioner': {'reference': 'Practitioner/1'}}}, {'resource': {'resourceType': 'Encounter', 'identifier': [{'value': '44'}], 'status': 'in-progress', 'class': {'code': 'AMB'}, 'type': [{'text': 'Test1'}], 'reasonCode': [{'text': 'Bain pain'}], 'diagnosis': [{'condition': {'display': 'abc'}}], 'extension': [{'valueString': 'stringggabc'}], 'subject': {'reference': 'patient/1227'}}}, {'resource': {'resourceType': 'Invoice', 'status': 'issued', 'subject': {'reference': 'patient/1227'}, 'participant': [{'actor': {'reference': 'Practitioner/1'}}], 'totalNet': {'value': '20.0'}}}, {'resource': {'resourceType': 'ServiceRequest', 'status': 'active', 'intent': 'order', 'code': {'coding': [{'code': '100346-6', 'display': 'Clotting time of Blood by Thromboelastography.rotational.extrinsic coagulation system activated.platelets inhibited'}]}, 'subject': {'reference': 'patient/1227'}, 'performer': [{'identifier': {'value': 'PRAC-001'}, 'display': 'any lab'}]}}]}
-2026-04-11 08:58:42,605- INFO - [engine_service.py:189] - Extracted Doctor Data: {'doctor_id': '1', 'name': 'Kainat', 'phone_no': 'None', 'about': None, 'specialization': 'None'}
-2026-04-11 08:58:42,605- INFO - [engine_service.py:190] - Extracted Visit Note Data: {'note_id': '44', 'mpi': '1227', 'note_title': 'Test1', 'patient_complaint': 'Bain pain', 'diagnosis': 'abc', 'note_details': 'stringggabc'}
-2026-04-11 08:58:42,606- INFO - [engine_service.py:191] - Extracted Lab Tests Data: [{'lab_id': 'PRAC-001', 'visit_id': '44', 'lab_name': 'any lab', 'test_code': '100346-6', 'test_name': 'Clotting time of Blood by Thromboelastography.rotational.extrinsic coagulation system activated.platelets inhibited'}]
-2026-04-11 08:58:42,671- INFO - [engine_service.py:241] - Visit note and lab tests added to DB for patient MPI: 1227
-2026-04-11 10:39:20,443- INFO - [engine_service.py:83] - Recieved FHIR Data: {'resourceType': 'Bundle', 'type': 'message', 'entry': [{'resource': {'resourceType': 'Practitioner', 'identifier': [{'value': '1'}], 'name': [{'text': 'Kainat'}], 'telecom': [{'value': 'None'}]}}, {'resource': {'resourceType': 'PractitionerRole', 'specialty': [{'coding': [{'display': 'None'}]}], 'practitioner': {'reference': 'Practitioner/1'}}}, {'resource': {'resourceType': 'Encounter', 'identifier': [{'value': '54'}], 'status': 'in-progress', 'class': {'code': 'AMB'}, 'type': [{'text': 'Test1'}], 'reasonCode': [{'text': 'Bain pain'}], 'diagnosis': [{'condition': {'display': 'abc'}}], 'extension': [{'valueString': 'stringggabc'}], 'subject': {'reference': 'patient/1227'}}}, {'resource': {'resourceType': 'Invoice', 'status': 'issued', 'subject': {'reference': 'patient/1227'}, 'participant': [{'actor': {'reference': 'Practitioner/1'}}], 'totalNet': {'value': '20.0'}}}, {'resource': {'resourceType': 'ServiceRequest', 'status': 'active', 'intent': 'order', 'code': {'coding': [{'code': '58410-2', 'display': 'CBC panel - Bld by Automated count'}]}, 'subject': {'reference': 'patient/1227'}, 'performer': [{'identifier': {'value': 'PRAC-001'}, 'display': 'any lab'}]}}]}
-2026-04-11 10:39:20,444- INFO - [engine_service.py:189] - Extracted Doctor Data: {'doctor_id': '1', 'name': 'Kainat', 'phone_no': 'None', 'about': None, 'specialization': 'None'}
-2026-04-11 10:39:20,445- INFO - [engine_service.py:190] - Extracted Visit Note Data: {'note_id': '54', 'mpi': '1227', 'note_title': 'Test1', 'patient_complaint': 'Bain pain', 'diagnosis': 'abc', 'note_details': 'stringggabc'}
-2026-04-11 10:39:20,445- INFO - [engine_service.py:191] - Extracted Lab Tests Data: [{'lab_id': 'PRAC-001', 'visit_id': '54', 'lab_name': 'any lab', 'test_code': '58410-2', 'test_name': 'CBC panel - Bld by Automated count'}]
-2026-04-11 10:39:20,515- INFO - [engine_service.py:241] - Visit note and lab tests added to DB for patient MPI: 1227
+2026-04-11 12:51:03,369- INFO - [engine_service.py:191] - Extracted Lab Tests Data: [{'lab_id': 'PRAC-001', 'visit_id': '56', 'lab_name': 'any lab', 'test_code': '58410-2', 'test_name': 'test1'}, {'lab_id': 'PRAC-001', 'visit_id': '56', 'lab_name': 'any lab', 'test_code': '100346-6', 'test_name': 'test2'}]
+2026-04-11 12:51:03,402- INFO - [engine_service.py:241] - Visit note and lab tests added to DB for patient MPI: 1227
+2026-04-12 11:45:19,533- INFO - [engine_service.py:83] - Recieved FHIR Data: {'resourceType': 'Bundle', 'type': 'message', 'entry': [{'resource': {'resourceType': 'Practitioner', 'identifier': [{'value': '1'}], 'name': [{'text': 'Kainat'}], 'telecom': [{'value': 'None'}]}}, {'resource': {'resourceType': 'PractitionerRole', 'specialty': [{'coding': [{'display': 'None'}]}], 'practitioner': {'reference': 'Practitioner/1'}}}, {'resource': {'resourceType': 'Encounter', 'identifier': [{'value': '57'}], 'status': 'in-progress', 'class': {'code': 'AMB'}, 'type': [{'text': 'Test1'}], 'reasonCode': [{'text': 'Bain pain'}], 'diagnosis': [{'condition': {'display': 'abc'}}], 'extension': [{'valueString': 'stringggabc'}], 'subject': {'reference': 'patient/1227'}}}, {'resource': {'resourceType': 'Invoice', 'status': 'issued', 'subject': {'reference': 'patient/1227'}, 'participant': [{'actor': {'reference': 'Practitioner/1'}}], 'totalNet': {'value': '20.0'}}}, {'resource': {'resourceType': 'ServiceRequest', 'status': 'active', 'intent': 'order', 'code': {'coding': [{'code': '58410-2', 'display': 'cbc1'}]}, 'subject': {'reference': 'patient/1227'}, 'performer': [{'identifier': {'value': 'PRAC-001'}, 'display': 'any lab'}]}}, {'resource': {'resourceType': 'ServiceRequest', 'status': 'active', 'intent': 'order', 'code': {'coding': [{'code': '100346-6', 'display': 'cbc2'}]}, 'subject': {'reference': 'patient/1227'}, 'performer': [{'identifier': {'value': 'PRAC-001'}, 'display': 'any lab'}]}}]}
+2026-04-12 11:45:19,534- INFO - [engine_service.py:189] - Extracted Doctor Data: {'doctor_id': '1', 'name': 'Kainat', 'phone_no': 'None', 'about': None, 'specialization': 'None'}
+2026-04-12 11:45:19,535- INFO - [engine_service.py:190] - Extracted Visit Note Data: {'note_id': '57', 'mpi': '1227', 'note_title': 'Test1', 'patient_complaint': 'Bain pain', 'diagnosis': 'abc', 'note_details': 'stringggabc'}
+2026-04-12 11:45:19,535- INFO - [engine_service.py:191] - Extracted Lab Tests Data: [{'lab_id': 'PRAC-001', 'visit_id': '57', 'lab_name': 'any lab', 'test_code': '58410-2', 'test_name': 'cbc1'}, {'lab_id': 'PRAC-001', 'visit_id': '57', 'lab_name': 'any lab', 'test_code': '100346-6', 'test_name': 'cbc2'}]
+2026-04-12 11:45:19,672- INFO - [engine_service.py:241] - Visit note and lab tests added to DB for patient MPI: 1227
+2026-04-12 11:45:58,067- INFO - [engine_service.py:83] - Recieved FHIR Data: {'resourceType': 'Bundle', 'type': 'message', 'entry': [{'resource': {'resourceType': 'Practitioner', 'identifier': [{'value': '1'}], 'name': [{'text': 'Kainat'}], 'telecom': [{'value': 'None'}]}}, {'resource': {'resourceType': 'PractitionerRole', 'specialty': [{'coding': [{'display': 'None'}]}], 'practitioner': {'reference': 'Practitioner/1'}}}, {'resource': {'resourceType': 'Encounter', 'identifier': [{'value': '58'}], 'status': 'in-progress', 'class': {'code': 'AMB'}, 'type': [{'text': 'Test1'}], 'reasonCode': [{'text': 'Bain pain'}], 'diagnosis': [{'condition': {'display': 'abc'}}], 'extension': [{'valueString': 'stringggabc'}], 'subject': {'reference': 'patient/1227'}}}, {'resource': {'resourceType': 'Invoice', 'status': 'issued', 'subject': {'reference': 'patient/1227'}, 'participant': [{'actor': {'reference': 'Practitioner/1'}}], 'totalNet': {'value': '20.0'}}}, {'resource': {'resourceType': 'ServiceRequest', 'status': 'active', 'intent': 'order', 'code': {'coding': [{'code': '58410-2', 'display': 'cbc1'}]}, 'subject': {'reference': 'patient/1227'}, 'performer': [{'identifier': {'value': 'PRAC-001'}, 'display': 'any lab'}]}}]}
+2026-04-12 11:45:58,068- INFO - [engine_service.py:189] - Extracted Doctor Data: {'doctor_id': '1', 'name': 'Kainat', 'phone_no': 'None', 'about': None, 'specialization': 'None'}
+2026-04-12 11:45:58,069- INFO - [engine_service.py:190] - Extracted Visit Note Data: {'note_id': '58', 'mpi': '1227', 'note_title': 'Test1', 'patient_complaint': 'Bain pain', 'diagnosis': 'abc', 'note_details': 'stringggabc'}
+2026-04-12 11:45:58,069- INFO - [engine_service.py:191] - Extracted Lab Tests Data: [{'lab_id': 'PRAC-001', 'visit_id': '58', 'lab_name': 'any lab', 'test_code': '58410-2', 'test_name': 'cbc1'}]
+2026-04-12 11:45:58,114- INFO - [engine_service.py:241] - Visit note and lab tests added to DB for patient MPI: 1227
+2026-04-12 11:48:14,745- INFO - [engine_service.py:34] - Recieved FHIR Data: {'resourceType': 'Patient', 'identifier': [{'value': '1228', 'type': {'coding': [{'code': 'MR'}]}}, {'value': '37201-7677232-2', 'type': {'coding': [{'code': 'NI'}]}}], 'name': [{'text': 'Muhammad Haris ali'}], 'gender': 'male', 'birthDate': '1966-09-04', 'address': [{'text': 'post office tatral tehsial and district chakwal'}], 'telecom': [{'value': '03153716651'}]}
+2026-04-12 11:48:14,761- INFO - [engine_service.py:70] - Patient added to DB with MPI: {patient.mpi}

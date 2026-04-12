@@ -1,4 +1,5 @@
 import asyncio
+from collections import Counter
 from datetime import datetime
 import logging
 from logging.handlers import TimedRotatingFileHandler
@@ -213,9 +214,14 @@ async def route_worker(route):
         while True:
             # Each queue item is a (data, future) tuple.
             # The future lets ingest() know whether delivery succeeded or failed.
-            src_path_to_value, result_future = await route_queue[route.route_id].get()
+            src_path_to_value, simple_paths, result_future = await route_queue[route.route_id].get()
             logger.info(f"route_worker for route -> {route.name} received data: {src_path_to_value}")
-            src_paths_counter = [] # this will contain data just the output_data dictionary, but with the src paths instead of dest paths, useful for multiple same segments/sources to extract data from.
+            normal_src_paths_counter = [] # this will contain data just the output_data dictionary, but with the src paths instead of dest paths, useful for multiple same segments/sources to extract data from.
+            split_src_paths_counter = []
+            concat_src_paths_counter = []
+
+            simple_path_counts = Counter(simple_paths) # this will convert list [PID-5.1, PID-5.2, PID-5.1] into Counter({'PID-5.1': 2, 'PID-5.2': 1}). instead of using list.count() that iterate list everytime, you take the counts once.
+
             output_data = {} # contains the output fields with value
             concat_data = {} # contains single dest field id, and multiple mapping rule that concate multiple src into a single destination.
             split_data = {} # contain single src field id, and multiple mapping rule that split that single src into multiple destination.
@@ -239,120 +245,113 @@ async def route_worker(route):
                     
                     else: # map | copy | formate | regex
                         src_path = src_id_to_path[rule.src_field_id]
-                        src_path = increment_segment(segment_path=src_path, list_data=src_paths_counter) # here PID-5.1 will become PID[1]-5.1, useful when multiple same segments.
-                        src_paths_counter.append(src_path) # just to keep the count of the src paths that we have, and to increment the segment if there is multiple same segments.
 
-                        if src_path not in src_path_to_value:
-                            logger.info(f"The src path {src_path} not found in src_path_to_value: {src_path_to_value}")
-                            continue
-                        value = src_path_to_value[src_path]
-                        print(f"src_path: {src_path}, value: {value}")
+                        for _ in range(simple_path_counts[src_path]): # if there is multiple same src paths then we have to do the transformation for that many times, and also have to take care of the counter in the segment name.
 
-                        if rule.transform_type == 'map':
-                            # here the first value will give me the map value, if the mapping value is not found then return the default value
-                            value = rule.config.get(str(value).lower(), value) 
+                            src_path = increment_segment(segment_path=src_path, list_data=normal_src_paths_counter) # here PID-5.1 will become PID[1]-5.1, useful when multiple same segments.
+                            normal_src_paths_counter.append(src_path) # just to keep the count of the src paths that we have, and to increment the segment if there is multiple same segments.
 
-                        elif rule.transform_type == "regex":
-                            value = regex_replace_with_template(value=value, pattern_from=rule.config["from"], pattern_to=rule.config["to"])
+                            if src_path not in src_path_to_value:
+                                logger.info(f"The src path {src_path} not found in src_path_to_value: {src_path_to_value}")
+                                continue
+                            value = src_path_to_value[src_path]
+                            logger.debug(f"src_path: {src_path}, value: {value}")
 
-                        elif rule.transform_type == 'format':
-                            try: # 2004-10-06 → 20041006 vice versa
-                                dt = datetime.strptime(str(value), rule.config["from"])
-                                value = dt.strftime(rule.config["to"])
-                            except Exception as exp:
-                                logger.error(f"Error while transformation: {str(exp)}")
+                            if rule.transform_type == 'map':
+                                # here the first value will give me the map value, if the mapping value is not found then return the default value
+                                value = rule.config.get(str(value).lower(), value) 
 
-                        if rule.dest_field_id not in dest_id_to_path:
-                            logger.error(f"""The destination id in rule {rule.dest_field_id}
-                                           does not matches with the destination map id {dest_id_to_path}""")
-                            continue
-                            
-                        dest_path = dest_id_to_path[rule.dest_field_id]
-                        dest_path = increment_segment(output_data=output_data, segment_path=dest_path) # here PID-5.1 will become PID[1]-5.1
-                        output_data[dest_path] = value
+                            elif rule.transform_type == "regex":
+                                value = regex_replace_with_template(value=value, pattern_from=rule.config["from"], pattern_to=rule.config["to"])
+
+                            elif rule.transform_type == 'format':
+                                try: # 2004-10-06 → 20041006 vice versa
+                                    dt = datetime.strptime(str(value), rule.config["from"])
+                                    value = dt.strftime(rule.config["to"])
+                                except Exception as exp:
+                                    logger.error(f"Error while transformation: {str(exp)}")
+
+                            if rule.dest_field_id not in dest_id_to_path:
+                                logger.error(f"""The destination id in rule {rule.dest_field_id}
+                                            does not matches with the destination map id {dest_id_to_path}""")
+                                continue
+                                
+                            dest_path = dest_id_to_path[rule.dest_field_id]
+                            dest_path = increment_segment(output_data=output_data, segment_path=dest_path) # here PID-5.1 will become PID[1]-5.1
+                            output_data[dest_path] = value
 
                 logger.info(f"output data dictionary before concat and split transformation for route {route.name} -> {output_data}")
                 logger.info(f"concat_data for route {route.name} -> {concat_data}")
                 logger.info(f"split_data for route {route.name} -> {split_data}")
 
                 ################################## Concat Data ##################################
-                for dest_id , rules in concat_data.items(): 
-                    values = []
-                    logger.debug(f"Applying concat transformation for dest_id: {dest_id} with rules: {rules}")
-
-                    for rule in rules:
-                        if rule.src_field_id not in src_id_to_path:
-                            logger.error(f"""While Concatnation, The src_field id in rule {rule.src_field_id}
-                                        does not exists in the src_id_to_path {src_id_to_path}
-                                        There must be a issue when you input data in database.""")
-                            continue
-
-                        src_path = src_id_to_path[rule.src_field_id]
-                        src_path = increment_segment(segment_path=src_path, list_data=src_paths_counter)
-
-                        if src_path in src_path_to_value:
-                            values.append(str(src_path_to_value[src_path]))
-
-                        else:
-                            logger.warning(f"while Concatnation, The src_path {src_path} not found in path data: {src_path_to_value}")
-                            continue
+                for dest_id , concat_rules in concat_data.items(): 
+                    logger.debug(f"Applying concat transformation for dest_id: {dest_id} with rules: {concat_rules}")
+                    multiple_src_paths_to_concat: dict[int, list[str]] = dict() # this will contain data like this: {1: [PID-5.1, PID[1]-5.1], 2: [PID-5.2, PID[1]-5.2]} this is useful when we have multiple same src paths to concatinate, and also to take care of the counter in the segment name.
                     
-                    delimiter = rules[0].config.get('delimiter', " ") # concat on delimiter or by default with space " " 
-                    concated_value = delimiter.join(values)
+                    delimiter = " "
+                    for concat_rule in concat_rules:
+                        delimiter = concat_rule.config.get('delimiter', " ") # concat on delimiter or by default with space " "
 
-                    if rule.dest_field_id not in dest_id_to_path:
-                        logger.error(f"""While Concatnation, The destination id in rule {rule.dest_field_id}
-                                        does not matches with the destination map id {dest_id_to_path}
-                                        There must be a issue when you input data in database""")
-                        continue
+                        src_path = src_id_to_path[concat_rule.src_field_id]
+                        for i in range(simple_path_counts[src_path]): # if there is multiple same src paths then we have to do the transformation for that many times, and also have to take care of the counter in the segment name.
+                            
+                            current_src_path = increment_segment(segment_path=src_path, list_data=concat_src_paths_counter)
+                            concat_src_paths_counter.append(current_src_path)
 
-                    dest_path = dest_id_to_path[dest_id]
-                    dest_path = increment_segment(output_data=output_data, segment_path=dest_path)
-                    output_data[dest_path] = concated_value
-                
-                #################################### Spit Data ####################################
-                for src_id, rules in split_data.items():
+                            if current_src_path in src_path_to_value:
 
-                    logger.debug(f"Applying split transformation for src_id: {src_id} with rules: {rules}")
+                                if i not in multiple_src_paths_to_concat:
+                                    multiple_src_paths_to_concat[i] = []
+                                multiple_src_paths_to_concat[i].append(str(src_path_to_value[current_src_path]))
 
-                    if src_id not in src_id_to_path:
-                        logger.error(f"""While Spliting, The src_field_id from route -> {route.name}    
-                                        does not exists in the src_id_to_path {src_id_to_path}
-                                        There must be a issue when you input data in database.""")
-                        continue
-
-                    src_path = src_id_to_path[src_id]
-                    src_path = increment_segment(segment_path=src_path, list_data=src_paths_counter)
-                    
-                    if src_path not in src_path_to_value:
-                        logger.warning(f"while Spliting, The src_path {src_path} not found in path data: {src_path_to_value}")
-                        continue
-                    
-                    # As rules 
-                    delimiter= rules[0].config.get('delimiter', ' ') # concat on delimiter or by default with space " " 
-                    parts = str(src_path_to_value[src_path]).split(delimiter)
-
-                    last_dest_path = None
-                    for i, rule in enumerate(rules):
-                        if i < len(parts):
-                            if rule.dest_field_id not in dest_id_to_path:
-                                logger.error(f"""While Spliting, The destination id in rule {rule.dest_field_id}
-                                            does not matches with the destination map id {dest_id_to_path}
-                                            There must be a issue when you input data in database""")
+                            else:
+                                logger.warning(f"while Concatnation, The src_path '{current_src_path}' not found in path data: '{src_path_to_value}'")
                                 continue
+                                        
+                    for idx in multiple_src_paths_to_concat.keys(): # here we are taking the values of the same src paths with the same counter and concatinate them.
+                        concated_value = delimiter.join(multiple_src_paths_to_concat[idx])
 
-                            dest_path = dest_id_to_path[rule.dest_field_id]
-                            dest_path = increment_segment(output_data=output_data, segment_path=dest_path)
-                            output_data[dest_path] = parts[i]
-                            last_dest_path = dest_path
-                    
-                    if len(parts) > len(rules): # here if the while spliting, if there is some data left concatenate it with the last path
-                        logger.info(f"destination path for remaining data ---> {last_dest_path}")
-                        output_data[last_dest_path] += " " + (' ').join(parts[len(rules):]) # join all the remaining parts with the remining data
+                        dest_path = dest_id_to_path[dest_id]
+                        dest_path = increment_segment(output_data=output_data, segment_path=dest_path)
+                        output_data[dest_path] = concated_value
+                        logger.info(f"Concated value for dest_path {dest_path} is {concated_value}")
+                
+                #################################### Split Data ####################################
+                for src_id, split_rules in split_data.items():
+                    logger.debug(f"Applying split transformation for src_id: {src_id} with split_rules: {split_rules}")
+
+                    for _ in range(simple_path_counts[src_id_to_path[src_id]]): # if there is multiple same src paths then we have to do the transformation for that many times, and also have to take care of the counter in the segment name.
+                        src_path = src_id_to_path[src_id]
+                        src_path = increment_segment(segment_path=src_path, list_data=split_src_paths_counter)
+                        split_src_paths_counter.append(src_path)
+                        
+                        if src_path not in src_path_to_value:
+                            logger.warning(f"while Spliting, The src_path {src_path} not found in path data: {src_path_to_value}")
+                            continue
+                        
+                        # As split_rules 
+                        delimiter= split_rules[0].config.get('delimiter', ' ') # concat on delimiter or by default with space " " 
+                        parts = str(src_path_to_value[src_path]).split(delimiter)
+
+                        last_dest_path = None
+                        for i, split_rule in enumerate(split_rules):
+                            if i < len(parts):
+
+                                dest_path = dest_id_to_path[split_rule.dest_field_id]
+                                dest_path = increment_segment(output_data=output_data, segment_path=dest_path)
+                                output_data[dest_path] = parts[i]
+                                last_dest_path = dest_path
+                        
+                        if len(parts) > len(split_rules) and last_dest_path: # here if the while spliting, if there is some data left concatenate it with the last path
+                            logger.info(f"destination path for remaining data ---> {last_dest_path}")
+                            output_data[last_dest_path] += " " + (' ').join(parts[len(split_rules):]) # join all the remaining parts with the remining data
+                        elif last_dest_path is None:
+                            logger.warning(f"while Splitting, last_dest_path is None: {last_dest_path}, means no split data is mapped to any destination")
                 logger.info(f"Output for route -> {route.name}: {output_data}")
 
             except Exception as exp:
-                logger.error(f"{exp} -> This came when processing data for route -> '{route.name}'")
+                logger.exception(f"{exp} -> This came when processing data for route -> '{route.name}'")
                 if not result_future.done():
                     result_future.set_exception(exp)
                     continue
@@ -390,7 +389,7 @@ async def route_worker(route):
                         result_future.set_exception(Exception(err))
 
             except Exception as exp:
-                logger.error(f"{exp} -> This came when sending data for route -> '{route.name}'")
+                logger.exception(f"{exp} -> This came when sending data for route -> '{route.name}'")
                 if not result_future.done():
                     result_future.set_exception(exp)
 
@@ -455,6 +454,7 @@ async def ingest(full_path: str, req: Request):
             resource_type = payload.get("resourceType", "Unknown")
             bundle_path_to_resource = {}
             paths = []
+            simple_paths = [] # contains paths without the counter in the segment name.
             if resource_type == "Bundle":
                 # Bundle: extract paths per entry resource, prefixed with each resource type.
                 # e.g. "Patient-birthDate", "Coverage-identifier[0].value"
@@ -465,12 +465,15 @@ async def ingest(full_path: str, req: Request):
                     raw_paths = fhir_extract_paths(resource)
                     for p in raw_paths:
                         full_path = f"{res_type}-{p}"
+                        simple_paths.append(full_path) # useful for checking how many times this paht is comming to create that many resources.
+
                         full_path = increment_segment(segment_path=full_path, list_data=paths) # here if there is multiple same segments then it will increment the segment with [1], [2] etc.., useful when there is multiple same segments in the message.
                         paths.append(full_path)
                         bundle_path_to_resource[full_path] = resource
             else:
                 # Single resource: prefix with that resource's type.
                 raw_paths = fhir_extract_paths(payload)
+                simple_paths = [f"{resource_type}-{p}" for p in raw_paths]
                 paths = [f"{increment_segment(segment_path=f'{resource_type}-{p}', list_data=paths)}" for p in raw_paths]
         else:
             # HL7: iterate each non-MSH segment and collect paths, just like
@@ -479,6 +482,7 @@ async def ingest(full_path: str, req: Request):
                 if not segment.strip():
                     continue
                 _, seg_paths = hl7_extract_paths(segment)
+                simple_paths.extend(seg_paths)
                 for p in seg_paths:
                     p = increment_segment(segment_path=p, list_data=paths) # here if there is multiple same segments then it will increment the segment with [1], [2] etc.., useful when there is multiple same segments in the message.
                     paths.append(p)
@@ -512,7 +516,7 @@ async def ingest(full_path: str, req: Request):
         for route in routes:
             if route.route_id in route_queue:
                 future = loop.create_future()
-                await route_queue[route.route_id].put((src_path_to_value, future))
+                await route_queue[route.route_id].put((src_path_to_value, simple_paths, future))
                 delivery_futures.append((route.route_id, route.name, future))
             else:
                 logger.warning("trace=%s route_queue_missing route_id=%s", trace_id, route.name)

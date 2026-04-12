@@ -58,18 +58,18 @@ def regex_replace_with_template(value: str, pattern_from: str, pattern_to: str) 
 
 
 # Test forward: "2" → "patient/2"
-print("=== FORWARD ===")
-id_ = "2"
-regex_dictionary = {"from": r"\d+", "to": r"patient/\d+"}
-result = regex_replace_with_template(id_, regex_dictionary["from"], regex_dictionary["to"])
-print(f"Result: {result}\n")
+# print("=== FORWARD ===")
+# id_ = "2"
+# regex_dictionary = {"from": r"\d+", "to": r"patient/\d+"}
+# result = regex_replace_with_template(id_, regex_dictionary["from"], regex_dictionary["to"])
+# print(f"Result: {result}\n")
 
-# Test reverse: "patient/2" → "2"
-print("=== REVERSE ===")
-id_ = "patient/2"
-regex_dictionary = {"from": r"patient/\d+", "to": r"\d+"}
-result = regex_replace_with_template(id_, regex_dictionary["from"], regex_dictionary["to"])
-print(f"Result: {result}")
+# # Test reverse: "patient/2" → "2"
+# print("=== REVERSE ===")
+# id_ = "patient/2"
+# regex_dictionary = {"from": r"patient/\d+", "to": r"\d+"}
+# result = regex_replace_with_template(id_, regex_dictionary["from"], regex_dictionary["to"])
+# print(f"Result: {result}")
 
 # value = "2"
 # # print(re.sub(pattern=r"patient/(\d+)", repl=r"\1", string=value))
@@ -80,6 +80,18 @@ print(f"Result: {result}")
 # lines = ["hi there-", "how are you"]
 # line = "\r\n".join(lines)
 # print(line.splitlines()[1:])
-l = ["hi there-"]
-for i in range(len(l)) if len(l) > 1 else l:
-    print(i)
+
+# rules = [1,2,3,4,5]
+# incomming_rules = [2,3,3,4,5]
+# for rule in rules:
+#     # for incoming_rule in incomming_rules:
+#     if rule in incomming_rules:
+#         occurance_of_rule = incomming_rules.count(rule)
+#         for i in range(occurance_of_rule):
+#             print(rule)
+    # process_rule(rule)
+
+from collections import Counter
+
+l = ["ali","usama","ahemd","ahemd","abc","dev"]
+print(Counter(l))

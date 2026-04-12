@@ -22,7 +22,7 @@ class Endpoints(Base):
     __tablename__ = "endpoints"
 
     endpoint_id = Column(Integer, primary_key=True, index=True)
-    server_id = Column(Integer, ForeignKey("server.server_id")) # source(fk of server)
+    server_id = Column(Integer, ForeignKey("server.server_id"), nullable=False) # source(fk of server)
     url = Column(String(255), nullable=False) # endpoint url
 
     __table_args__ = (
@@ -39,7 +39,7 @@ class EndpointFields(Base):
     __tablename__ = "endpoint_fields"
 
     endpoint_field_id = Column(Integer, primary_key=True, index=True)
-    endpoint_id = Column(Integer, ForeignKey("endpoints.endpoint_id")) # source(fk of endpoint)
+    endpoint_id = Column(Integer, ForeignKey("endpoints.endpoint_id"), nullable=False) # source(fk of endpoint)
     resource = Column(String(50), nullable=False) # Patient | PID | Encounter | ORU -> useful when there are multiple resources in a msg
     path = Column(String(100), nullable=False) # name.text | name.given
     name = Column(String(100), nullable=False) # fullname | given name | mpi
@@ -55,10 +55,10 @@ class Route(Base):
     route_id = Column(Integer, primary_key=True, index=True)
     
     name = Column(String(100), unique=True, nullable=False) # name(always unique)
-    src_server_id = Column(Integer, ForeignKey("server.server_id"))
-    src_endpoint_id = Column(Integer, ForeignKey("endpoints.endpoint_id")) # src_endpointid(fk of endpoint)
-    dest_server_id = Column(Integer, ForeignKey("server.server_id"))
-    dest_endpoint_id = Column(Integer, ForeignKey("endpoints.endpoint_id")) # dest_endpoint(from server)
+    src_server_id = Column(Integer, ForeignKey("server.server_id"), nullable=False)
+    src_endpoint_id = Column(Integer, ForeignKey("endpoints.endpoint_id"), nullable=False) # src_endpointid(fk of endpoint)
+    dest_server_id = Column(Integer, ForeignKey("server.server_id"), nullable=False)
+    dest_endpoint_id = Column(Integer, ForeignKey("endpoints.endpoint_id"), nullable=False) # dest_endpoint(from server)
     msg_type = Column(String(50)) # e.g., ADT, ORM, ORU
 
     mapping_rules = relationship("MappingRule", back_populates="route")
@@ -73,9 +73,9 @@ class MappingRule(Base):
     __tablename__ = "mapping_rule"
 
     mapping_rule_id = Column(Integer, primary_key=True, index=True)
-    route_id = Column(Integer, ForeignKey("route.route_id")) # route(fk of route)
-    src_field_id = Column(Integer, ForeignKey("endpoint_fields.endpoint_field_id")) # src_field(fk of endpoint_fields)
-    dest_field_id = Column(Integer, ForeignKey("endpoint_fields.endpoint_field_id")) # dest_field(fk of endpoint_fields)
+    route_id = Column(Integer, ForeignKey("route.route_id"), nullable=False) # route(fk of route)
+    src_field_id = Column(Integer, ForeignKey("endpoint_fields.endpoint_field_id"), nullable=False) # src_field(fk of endpoint_fields)
+    dest_field_id = Column(Integer, ForeignKey("endpoint_fields.endpoint_field_id"), nullable=False) # dest_field(fk of endpoint_fields)
     transform_type = Column(String(20), nullable=False) # copy | map | format | split | concat
     config = Column(JSON, nullable=False)
 
