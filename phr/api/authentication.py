@@ -13,26 +13,20 @@ router = APIRouter(tags=['Authentication'])
 @limiter.limit("10/minute")
 def SignUP_patient(patient: auth_schema.SignUp, request: Request, response: Response,  db :Session = Depends(get_db)):
     """
-    Set a password for an existing patient in the PHR system.
+        Create a PHR password for an already-registered patient.
 
-    A patient record is pre-created by the system when they register via the EHR.
-    This endpoint allows the patient to set their password to activate their PHR account.
+        Input:
+        - Body (`auth_schema.SignUp`):
+            - `nic` (str): Existing patient's NIC.
+            - `password` (str): Password to set for the account.
 
-    **Request Body:**
-    - `nic` (str, required): The patient's National Identity Card (NIC) number. Must already
-      exist in the system — patients cannot self-register.
-    - `password` (str, required): The password the patient wants to set for their account.
+        Returns:
+        - `201 Created` with JSON:
+            - `message` (str): Confirmation message.
 
-    **Response (201 Created):**
-    Returns a JSON message:
-    - `message`: "Sign Up sucessfully"
-
-    **Constraints:**
-    - The NIC must already exist in the Patient table. If not found, sign-up is rejected.
-
-    **Error Responses:**
-    - `409 Conflict`: No patient found with the provided NIC (patient does not exist)
-    - `400 Bad Request`: Unexpected database or server error
+        Potential errors:
+        - `409 Conflict`: Patient with provided NIC does not exist.
+        - `400 Bad Request`: Any unexpected database/server exception.
     """
     try:
         is_valid_patient = db.query(model.Patient).filter(model.Patient.nic == patient.nic).first()
@@ -52,51 +46,22 @@ def SignUP_patient(patient: auth_schema.SignUp, request: Request, response: Resp
 @limiter.limit("10/minute")
 def login_patient(patient: auth_schema.Login, request: Request, response: Response, db :Session = Depends(get_db)):
     """
-        Authenticate a patient and log in to the PHR (Personal Health Record) system.
+        Authenticate a patient in the PHR system.
 
-        **Request Body:**
-        - `nic` (str, required): The patient's National Identity Card (NIC) number.
-        - `password` (str, required): The patient's password (set during sign-up).
+        Input:
+        - Body (`auth_schema.Login`):
+            - `nic` (str): Patient NIC.
+            - `password` (str): Account password.
 
-        **Response (200 OK):**
-        Returns a JSON object containing:
-        - `patient` (object): Patient information
-        - `mpi` (int): Master Patient Index - unique identifier
-        - `nic` (str): National Identity Card number
-        - `name` (str): Patient's full name
-        - `phone_no` (str | null): Contact phone number
-        - `gender` (str): Patient's gender
-        - `date_of_birth` (date): Date of birth (format: YYYY-MM-DD)
-        - `address` (str | null): Residential address
+        Returns:
+        - `200 OK` with `patient_schema.Patient`:
+            - `mpi` (int), `nic` (str), `name` (str), `phone_no` (str | null),
+                `gender` (str), `date_of_birth` (date), `address` (str | null).
 
-        **Example Response:**
-        ```json
-        {
-        "patient": {
-            "mpi": 12345,
-            "nic": "1234567890V",
-            "name": "John Doe",
-            "phone_no": "+92-300-1234567",
-            "gender": "Male",
-            "date_of_birth": "1990-05-15",
-            "address": "123 Main Street, Rawalpindi"
-        }
-        }
-        ```
-
-        **Error Responses:**
-        - `404 Not Found`: NIC is not registered in the system
-        ```json
-        {"detail": "NIC not found"}
-        ```
-        - `404 Not Found`: Password does not match the one set for this NIC
-        ```json
-        {"detail": "Invalid password"}
-        ```
-        - `400 Bad Request`: Unexpected database or server error
-        ```json
-        {"detail": "Database error"}
-        ``` 
+        Potential errors:
+        - `404 Not Found`: NIC does not exist.
+        - `404 Not Found`: Password is invalid for the NIC.
+        - `400 Bad Request`: Any unexpected database/server exception.
     """
     try:
         is_valid_patient = db.query(model.Patient).filter(

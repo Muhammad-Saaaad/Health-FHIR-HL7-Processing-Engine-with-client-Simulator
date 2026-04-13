@@ -24,6 +24,22 @@ router = APIRouter(tags=["Lab Reports"])
 @router.get("/lab-reports-base/{note_id}", response_model=list[LabReportBase])
 @limiter.limit("30/minute")
 def get_lab_reports_base(note_id: str, request: Request, response: Response, db: Session = Depends(get_db)):
+    """
+        Retrieve summary-level lab reports for a visit note.
+
+        Input:
+        - Path parameter:
+            - `note_id` (str): Visit note identifier.
+        - No request body.
+
+        Returns:
+        - `200 OK` with list[`LabReportBase`].
+        - Each item includes fields like `report_id`, `test_name`, `updated_at`,
+            and `test_status` (based on schema).
+
+        Potential errors:
+        - `404 Not Found`: Visit note does not exist.
+    """
 
     if db.get(model.VisitingNotes, note_id) is None:
         logger.warning(f"Visit note with ID {note_id} not found.")
@@ -35,6 +51,25 @@ def get_lab_reports_base(note_id: str, request: Request, response: Response, db:
 @router.get("/lab-results/{report_id}", response_model=LabResult)
 @limiter.limit("30/minute")
 def get_lab_results(report_id: int, request: Request, response: Response, db: Session = Depends(get_db)):
+    """
+        Retrieve detailed result data for a single lab report.
+
+        Input:
+        - Path parameter:
+            - `report_id` (int): Lab report identifier.
+        - No request body.
+
+        Returns:
+        - `200 OK` with `LabResult` payload:
+            - `report_id` (int)
+            - `test_name` (str)
+            - `description` (str | null)
+            - `mini_test_results` (list/object as defined by schema/model)
+
+        Potential errors:
+        - `404 Not Found`: Lab report does not exist.
+        - `400 Bad Request`: Any unexpected database/server exception.
+    """
     try:
         lab_report = db.get(model.LabReport, report_id)
         if lab_report is None:
@@ -47,7 +82,6 @@ def get_lab_results(report_id: int, request: Request, response: Response, db: Se
             "description": lab_report.description,
             "mini_test_results": lab_report.mini_test
         }
-
         return response_data
     
     except Exception as exp:

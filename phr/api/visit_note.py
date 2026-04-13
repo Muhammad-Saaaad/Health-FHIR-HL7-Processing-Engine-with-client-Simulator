@@ -24,6 +24,25 @@ logger.addHandler(handler)
 @router.get("/doctor-visit-notes/{mpi}/{doctor_id}", response_model=list[VisitNoteBase])
 @limiter.limit("30/minute")
 def get_doctors_visit_notes(request: Request, response: Response, mpi: str, doctor_id: int, db: Session = Depends(get_db)):
+    """
+        Retrieve all visit notes of a patient for a specific doctor.
+
+        Input:
+        - Path parameters:
+            - `mpi` (str): Patient MPI identifier.
+            - `doctor_id` (int): Doctor identifier.
+        - No request body.
+
+        Returns:
+        - `200 OK` with list[`VisitNoteBase`].
+        - Each item contains visit-note summary data defined by schema.
+
+        Potential errors:
+        - `404 Not Found`: Patient does not exist.
+        - `404 Not Found`: Doctor does not exist.
+        - `404 Not Found`: No visit notes found for the pair.
+        - `400 Bad Request`: Any unexpected database/server exception.
+    """
     try:
         if db.get(model.Patient, mpi) is None:
             logger.warning(f"Patient with MPI {mpi} not found.")
@@ -46,6 +65,25 @@ def get_doctors_visit_notes(request: Request, response: Response, mpi: str, doct
 @router.get("/visit-note-details/{note_id}", response_model=VisitNoteDetail)
 @limiter.limit("30/minute")
 def get_visit_note_details(request: Request, response: Response, note_id: str, db: Session = Depends(get_db)):
+    """
+        Retrieve detailed data for a specific visit note.
+
+        Input:
+        - Path parameter:
+            - `note_id` (str): Visit note identifier.
+        - No request body.
+
+        Returns:
+        - `200 OK` with `VisitNoteDetail`:
+            - Visit note core fields (`note_id`, `note_title`, `patient_complaint`,
+                `diagnosis`, `note_details`, `consultation_bill`, `payment_status`).
+            - Optional lab enrichment fields when lab reports exist:
+                `lab_name`, `lab_tests`, `test_bill`.
+
+        Potential errors:
+        - `404 Not Found`: Visit note does not exist.
+        - `400 Bad Request`: Any unexpected database/server exception.
+    """
     try:
         visit_note = db.get(model.VisitingNotes, note_id)
         if visit_note is None:

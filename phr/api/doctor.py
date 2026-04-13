@@ -27,6 +27,21 @@ logger.addHandler(handler)
 @router.get("/all_doctors",response_model=list[DoctorBase])
 @limiter.limit("30/minute")
 def get_doctors(request: Request, response: Response, db: Session = Depends(get_db)):
+    """
+        Retrieve all doctors available in the PHR system.
+
+        Input:
+        - No request body.
+        - Uses request context and database session.
+
+        Returns:
+        - `200 OK` with list[`DoctorBase`].
+        - Each item includes doctor fields such as `doctor_id`, `name`,
+            `phone_no`, `specialization`, and `last_visit` (based on schema).
+
+        Potential errors:
+        - `400 Bad Request`: Any unexpected database/server exception.
+    """
     try:
         return db.query(model.Doctor).all()
     except Exception as exp:
@@ -36,6 +51,21 @@ def get_doctors(request: Request, response: Response, db: Session = Depends(get_
 @router.get("/single-doctor/{doctor_id}")
 @limiter.limit("30/minute")
 def get_doctor_by_id(request: Request, response: Response, doctor_id: int, db: Session = Depends(get_db)):
+    """
+        Retrieve one doctor by doctor ID.
+
+        Input:
+        - Path parameter:
+            - `doctor_id` (int): Unique doctor identifier.
+        - No request body.
+
+        Returns:
+        - `200 OK` with doctor object.
+
+        Potential errors:
+        - `404 Not Found`: Doctor does not exist for the provided ID.
+        - `400 Bad Request`: Any unexpected database/server exception.
+    """
     try:
         doctor = db.query(model.Doctor).filter(model.Doctor.doctor_id == doctor_id).first()
         if not doctor:
@@ -50,6 +80,21 @@ def get_doctor_by_id(request: Request, response: Response, doctor_id: int, db: S
 @router.get("/doctor-encountered-by-patient/{mpi}", response_model=list[DoctorBase])
 @limiter.limit("30/minute")
 def get_doctor_encountered_by_patient(request: Request, response: Response, mpi: int, db: Session = Depends(get_db)):
+    """
+        Retrieve doctors encountered by a specific patient.
+
+        Input:
+        - Path parameter:
+            - `mpi` (int): Patient MPI identifier.
+        - No request body.
+
+        Returns:
+        - `200 OK` with list[`DoctorBase`] built from visit-note joins.
+        - Empty list if patient has no encountered doctors.
+
+        Potential errors:
+        - `400 Bad Request`: Any unexpected database/server exception.
+    """
     try:
         joined_response = db.query(model.VisitingNotes).filter(model.VisitingNotes.mpi == mpi).options(
             joinedload(model.VisitingNotes.patient),
