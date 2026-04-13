@@ -1,4 +1,4 @@
-from datetime import datetime, date
+from datetime import datetime
 
 from pydantic import BaseModel, field_serializer
 
@@ -12,8 +12,8 @@ class VisitNoteBase(BaseModel):
     # NO @classmethod here because serializers run on ALREADY-CREATED objects during output conversion.
     # Pydantic passes self (the actual instance with real data) so we can read self.last_visit and format it.
     @field_serializer("visit_date")
-    def format_visit_date(self, value: date) -> str:
-        return value.strftime("%Y-%m-%d %H:%M:%S %p") # %p is for AM or PM. or you do .lower() for am or pm.
+    def format_visit_date(self, value: datetime) -> str:
+        return value.strftime("%Y-%m-%d %H:%M %p") # %p is for AM or PM. or you do .lower() for am or pm.
 
     model_config = {"from_attributes": True}
 

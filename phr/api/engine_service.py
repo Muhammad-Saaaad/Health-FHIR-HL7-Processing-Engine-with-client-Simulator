@@ -259,7 +259,8 @@ async def get_visit_note(req: Request, db: Session = Depends(get_db)):
                 lab_id = lab_test['lab_id'],
                 lab_name = lab_test['lab_name'],
                 test_code = lab_test['test_code'],
-                test_name = lab_test['test_name']
+                test_name = lab_test['test_name'],
+                description = None
             )
             db.add(lab_report_obj)
         db.commit()

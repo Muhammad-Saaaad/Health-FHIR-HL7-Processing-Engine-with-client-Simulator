@@ -68,10 +68,26 @@ class LabReport(Base):
     test_code = Column(String(30), nullable=False)
     test_name = Column(Text, nullable=False)
     test_bill = Column(Float, default=0, nullable=True)
+    description = Column(String(255), nullable=True) # added this for lab result description.
+    test_status = Column(String(10), default="Pending") # Completed, Pending, Cancelled
     created_at = Column(DateTime, default=datetime.now())
     updated_at = Column(DateTime, default=datetime.now())
 
     visiting_notes = relationship("VisitingNotes", back_populates="report")
+    mini_test = relationship("MiniLabResult", back_populates="test_report")
+
+class MiniLabResult(Base):
+    __tablename__ = "mini_test_result"
+
+    mini_test_id = Column(Integer, primary_key=True, index= True)
+    report_id = Column(Integer, ForeignKey("lab_report.report_id"), nullable=False)
+
+    test_name = Column(String(50), nullable=False)
+    normal_range = Column(String(20), nullable=False)
+    result_value = Column(String(7), nullable=False)
+
+    test_report = relationship("LabReport", back_populates="mini_test")
+
 
 # to apply migrations
 
