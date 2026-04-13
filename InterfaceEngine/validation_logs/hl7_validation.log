@@ -226,3 +226,20 @@
 2026-04-12 11:48:14,192 - [hl7_validation.py:260] -INFO - Processing field index 36
 2026-04-12 11:48:14,192 - [hl7_validation.py:270] -INFO - Processing component index 1
 2026-04-12 11:48:14,193 - [hl7_validation.py:283] -INFO - appending line IN1|1||||||||||||||Golden|||||||||||||||||||||0
+2026-04-12 13:24:26,855 - [hl7_validation.py:150] -INFO - Building HL7 message with src: EHR, dest: LIS, msg_type: ORM, output_data keys: ['PID[1]-3', 'OBR[1]-2', 'OBR[1]-4.1', 'OBR[2]-4.1', 'OBR[1]-4.2', 'OBR[2]-4.2']
+2026-04-12 13:24:26,856 - [hl7_validation.py:214] -DEBUG - Segment data structure after parsing output_data: {'PID': {1: {3: {1: {1: '1227'}}}}, 'OBR': {1: {2: {1: {1: '59'}}, 4: {1: {1: '58410-2'}, 2: {1: 'cbc1'}}}, 2: {4: {1: {1: '100346-6'}, 2: {1: 'cbc2'}}}}}
+2026-04-12 13:24:26,857 - [hl7_validation.py:246] -INFO - segment PID occurrence count: 1
+2026-04-12 13:24:26,858 - [hl7_validation.py:260] -INFO - Processing field index 3
+2026-04-12 13:24:26,858 - [hl7_validation.py:270] -INFO - Processing component index 1
+2026-04-12 13:24:26,858 - [hl7_validation.py:283] -INFO - appending line PID|1||1227
+2026-04-12 13:24:26,859 - [hl7_validation.py:246] -INFO - segment OBR occurrence count: 1
+2026-04-12 13:24:26,859 - [hl7_validation.py:260] -INFO - Processing field index 2
+2026-04-12 13:24:26,860 - [hl7_validation.py:270] -INFO - Processing component index 1
+2026-04-12 13:24:26,860 - [hl7_validation.py:260] -INFO - Processing field index 4
+2026-04-12 13:24:26,860 - [hl7_validation.py:270] -INFO - Processing component index 1
+2026-04-12 13:24:26,861 - [hl7_validation.py:270] -INFO - Processing component index 2
+2026-04-12 13:24:26,861 - [hl7_validation.py:283] -INFO - appending line OBR|1|59||58410-2^cbc1
+2026-04-12 13:24:26,861 - [hl7_validation.py:260] -INFO - Processing field index 4
+2026-04-12 13:24:26,862 - [hl7_validation.py:270] -INFO - Processing component index 1
+2026-04-12 13:24:26,862 - [hl7_validation.py:270] -INFO - Processing component index 2
+2026-04-12 13:24:26,862 - [hl7_validation.py:283] -INFO - appending line OBR|2|||100346-6^cbc2

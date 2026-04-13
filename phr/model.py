@@ -48,7 +48,8 @@ class VisitingNotes(Base):
     patient_complaint = Column(String(255), nullable=True)
     diagnosis = Column(String(255), nullable=True)
     note_details = Column(Text, nullable=True)
-    total_bill = Column(Float, default=0, nullable=True)
+    consultation_bill = Column(Float, default=0, nullable=True)
+    payment_status = Column(String(20), default="unpaid", nullable=True)
 
     doctor = relationship("Doctor", back_populates="visiting_notes")
     patient = relationship("Patient", back_populates="visiting_notes")
@@ -66,7 +67,6 @@ class LabReport(Base):
     lab_name = Column(String(100), nullable=False) # from which lab the test is done
     test_code = Column(String(30), nullable=False)
     test_name = Column(Text, nullable=False)
-    test_status = Column(String(10), nullable=False, default="Pending") # Arrived, decline
     test_bill = Column(Float, default=0, nullable=True)
     created_at = Column(DateTime, default=datetime.now())
     updated_at = Column(DateTime, default=datetime.now())

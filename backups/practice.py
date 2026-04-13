@@ -91,7 +91,14 @@ def regex_replace_with_template(value: str, pattern_from: str, pattern_to: str) 
 #             print(rule)
     # process_rule(rule)
 
-from collections import Counter
+# from collections import Counter
 
-l = ["ali","usama","ahemd","ahemd","abc","dev"]
-print(Counter(l))
+# l = ["ali","usama","ahemd","ahemd","abc","dev"]
+# print(Counter(l))
+
+from datetime import datetime
+
+date = datetime.now().date()
+date_formate_to_chnage = datetime.strptime(str(date), "%Y-%m-%d")
+formated_date = date_formate_to_chnage.strftime("%B %d, %Y")
+print(formated_date)

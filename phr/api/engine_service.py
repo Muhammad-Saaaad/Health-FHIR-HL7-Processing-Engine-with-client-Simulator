@@ -144,6 +144,7 @@ async def get_visit_note(req: Request, db: Session = Depends(get_db)):
                 visit_note['diagnosis'] = diagnosis
 
                 visit_note['note_details'] = resource.get("extension", [{"valueString": None}])[0].get("valueString", None)
+
                 
         if not visit_note.get("note_id", None):
             logger.warning(f"No visit note id found in the entire bundle: \n {json_data}")
@@ -157,9 +158,30 @@ async def get_visit_note(req: Request, db: Session = Depends(get_db)):
             logger.warning(f"No patient reference found in the entire bundle: \n {json_data}")
             return {"message": f"No patient reference found in the entire bundle: \n {json_data}"}
 
+
         lab_tests = []
         for lab_test in json_data.get("entry", []):
             resource = lab_test.get("resource", None)
+
+            if resource and resource.get("resourceType") == "Invoice":
+                mpi = resource.get("subject", {"reference": None}).get("reference", None)
+                participant = resource.get("participant", [{"actor": {"reference": None}}])[0].get("actor", {"reference": None}).get("reference", None)
+                
+                if not mpi:
+                    logger.warning(f"No patient reference found in invoice resource: \n {lab_test}")
+                    pass
+                if not participant:
+                    logger.warning(f"No participant reference found in invoice resource: \n {lab_test}")
+                    pass
+
+                consultation_bill = resource.get("totalNet", {"value": None}).get("value", None)
+                if not consultation_bill:
+                    logger.warning(f"No consultation bill found in invoice resource: \n {lab_test}")
+                    visit_note['consultation_bill'] = 0
+                else:
+                    visit_note['consultation_bill'] = consultation_bill
+                
+                visit_note['invoice_status'] = resource.get("status", None)
 
             if resource and resource.get("resourceType") == "ServiceRequest":
                 # skipping the status, intent, lab name, and lab bill of the service request.
@@ -219,7 +241,10 @@ async def get_visit_note(req: Request, db: Session = Depends(get_db)):
             note_title = visit_note.get('note_title', None),
             patient_complaint = visit_note.get('patient_complaint', None),
             diagnosis = visit_note.get('diagnosis', None),
-            note_details = visit_note.get('note_details', None)
+            note_details = visit_note.get('note_details', None),
+            consultation_bill = visit_note.get('consultation_bill', 0),
+            # payment_status = visit_note.get('payment_status', "unpaid") if visit_note.get('payment_status', None) == 'issued' else "unpaid"
+            payment_status = "unpaid" # By default, it is unpaid, but we can add logic to this later.
         )
         db.add(visit_note_obj)
         db.flush()
