@@ -8,7 +8,7 @@ logger.setLevel(logging.INFO)
 formater = logging.Formatter("%(asctime)s- %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s")
 if not logger.handlers:
     rotating_file_handler = RotatingFileHandler(
-        r"E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\EHR\logs\engine_service.log",
+        r"logs\engine_service.log",
         maxBytes=20000, # 20KB
         backupCount=1
     )
