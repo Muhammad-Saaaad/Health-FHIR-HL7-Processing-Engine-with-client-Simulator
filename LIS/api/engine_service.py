@@ -107,6 +107,10 @@ async def take_lab_order(req: Request, db: Session = Depends(get_db)):
                 mpi = path_to_values.get("PID-3")
                 continue
             if "OBR-1" not in path_to_values.keys() or not mpi:
+                logger.warning(f"Skipping segment {segment} due to missing OBR-1 or MPI: {segment}")
+                continue
+            if "OBR-2" not in path_to_values.keys():
+                logger.warning(f"Skipping segment {segment} due to missing OBR-2 (VID): {segment}")
                 continue
             
             if db.get(model.Patient, mpi) is None: # if the mpi does not exists in the database.
@@ -115,6 +119,7 @@ async def take_lab_order(req: Request, db: Session = Depends(get_db)):
 
             lab_orders.append(model.LabTestRequest(
                 mpi = mpi,
+                vid = path_to_values.get("OBR-2"),
                 test_name= path_to_values.get("OBR-4.2", "Unknown Test"), # OBR-4.2 is the component of OBR-4 which contains the test name, if not found then set it as unknown test.
             ))
         
@@ -122,7 +127,7 @@ async def take_lab_order(req: Request, db: Session = Depends(get_db)):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="MPI not found in the message")
         
         if mpi_not_found:
-            logging.critical(f"Lab order received for non-existent MPI: {mpi}. No orders were processed.")
+            logger.critical(f"Lab order received for non-existent MPI: {mpi}. No orders were processed.")
             return {"message": f"MPI {mpi} not found in the database"}
         
         if not lab_orders:
@@ -141,6 +146,36 @@ async def take_lab_order(req: Request, db: Session = Depends(get_db)):
     except Exception as exp:
         logger.error(f"Error processing new lab order HL7 message: {str(exp)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
+
+# @router.put("/get-report-payment-status", tags=["Billing"])
+# def update_payment(request: Request,  db: Session = Depends(get_db)):
+#     """
+#     Mark an existing bill as paid.
+
+#     **Path Parameters:**
+#     - `bill_id` (int, required): The unique identifier of the bill to mark as paid.
+
+#     **Response (200 OK):**
+#     Returns the updated billing record with:
+#     - `payment_status`: Updated to "Paid"
+#     - `updated_at`: Updated timestamp reflecting when the payment was recorded
+
+#     **Note:**
+#     - This endpoint does not require a request body. It simply flips `payment_status` to "Paid".
+#     - No payment amount or method is validated; it is assumed payment is confirmed externally.
+
+#     **Error Responses:**
+#     - `404 Not Found`: No bill exists with the given `bill_id`
+#     """
+#     bill = db.get(model.LabTestBilling, bill_id)
+#     if not bill:
+#         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bill not found.")
+        
+#     bill.payment_status = "Paid"
+#     bill.updated_at = datetime.now()
+#     db.commit()
+#     db.refresh(bill)
+#     return bill
 
 def hl7_extract_paths(segment) -> tuple[str, list[str]]:
     """

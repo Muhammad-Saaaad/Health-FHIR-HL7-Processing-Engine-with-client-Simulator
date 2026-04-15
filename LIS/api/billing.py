@@ -57,34 +57,3 @@ def create_bill(b: BillingCreate, request: Request, response: Response, db: Sess
     db.commit()
     db.refresh(bill)
     return bill
-
-@router.put("/billing/{bill_id}/pay", response_model=BillingOut, tags=["Billing"])
-@limiter.limit("10/minute")  # Limit to 10 payment updates per minute per IP
-def update_payment(bill_id: int,request: Request, response: Response, db: Session = Depends(get_db)):
-    """
-    Mark an existing bill as paid.
-
-    **Path Parameters:**
-    - `bill_id` (int, required): The unique identifier of the bill to mark as paid.
-
-    **Response (200 OK):**
-    Returns the updated billing record with:
-    - `payment_status`: Updated to "Paid"
-    - `updated_at`: Updated timestamp reflecting when the payment was recorded
-
-    **Note:**
-    - This endpoint does not require a request body. It simply flips `payment_status` to "Paid".
-    - No payment amount or method is validated; it is assumed payment is confirmed externally.
-
-    **Error Responses:**
-    - `404 Not Found`: No bill exists with the given `bill_id`
-    """
-    bill = db.get(model.LabTestBilling, bill_id)
-    if not bill:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bill not found.")
-        
-    bill.payment_status = "Paid"
-    bill.updated_at = datetime.now()
-    db.commit()
-    db.refresh(bill)
-    return bill

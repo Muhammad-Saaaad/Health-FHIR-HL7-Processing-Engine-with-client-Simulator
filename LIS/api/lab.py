@@ -15,67 +15,49 @@ from rate_limiting import limiter
 
 router = APIRouter(tags=["Test Requests"])
 
-@router.post("/test_requests", response_model=TestRequestOut, status_code=status.HTTP_201_CREATED, tags=["Test Requests"])
-@limiter.limit("10/minute")  # Limit to 10 requests per minute per IP
-def create_test_request(data: TestRequestCreate, request: Request, response: Response, db: Session = Depends(get_db)):
-    """
-    Create a new lab test request for a patient.
+# @router.post("/test_requests", response_model=TestRequestOut, status_code=status.HTTP_201_CREATED, tags=["Test Requests"])
+# @limiter.limit("10/minute")  # Limit to 10 requests per minute per IP
+# def create_test_request(data: TestRequestCreate, request: Request, response: Response, db: Session = Depends(get_db)):
+#     """
+#     Create a new lab test request for a patient.
 
-    **Request Body:**
-    - `patient_cnic` (str, required): The CNIC (National ID) of the patient requesting the test.
-      Must match an existing patient record.
-    - `test_name` (str, required): Name of the lab test to be performed (e.g., "CBC", "Blood Sugar").
+#     **Request Body:**
+#     - `patient_cnic` (str, required): The CNIC (National ID) of the patient requesting the test.
+#       Must match an existing patient record.
+#     - `test_name` (str, required): Name of the lab test to be performed (e.g., "CBC", "Blood Sugar").
 
-    **Response (201 Created):**
-    Returns the created test request object including:
-    - `test_req_id`: Auto-generated unique test request ID
-    - `patient_id`: Internal patient ID resolved from CNIC
-    - `test_name`: The requested test name
-    - `status`: Defaults to "Pending" on creation
-    - `locked_by`: None (not locked initially)
-    - `locked_at`: None (not locked initially)
+#     **Response (201 Created):**
+#     Returns the created test request object including:
+#     - `test_req_id`: Auto-generated unique test request ID
+#     - `patient_id`: Internal patient ID resolved from CNIC
+#     - `test_name`: The requested test name
+#     - `status`: Defaults to "Pending" on creation
+#     - `locked_by`: None (not locked initially)
+#     - `locked_at`: None (not locked initially)
 
-    **Note:**
-    - The patient is looked up by CNIC. The first patient whose CNIC does NOT match is used
-      (this may be a bug in the current implementation; the filter uses `!=` instead of `==`).
+#     **Note:**
+#     - The patient is looked up by CNIC. The first patient whose CNIC does NOT match is used
+#       (this may be a bug in the current implementation; the filter uses `!=` instead of `==`).
 
-    **Error Responses:**
-    - `404 Not Found`: No patient found matching the given `patient_cnic`
-    """
-    is_patient = db.query(model.Patient).filter(model.Patient.cnic == data.patient_cnic).first()
+#     **Error Responses:**
+#     - `404 Not Found`: No patient found matching the given `patient_cnic`
+#     """
+#     is_patient = db.query(model.Patient).filter(model.Patient.cnic == data.patient_cnic).first()
     
-    if not is_patient:
-        raise HTTPException(status_code=404, detail="Patient not found")
+#     if not is_patient:
+#         raise HTTPException(status_code=404, detail="Patient not found")
         
-    db_request = model.LabTestRequest(
-        patient_id = is_patient.pid,
-        test_name = data.test_name,
-        status = "Pending",
-        decline_reason = None,
-        locked_by = None,
-        locked_at = None
-    )
-    db.add(db_request)
-    db.commit()
-    db.refresh(db_request)
-    return db_request
-
-@router.get("/requests/pending", response_model=list[TestRequestOut], tags=["Test Requests"])
-@limiter.limit("20/minute")  # Limit to 20 requests per minute per IP
-def get_pending_requests(request: Request, response: Response, db: Session = Depends(get_db)):
-    """
-    Retrieve all lab test requests that are currently in "Pending" status.
-
-    **Query Parameters:** None
-
-    **Response (200 OK):**
-    Returns a list of test request objects with `status == "Pending"`. Each object includes:
-    - `test_req_id`, `patient_id`, `test_name`, `status`, `decline_reason`, `locked_by`, `locked_at`
-
-    **Note:**
-    - Returns an empty list if there are no pending test requests.
-    """
-    return db.query(model.LabTestRequest).filter(model.LabTestRequest.status == "Pending").all()
+#     db_request = model.LabTestRequest(
+#         patient_id = is_patient.pid,
+#         test_name = data.test_name,
+#         status = "Pending",
+#         locked_by = None,
+#         locked_at = None
+#     )
+#     db.add(db_request)
+#     db.commit()
+#     db.refresh(db_request)
+#     return db_request
 
 @router.get("/requests/accepted/payment/paid", response_model=list[TestRequestOut], tags=["Test Requests"])
 @limiter.limit("20/minute")  # Limit to 20 requests per minute per IP
@@ -99,45 +81,53 @@ def get_accepted_requests(request: Request, response: Response, db: Session = De
 
     return accepted_requests
 
-@router.put("/requests/{req_id}/status", response_model=TestRequestOut, tags=["Test Requests"])
+@router.put("/requests/update_report_status", response_model=TestRequestOut, tags=["Test Requests"])
 @limiter.limit("10/minute")  # Limit to 10 requests per minute per IP
-def update_request_status(req_id: int, status_update: TestRequestStatusUpdate, request: Request, response: Response, db: Session = Depends(get_db)):
+def update_request_status(status_update: TestRequestStatusUpdate, request: Request, response: Response, db: Session = Depends(get_db)):
     """
     Update the status of a lab test request (e.g., accept or decline it).
 
     **Path Parameters:**
     - `req_id` (int, required): The unique ID of the test request to update.
+    - `user_id` (int, required): The ID of the user updating the request.
 
     **Request Body:**
     - `status` (str, required): New status to assign (e.g., "Accepted", "Declined").
-    - `decline_reason` (str, optional): Reason for declining the request. Should be provided if status is "Declined".
 
     **Response (200 OK):**
-    Returns the updated test request object with the new `status` and `decline_reason`.
+    Returns the updated test request object with the new `status`
 
     **Error Responses:**
     - `404 Not Found`: No test request exists with the given `req_id`
     """
+    if status_update.total_bill <= 0:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Total bill amount cannot be negative or zero.")
     updated_request = db.query(model.LabTestRequest).filter(model.LabTestRequest.test_req_id == req_id).first()
     
     if not updated_request:
-        raise HTTPException(status_code=404, detail="Test Request not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Test Request not found")
+    if not updated_request.locked_by:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot update status as the request is not locked by any technician.")
+    
+    if updated_request.locked_by != user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot update status as the request is locked by another technician.")
     
     updated_request.status = status_update.status
-    updated_request.decline_reason = status_update.decline_reason
+
+    # test_bills = db.query(model)
 
     db.commit()
     db.refresh(updated_request)
     return updated_request
 
-@router.put("/requests/{req_id}/lock", response_model=TestRequestOut, tags=["Test Requests"])
+@router.put("/requests/lock_test_request/visit_id/{visit_id}/user_id/{user_id}", response_model=list[TestRequestOut], tags=["Test Requests"])
 @limiter.limit("10/minute")  # Limit to 10 requests per minute per IP
-def lock_test_request(req_id: int, user_id: int, request: Request, response: Response, db: Session = Depends(get_db)):
+def lock_test_request(visit_id: str, user_id: int, request: Request, response: Response, db: Session = Depends(get_db)):
     """
     Lock a lab test request to a specific technician to prevent concurrent processing.
 
     **Path Parameters:**
-    - `req_id` (int, required): The unique ID of the test request to lock.
+    - `visit_id` (str, required): The unique ID of the test request to lock.
 
     **Query Parameters:**
     - `user_id` (int, required): ID of the technician locking the request.
@@ -151,32 +141,36 @@ def lock_test_request(req_id: int, user_id: int, request: Request, response: Res
 
     **Error Responses:**
     - `403 Forbidden`: The test request is already locked by a different technician
-    - `404 Not Found`: No test request exists with the given `req_id`
+    - `404 Not Found`: No test request exists with the given `visit_id`
     """
-    current_request = db.get(model.LabTestRequest, req_id)
-    if current_request and current_request.locked_by and current_request.locked_by != user_id:
-        raise HTTPException(status_code=403, detail="Test is already locked by another technician.")
-        
-    current_request.locked_by = user_id
-    current_request.locked_at = datetime.now()
-
-    db.commit()
-    db.refresh(current_request)
     
-    updated_request = db.get(model.LabTestRequest, req_id)
-    if not updated_request:
-        raise HTTPException(status_code=404, detail="Test Request not found")
-        
-    return updated_request
+    if not db.get(model.User, user_id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User (Technician) ID not found.")
+    
+    current_requests = db.query(model.LabTestRequest).filter(model.LabTestRequest.vid == visit_id).all()
+    if not current_requests:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Visit Id not found")
+    
+    for current_request in current_requests:
 
-@router.put("/requests/{req_id}/unlock", response_model=TestRequestOut, tags=["Test Requests"])
+        # is the page is locked and it is not locked by you, then error. if it is locked by you, then ok.
+        if current_request.locked_by and current_request.locked_by != user_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="This page is already locked by another technician.")
+            
+        current_request.locked_by = user_id
+        current_request.locked_at = datetime.now()
+
+    db.commit()        
+    return current_requests
+
+@router.put("/requests/unlock_test_request/visit_id/{visit_id}/user_id/{user_id}", response_model=list[TestRequestOut], tags=["Test Requests"])
 @limiter.limit("10/minute")  # Limit to 10 requests per minute per IP
-def unlock_test_request(req_id: int, user_id: int, request: Request, response: Response, db: Session = Depends(get_db)):
+def unlock_test_request(visit_id: str, user_id: int, request: Request, response: Response, db: Session = Depends(get_db)):
     """
     Unlock a lab test request to release it from a technician's hold.
 
     **Path Parameters:**
-    - `req_id` (int, required): The unique ID of the test request to unlock.
+    - `visit_id` (str, required): The unique ID of the test request to unlock.
 
     **Query Parameters:**
     - `user_id` (int, required): ID of the technician requesting the unlock.
@@ -193,24 +187,30 @@ def unlock_test_request(req_id: int, user_id: int, request: Request, response: R
 
     **Error Responses:**
     - `403 Forbidden`: The test request is locked by a different technician
-    - `404 Not Found`: No test request exists with the given `req_id`
+    - `404 Not Found`: No test request exists with the given `visit_id`
+    - `404 Not Found`: User (Technician) ID not found.
     """
-    current_request = db.get(model.LabTestRequest, req_id)
-    if current_request and current_request.locked_by and current_request.locked_by != user_id:
-        raise HTTPException(status_code=403, detail="Test is already locked by another technician.")
+    if not db.get(model.User, user_id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User (Technician) ID not found.")
+    
+    current_requests = db.query(model.LabTestRequest).filter(model.LabTestRequest.vid == visit_id).all()
+    if not current_requests:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Visit Id not found")
+    
+    for current_request in current_requests:
+
+        if not current_request.locked_by: # if page is not locked, then you cannot unlock this page.
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Page is not locked")
         
-    test_req = db.query(model.LabTestRequest).where(model.LabTestRequest.test_req_id == req_id).first()
-    test_req.locked_by = user_id
-    test_req.locked_at = datetime.now()
+        if current_request.locked_by != user_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Page is not locked by this user: {user_id}")
+            
+        current_request.locked_by = None
+        current_request.locked_at = None
 
     db.commit()
-    db.refresh(test_req)
     
-    updated_request = db.get(model.LabTestRequest, req_id)
-    if not updated_request:
-        raise HTTPException(status_code=404, detail="Test Request not found")
-        
-    return updated_request
+    return current_requests
 
 
 @router.post("/results/complete", status_code=status.HTTP_201_CREATED, tags=["Results"])

@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 import model
-from schemas.auth_schema import SignUp, Login
+from schemas.auth_schema import SignUp, Login, UserOut
 from rate_limiting import limiter
 
 router = APIRouter(tags=["Authentication"])
@@ -44,7 +44,7 @@ def SignUp(user: SignUp,request: Request, response: Response, db: Session = Depe
     db.refresh(db_user)
     return db_user
 
-@router.post("/Login", status_code=status.HTTP_200_OK, tags=["user"])
+@router.post("/Login", status_code=status.HTTP_200_OK, response_model=UserOut, tags=["user"])
 @limiter.limit("10/minute")  # Limit to 10 login attempts per minute per IP
 def login(data: Login, request: Request, response: Response, db: Session = Depends(get_db)):
     """
@@ -55,8 +55,10 @@ def login(data: Login, request: Request, response: Response, db: Session = Depen
     - `password` (str, required): The user's password.
 
     **Response (200 OK):**
-    Returns a confirmation message on successful login:
-    - `message`: "Login sucessfull"
+    Returns the user object on successful login:
+    - `user_id`: Auto-generated unique user identifier
+    - `user_name`: The logged-in user's username
+    - `email`: The logged-in user's email address
 
     **Error Responses:**
     - `400 Bad Request`: Email is not registered in the system
@@ -69,4 +71,5 @@ def login(data: Login, request: Request, response: Response, db: Session = Depen
     if user.password != data.password:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="password invalid")
     
-    return {"message": "Login sucessfull"}
+    return user
+

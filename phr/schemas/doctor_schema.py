@@ -16,7 +16,7 @@ class DoctorBase(BaseModel):
     @classmethod
     def parse_last_visit(cls, value):
         if isinstance(value, str):
-            # Convert API input text into a real date object.
+            # Convert API input string into a real date object, also format it.
             return datetime.strptime(value, "%Y-%m-%d").date()
         return value
 
@@ -25,6 +25,7 @@ class DoctorBase(BaseModel):
     # Pydantic passes self (the actual instance with real data) so we can read self.last_visit and format it.
     @field_serializer("last_visit")
     def format_last_visit(self, value: date) -> str:
+        # convert the date object into formated string. e.g. "January 01, 2024"
         return value.strftime("%B %d, %Y")
 
     model_config = {"from_attributes": True}

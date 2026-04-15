@@ -37,11 +37,13 @@ class LabTestRequest(base):
     __tablename__ = "test_request"
 
     test_req_id = Column(Integer, primary_key=True, index=True)
+    vid = Column(String(20), nullable=True)
     mpi = Column(Integer, ForeignKey("patient.mpi"), nullable=False) # every test req will have a patient assign to it
 
     test_name = Column(Text, nullable=False)
-    status = Column(String(10), nullable=False, default='Pending') #pending or accepted or rejected
-    decline_reason = Column(String(100), nullable=True)
+    status = Column(String(10), nullable=False, default='Pending') #Pending or Accepted or Declined or Completed
+    created_at = Column(DateTime, default=datetime.now())
+
     locked_by = Column(Integer, ForeignKey('users.user_id'), nullable=True)
     locked_at = Column(DateTime, nullable=True)
 

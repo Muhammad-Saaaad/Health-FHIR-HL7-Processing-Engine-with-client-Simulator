@@ -1,21 +1,29 @@
 from pydantic import BaseModel, Field, EmailStr
 from datetime import datetime, date
 
+class LabBase(BaseModel):
+    report_id: int | None = None
+    test_name: str | None = None
+    vid: str | None = None
+    status: str | None = None
+
 class TestRequestCreate(BaseModel):
     patient_cnic: str
     test_name: str = Field(..., max_length=50)
 
 # --- Schema for Test Request Status Update ---
 class TestRequestStatusUpdate(BaseModel):
+    req_id: list[int]
+    user_id: int
+
+    total_bill: float
     status: str = Field(..., pattern="^(Pending|Accepted|Declined|Completed)$")
-    decline_reason: str | None
 
 class TestRequestOut(BaseModel):
     test_req_id: int
     mpi : int
     test_name: str
     status: str
-    decline_reason: str | None
     locked_by: int | None
     locked_at: datetime | None
 

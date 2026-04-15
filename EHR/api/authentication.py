@@ -76,7 +76,7 @@ def login_doctor(doctor: schema.Login, request: Request, response: Response, db 
     if is_valid_doc.password != doctor.password:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="password not valid")
     
-    return {"message": "login sucessfully"}
+    return is_valid_doc
 
 @router.get("/get-all-doctors/", status_code=status.HTTP_200_OK)
 def get_all_doctors(request: Request, response: Response, db: Session = Depends(get_db)):

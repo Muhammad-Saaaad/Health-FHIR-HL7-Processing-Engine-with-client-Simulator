@@ -98,7 +98,11 @@ def regex_replace_with_template(value: str, pattern_from: str, pattern_to: str) 
 
 from datetime import datetime
 
-date = datetime.now().date()
-date_formate_to_chnage = datetime.strptime(str(date), "%Y-%m-%d")
-formated_date = date_formate_to_chnage.strftime("%B %d, %Y")
-print(formated_date)
+# date = datetime.now().date()
+# date_formate_to_chnage = datetime.strptime(str(date), "%Y-%m-%d")
+# formated_date = date_formate_to_chnage.strftime("%B %d, %Y")
+# print(formated_date)
+
+t1 = (4, 20)
+t2 = (4, 30)
+print(t1 < t2)
