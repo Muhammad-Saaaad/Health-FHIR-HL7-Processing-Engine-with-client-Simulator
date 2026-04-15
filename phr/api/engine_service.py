@@ -16,7 +16,7 @@ formater = logging.Formatter("%(asctime)s- %(levelname)s - [%(filename)s:%(linen
 
 if not logger.handlers:
     rotating_file_handler = RotatingFileHandler(
-        r"E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\phr\logs\recieve_data.log",
+        r"logs\recieve_data.log",
         maxBytes=20000, # 20KB
         backupCount=1
     )
