@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from database import get_db
 import model
-from schemas.patient_schema import PatientBase, PatientDetail, WaitingListPatient
+from schemas.patient_schema import PatientBase, PatientDetail, WaitingPatientList, AcceptedPatientList
 from rate_limiting import limiter
 
 router = APIRouter(tags=["patient"])
@@ -78,7 +78,7 @@ def get_patient_detail(mpi: int, request: Request, response: Response, db: Sessi
     response["lab_reports"] = reports
     return response
 
-@router.get("/patient-waiting-list", response_model=list[WaitingListPatient])
+@router.get("/patient-waiting-list", response_model=list[WaitingPatientList])
 @limiter.limit("20/minute")  # Limit to 20 requests per minute per IP
 def get_pending_requests(request: Request, response: Response, db: Session = Depends(get_db)):
     """ 
@@ -107,7 +107,7 @@ def get_pending_requests(request: Request, response: Response, db: Session = Dep
         patient = db.get(model.Patient, req.mpi)
         if patient:
             seen_vids.add(req.vid)
-            waiting_list_patient = WaitingListPatient(
+            waiting_list_patient = WaitingPatientList(
                 test_req_id=req.test_req_id,
                 mpi=patient.mpi,
                 fname=patient.fname,
@@ -119,3 +119,42 @@ def get_pending_requests(request: Request, response: Response, db: Session = Dep
             waiting_list_patients.append(waiting_list_patient)
 
     return waiting_list_patients
+
+@router.get("/patient-Accepted-list", response_model=list[AcceptedPatientList])
+@limiter.limit("20/minute")  # Limit to 20 requests per minute per IP
+def get_accepted_requests(request: Request, response: Response, db: Session = Depends(get_db)):
+    """ 
+    Retrieve accepted lab test requests, keeping only one row per `vid`.
+
+    **Query Parameters:** None
+
+    **Response (200 OK):**
+    Returns a list of unique waiting-list entries for requests with `status == "Accepted"`.
+    If multiple accepted rows share the same `vid`, only the first one is returned.
+    Each object includes:
+    - `test_req_id`, `mpi`, `fname`, `lname`, `status`, `date`, `vid`, `age`, `gender`.
+
+    **Note:**
+    - Returns an empty list if there are no accepted test requests.
+    - Uniqueness is based on `vid`.
+    """
+    accepted_requests = db.query(model.LabTestRequest).filter(model.LabTestRequest.status == "Accepted").all()
+    patients_accepted_list = []
+
+    for req in accepted_requests:
+
+        patient = db.get(model.Patient, req.mpi)
+        if patient:
+            waiting_list_patient = AcceptedPatientList(
+                test_req_id=req.test_req_id,
+                test_name=req.test_name,
+                mpi=patient.mpi,
+                fname=patient.fname,
+                lname=patient.lname,
+                status=req.status,
+                date=req.created_at,
+                vid=req.vid,
+            )
+            patients_accepted_list.append(waiting_list_patient)
+
+    return patients_accepted_list

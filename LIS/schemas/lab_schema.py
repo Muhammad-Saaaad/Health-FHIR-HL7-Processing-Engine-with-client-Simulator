@@ -13,11 +13,11 @@ class TestRequestCreate(BaseModel):
 
 # --- Schema for Test Request Status Update ---
 class TestRequestStatusUpdate(BaseModel):
-    req_id: list[int]
+    req_id_status: dict[int, str] # Mapping of request IDs to their new statuses
+    req_id_bill: dict[int, float] # Mapping of request IDs to their bills. 
     user_id: int
-
-    total_bill: float
-    status: str = Field(..., pattern="^(Pending|Accepted|Declined|Completed)$")
+    visit_id: str
+    # status: str = Field(..., pattern="^(Pending|Accepted|Declined|Completed)$")
 
 class TestRequestOut(BaseModel):
     test_req_id: int
@@ -28,31 +28,3 @@ class TestRequestOut(BaseModel):
     locked_at: datetime | None
 
     model_config = {"from_attributes": True}
-
-class MiniTestCreate(BaseModel):
-    """Schema for a single mini-test result input."""
-    test_name: str
-    normal_range: str
-    result_value: str
-
-class MiniTestOut(MiniTestCreate):
-    """Schema for returning a single mini-test result."""
-    mini_test_id: int
-    result_id: int # Foreign key to TestResult
-    
-    model_config = {"from_attributes":True}
-
-class CompleteTestResultCreate(BaseModel):
-    user_id: int
-    test_req_id: int
-    description: str| None = None
-    mini_tests: list[MiniTestCreate] # Nested list of mini-tests
-
-class TestResultOut(BaseModel):
-    result_id: int
-    user_id: int
-    test_req_id: int
-    description: str | None
-    mini_test_results: list[MiniTestOut] = []
-    
-    model_config = {"from_attributes":True}

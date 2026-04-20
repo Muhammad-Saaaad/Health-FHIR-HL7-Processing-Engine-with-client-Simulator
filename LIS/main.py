@@ -7,7 +7,7 @@ from slowapi.errors import RateLimitExceeded
 
 from database import engine
 import model
-from api import auth, patient ,lab, billing, engine_service
+from api import auth, patient ,lab, engine_service, results
 from rate_limiting import limiter, rate_limit_exceeded_handler
 
 os.makedirs("logs", exist_ok=True)
@@ -31,7 +31,7 @@ app.add_middleware(SlowAPIMiddleware)
 app.include_router(auth.router)
 app.include_router(patient.router)
 app.include_router(lab.router)
-app.include_router(billing.router)
+app.include_router(results.router)
 app.include_router(engine_service.router)
 
 @app.get("/health")

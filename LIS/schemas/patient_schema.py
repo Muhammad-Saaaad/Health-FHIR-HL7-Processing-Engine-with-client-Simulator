@@ -37,8 +37,22 @@ class PatientDetail(BaseModel):
 
     model_config = {"from_attributes": True}
 
-class WaitingListPatient(BaseModel):
+class WaitingPatientList(BaseModel):
     test_req_id: int
+    vid: str | None
+    mpi: int
+    fname: str
+    lname: str
+    status: str
+    date: datetime
+
+    @field_serializer("date")
+    def serialize_date(self, value: datetime) -> str:
+        return value.strftime("%B %d, %Y")
+
+class AcceptedPatientList(BaseModel):
+    test_req_id: int
+    test_name: str
     vid: str | None
     mpi: int
     fname: str

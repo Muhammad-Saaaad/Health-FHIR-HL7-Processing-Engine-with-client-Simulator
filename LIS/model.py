@@ -57,11 +57,12 @@ class LabTestBilling(base):
     bill_id = Column(Integer, primary_key=True, index=True)
     mpi = Column(Integer, ForeignKey("patient.mpi"), nullable=False)
     test_req_id = Column(Integer, ForeignKey("test_request.test_req_id"), nullable=False)
+    vid = Column(String(20), nullable=False)
 
     bill_amount = Column(Float, nullable=False)
     payment_status = Column(String(10), nullable=False)# pending, accepted, rejected
-    create_at = Column(DateTime, nullable=False)
-    updated_at = Column(DateTime, nullable=False)
+    create_at = Column(DateTime, default=datetime.now(), nullable=False)
+    updated_at = Column(DateTime, default=datetime.now(), nullable=False)
 
     patient = relationship("Patient", back_populates="test_bill")
     test_req = relationship("LabTestRequest", back_populates="test_bill")
@@ -74,7 +75,7 @@ class LabResult(base):
     test_req_id = Column(Integer, ForeignKey("test_request.test_req_id"), nullable=False)
 
     description = Column(String(255), nullable=True)
-    created_at = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, default=datetime.now(), nullable=False)
 
     mini_test = relationship("MiniLabResult", back_populates="test_result")
     user = relationship("User", back_populates="test_result")
@@ -86,8 +87,9 @@ class MiniLabResult(base):
     mini_test_id = Column(Integer, primary_key=True, index= True)
     result_id = Column(Integer, ForeignKey("test_result.result_id"), nullable=False)
 
-    test_name = Column(String(100), nullable=False)
+    mini_test_name = Column(String(100), nullable=False)
     normal_range = Column(String(20), nullable=False)
+    unit = Column(String(20), nullable=False)
     result_value = Column(String(7), nullable=False)
 
     test_result = relationship("LabResult", back_populates="mini_test")
