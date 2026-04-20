@@ -36,8 +36,12 @@ def get_doctors(request: Request, response: Response, db: Session = Depends(get_
 
         Returns:
         - `200 OK` with list[`DoctorBase`].
-        - Each item includes doctor fields such as `doctor_id`, `name`,
-            `phone_no`, `specialization`, and `last_visit` (based on schema).
+        - Each item includes:
+            - `doctor_id` (int)
+            - `name` (str)
+            - `phone_no` (str | null)
+            - `specialization` (str | null)
+            - `last_visit` (str, formatted date)
 
         Potential errors:
         - `400 Bad Request`: Any unexpected database/server exception.
@@ -60,7 +64,8 @@ def get_doctor_by_id(request: Request, response: Response, doctor_id: int, db: S
         - No request body.
 
         Returns:
-        - `200 OK` with doctor object.
+        - `200 OK` with doctor object containing fields like:
+            `doctor_id`, `name`, `phone_no`, `specialization`, `last_visit`, and profile fields.
 
         Potential errors:
         - `404 Not Found`: Doctor does not exist for the provided ID.
@@ -90,6 +95,7 @@ def get_doctor_encountered_by_patient(request: Request, response: Response, mpi:
 
         Returns:
         - `200 OK` with list[`DoctorBase`] built from visit-note joins.
+        - Each item contains `doctor_id`, `name`, `phone_no`, `specialization`, `last_visit`.
         - Empty list if patient has no encountered doctors.
 
         Potential errors:

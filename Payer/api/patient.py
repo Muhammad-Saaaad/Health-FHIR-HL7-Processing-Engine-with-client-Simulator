@@ -121,14 +121,14 @@ def get_all_patients(request: Request, response: Response, db: Session = Depends
     **Query Parameters:** None
 
     **Response (200 OK):**
-    Returns a list of all patient records. Each item includes:
-    - `p_id`: Patient's internal unique ID
-    - `mpi`: Master Patient Index (linked from EHR)
-    - `name`: Patient's full name
-    - `gender`: Patient's gender
-    - `date_of_birth`: Patient's date of birth
-    - `phone_no`: Patient's phone number
-    - `policy_number`: The ID of the patient's currently active insurance policy
+    Returns `list[schema.PatientDisplay]`. Each item includes:
+    - `p_id` (int): Patient internal ID
+    - `mpi` (int | null): Master patient index
+    - `name` (str): Patient full name
+    - `gender` (str | null)
+    - `date_of_birth` (date | null)
+    - `phone_no` (str | null)
+    - `policy_number` (int | null): active policy ID
 
     **Note:**
     - Returns an empty list if no patients exist.
@@ -164,16 +164,19 @@ def get_single_patient(p_id: int, request: Request, response: Response, db: Sess
     - `p_id` (int, required): The unique ID of the patient to retrieve.
 
     **Response (200 OK):**
-    Returns patient details with:
-    - `p_id`: Patient's unique ID
-    - `name`: Patient's full name
-    - `cnic`: Patient's CNIC / national ID number
-    - `date_of_birth`: Patient's date of birth
-    - `patient_policy`: List of associated insurance policies, each containing:
-        - `policy_id`: Policy's unique identifier
-        - `policy_plan`: Insurance tier (e.g., \"Gold\", \"Silver\", \"Bronze\")
-        - `total_coverage`: Maximum coverage amount
-        - `amount_used`: Coverage already consumed
+        Returns `schema.PatientPolicyDetails` with:
+        - `p_id` (int)
+        - `mpi` (int | null)
+        - `name` (str)
+        - `Age` (str | null): serialized age derived from date of birth
+        - `phone_no` (str | null)
+        - `gender` (str | null)
+        - `patient_policy` (list[`patient_policy`]) where each policy item has:
+            - `policy_id` (int)
+            - `policy_plan` (str)
+            - `total_coverage` (float)
+            - `amount_used` (float)
+            - `status` (str)
 
     **Error Responses:**
     - `404 Not Found`: No patient exists with the given `p_id`

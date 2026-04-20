@@ -269,6 +269,30 @@ def mapping_suggestion(
     src_field_ids: list[int] = Query(...), # Now a query param: ?src_field_ids=1&src_field_ids=2
     dest_field_ids: list[int] = Query(...), # Now a query param: ?dest_field_ids=1&dest_field_ids=2
     db: Session = Depends(get_db)):
+    """
+    Generate an automatic mapping suggestion for one source field and one destination field.
+
+    **Path Parameters:**
+    - `src_server_id` (int): Source server ID.
+    - `dest_server_id` (int): Destination server ID.
+
+    **Query Parameters:**
+    - `src_field_ids` (list[int], required): One source endpoint field ID.
+    - `dest_field_ids` (list[int], required): One destination endpoint field ID.
+
+    **Response (200 OK):**
+    JSON object:
+    - `src_field_ids`: resolved source field IDs
+    - `dest_field_ids`: resolved destination field IDs
+    - `src_names`: canonical source names
+    - `dest_names`: canonical destination names
+    - `transform_type`: suggested transform (copy/map/format/split/concat/regex)
+    - `config`: suggested transform configuration object
+
+    **Error Responses:**
+    - `403 Forbidden`: Invalid field/server input combinations.
+    - `400 Bad Request`: Unexpected processing error.
+    """
 
     if len(src_field_ids)>1 and len(dest_field_ids) >1 :
         logger.warning(

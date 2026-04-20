@@ -38,6 +38,13 @@ def add_visit_note(visit_note: schema.VisitNote ,request: Request, response: Res
     - `lab_name` (str, optional): Name of the laboratory for ordered tests (required if test_names is provided).
     - `test_names` (list[str], optional): List of lab test names to order for this visit.
 
+    **Request Schema (`schema.VisitNote`) fields:**
+    - `mpi` (int), `doctor_id` (int)
+    - `note_title` (str), `patient_complaint` (str), `dignosis` (str), `note_details` (str)
+    - `bill_amount` (float)
+    - `lab_name` (str | null)
+    - `test_names` (list[`lab_schema.LoincMaster`] | null)
+
     **Response (201 Created):**
     Returns a JSON message:
     - `message`: "data inserted sucessfully"
@@ -267,8 +274,16 @@ def visit_note(doc_id: int, pid: int, request: Request, response: Response, db: 
     - `pid` (int, required): The patient's MPI (Master Patient Index).
 
     **Response (200 OK):**
-    Returns a list of visit note objects matching both the doctor and patient. Each object includes
-    the note details, diagnosis, complaints, and associated billing/lab information.
+    Returns `list[schema.ViewNote]` where each item contains:
+    - `note_id` (int)
+    - `mpi` (int)
+    - `doctor_id` (int)
+    - `bill_id` (int | null)
+    - `visit_date` (datetime)
+    - `note_title` (str | null)
+    - `patient_complaint` (str | null)
+    - `dignosis` (str | null)
+    - `note_details` (str | null)
 
     **Note:**
     - Returns an empty list if the doctor has no visit notes for the specified patient.
@@ -305,8 +320,16 @@ def visit_note(note_id: int, request: Request, response: Response, db: Session =
     - `note_id` (int, required): The unique identifier of the visit note to retrieve.
 
     **Response (200 OK):**
-    Returns the full visit note object including note title, patient complaint, diagnosis,
-    note details, and associated bill/lab report references.
+    Returns `schema.ViewNote` with:
+    - `note_id` (int)
+    - `mpi` (int)
+    - `doctor_id` (int)
+    - `bill_id` (int | null)
+    - `visit_date` (datetime)
+    - `note_title` (str | null)
+    - `patient_complaint` (str | null)
+    - `dignosis` (str | null)
+    - `note_details` (str | null)
 
     **Error Responses:**
     - `404 Not Found`: No visit note exists with the given `note_id`

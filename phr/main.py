@@ -37,6 +37,12 @@ app.include_router(lab.router)
 
 @app.get("/health")
 def check_health():
+    """
+    Health-check endpoint for PHR service.
+
+    **Response (200 OK):**
+    - JSON object: `{ "message": "✔ PHR running" }`
+    """
     return {"message": "✔ PHR running"}
 
 if __name__ == "__main__":

@@ -64,12 +64,12 @@ def expense_breakdown(pid: int, policy_id: int, request: Request, response: Resp
     - `policy_id` (int, required): Insurance policy primary key.
 
     **Response (200 OK):**
-    Returns a list of expense entries. Each entry includes:
-    - `claim_date`: Claim creation date (formatted string).
-    - `service`: Service name billed in the claim.
-    - `tests`: Placeholder field currently set to `"N/A"`.
-    - `total_amount`: Claim bill amount.
-    - `status`: Current claim status.
+    Returns `list[schema.ExpenseBreakdown]`. Each entry includes:
+    - `claim_date` (str): formatted claim date
+    - `service` (str): billed service name
+    - `tests` (str): currently `"N/A"`
+    - `total_amount` (float): billed amount
+    - `status` (str): current claim status
 
     **Error Responses:**
     - `404 Not Found`: Patient ID does not exist.
@@ -111,12 +111,13 @@ def get_all_pending_claims(request: Request, response: Response, db: Session = D
     **Query Parameters:** None
 
     **Response (200 OK):**
-    Returns a list of pending claims. Each item includes:
-    - `claim_id`: Unique claim identifier
-    - `name`: Patient's full name
-    - `service_name`: Name of the service/treatment
-    - `phone_no`: Patient's contact phone number
-    - `created_at`: Timestamp of claim submission
+    Returns `list[schema.AllClaims]`. Each item includes:
+    - `claim_id` (int)
+    - `mpi` (int)
+    - `policy_number` (int)
+    - `name` (str)
+    - `created_at` (str | null)
+    - `status` (str)
 
     **Note:**
     - Only claims with `claim_status == "Pending"` are returned.
@@ -146,14 +147,10 @@ def claims_per_patient(pid : int, request: Request, response: Response,  db: Ses
     - `pid` (int, required): The patient's unique ID.
 
     **Response (200 OK):**
-    Returns an object containing:
-    - `patient_id`: The patient's ID
-    - `all_claims`: Array of claim objects, each with:
-        - `claim_id`: Unique claim identifier
-        - `name`: Patient's full name
-        - `service_name`: Name of the service/treatment
-        - `phone_no`: Patient's contact phone number
-        - `created_at`: Timestamp of claim submission
+        Returns `schema.ClaimsPerPatient` containing:
+        - `patient_id` (int)
+        - `all_claims` (list[`schema.AllClaims`]) where each item has
+            `claim_id`, `mpi`, `policy_number`, `name`, `created_at`, `status`.
 
     **Note:**
     - Returns an object with an empty `all_claims` array if the patient has no claims.
@@ -185,15 +182,19 @@ def get_single_claims(claim_id : int, request: Request, response: Response, db: 
     - `claim_id` (int, required): The unique identifier of the claim to retrieve.
 
     **Response (200 OK):**
-    Returns the full claim object including:
-    - `claim_id`: Unique claim identifier
-    - `policy_id`: Associated insurance policy ID
-    - `patient_id`: Associated patient ID
-    - `service_name`: Name of the service/treatment
-    - `bill_amount`: The total claimed amount
-    - `claim_status`: Current status (e.g., "Pending", "Approved", "Rejected", "Paid")
-    - `provider_phone_no`: Provider contact number (if provided)
-    - `created_at`: Timestamp of claim submission
+    Returns `schema.PatientClaimDisplay` including:
+    - `claim_id` (int)
+    - `policy_id` (int)
+    - `pid` (int)
+    - `patient_name` (str)
+    - `patient_phone_no` (str)
+    - `gender` (str)
+    - `bill_amount` (float)
+    - `total_coverage` (float)
+    - `amount_used` (float)
+    - `service_included` (bool)
+    - `tests_included` (bool)
+    - `claim_status` (str)
 
     **Error Responses:**
     - `404 Not Found`: No claim exists with the given `claim_id`

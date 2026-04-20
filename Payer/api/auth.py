@@ -20,7 +20,7 @@ def signup_user(data: schema.SystemUserCreate, request: Request, response: Respo
     - `password` (str, required): Password for authentication. Minimum 6 characters recommended.
     
     **Response:**
-    Returns the created user with:
+    Returns `schema.SystemUserDisplay` with:
     - `user_id`: Unique identifier
     - `user_name`: The username
     - `email`: The email address
@@ -55,7 +55,7 @@ def login_user(data: schema.LoginRequest,request: Request, response: Response,  
     - `password` (str, required): User's password for authentication
     
     **Response:**
-    Returns authentication result with:
+    Returns JSON object with:
     - `message`: "Login Successful"
     - `user_id`: The user's unique identifier
     - `user_name`: The username

@@ -24,6 +24,10 @@ def SignUP_patient(patient: auth_schema.SignUp, request: Request, response: Resp
         - `201 Created` with JSON:
             - `message` (str): Confirmation message.
 
+        Request schema (`auth_schema.SignUp`):
+        - `nic` (str)
+        - `password` (str)
+
         Potential errors:
         - `409 Conflict`: Patient with provided NIC does not exist.
         - `400 Bad Request`: Any unexpected database/server exception.
@@ -55,7 +59,7 @@ def login_patient(patient: auth_schema.Login, request: Request, response: Respon
 
         Returns:
         - `200 OK` with `patient_schema.Patient`:
-            - `mpi` (int), `nic` (str), `name` (str), `phone_no` (str | null),
+            - `mpi` (str), `nic` (str), `name` (str), `phone_no` (str | null),
                 `gender` (str), `date_of_birth` (date), `address` (str | null).
 
         Potential errors:

@@ -31,8 +31,14 @@ def get_patient(request: Request, response: Response, db: Session = Depends(get_
     
     **Query Parameters:** None
     
-    **Response:**
-    Returns array of all patient records with complete details
+    **Response (200 OK):**
+    Returns `list[schema.get_patient]`.
+
+    Each patient object contains:
+    - `mpi` (int): Master Patient Index
+    - `name` (str): Patient full name
+    - `phone_no` (str | null): Patient phone number
+    - `gender` (str): Patient gender
     
     **Error Responses:**
     - 409 Conflict: Database or data consistency error
@@ -53,8 +59,15 @@ def get_patient(patient_id: int, request: Request, response: Response, db: Sessi
     **Path Parameters:**
     - `patient_id` (int, required): The unique identifier of the patient to retrieve.
 
-    **Response:**
-    Returns the patient record with complete details
+    **Response (200 OK):**
+    Returns `schema.SpecificPatient` with:
+    - `mpi` (int): Master Patient Index
+    - `name` (str): Patient full name
+    - `phone_no` (str | null): Patient phone number
+    - `gender` (str): Patient gender
+    - `nic` (str): National identity number
+    - `age` (int): Calculated age from `date_of_birth`
+    - `address` (str | null): Patient address
 
     **Error Responses:**
     - 404 Not Found: No patient exists with the given `patient_id`
@@ -99,8 +112,20 @@ async def add_patient(patient: schema.post_patient, request: Request, response: 
     **Side Effect:** Automatically creates corresponding FHIR Patient + Coverage Bundle in InterfaceEngine,
     which routes the data to downstream systems (LIS, Payer).
     
-    **Response:**
-    Returns JSON: {"message": "data inserted sucessfully"} if both local and FHIR registration succeed
+    **Response (201 Created):**
+    Returns JSON object:
+    - `message` (str): "data inserted sucessfully"
+
+    **Request Schema (`schema.post_patient`):**
+    - `nic` (str)
+    - `name` (str)
+    - `phone_no` (str | null)
+    - `gender` (str)
+    - `date_of_birth` (date)
+    - `address` (str | null)
+    - `insurance_company` (str)
+    - `policy_number` (int)
+    - `plan_type` (str)
     
     **Constraints:**
     - NIC must be unique (no duplicates allowed)

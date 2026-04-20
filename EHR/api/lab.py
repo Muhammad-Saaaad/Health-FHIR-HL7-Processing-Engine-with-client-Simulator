@@ -20,8 +20,14 @@ def fetch_lab_report(note_id: int, request: Request, response: Response, db: Ses
     - `note_id` (int, required): The unique identifier of the visit note whose lab reports to fetch.
 
     **Response (200 OK):**
-    Returns a list of lab report objects linked to the visit. Each object includes:
-    - Lab report details such as `lab_name`, `test_name`, and any result fields defined in the schema.
+    Returns `list[schema.LabReport]` where each item includes:
+    - `report_id` (int)
+    - `visit_id` (int)
+    - `lab_name` (str)
+    - `test_name` (str)
+    - `test_status` (str)
+    - `created_at` (datetime | null)
+    - `updated_at` (datetime | null)
 
     **Constraints:**
     - At least one lab report must be linked to the visit note; otherwise a 404 is returned.
@@ -44,10 +50,23 @@ def fetch_lab_report(note_id: int, request: Request, response: Response, db: Ses
 @limiter.limit("80/minute")
 async def test_search(search_name: str, request: Request, response: Response, db: Session = Depends(get_db)):
     """
-        * This will get the top 10 case insensetive results that contain the search name in the long common name of the LoincMaster table. 
-        * The results are cached in memory for faster retrieval on subsequent searches with the same name.
-        * The results are also ordered alphabetically by the long common name of the test.
-        * Only the top 10 results are returned to avoid overwhelming the client with too many options.
+    Search LOINC master tests by partial name.
+
+    **Query Parameters:**
+    - `search_name` (str, required): Case-insensitive text to match in `long_common_name`.
+
+    **Response (200 OK):**
+    Returns `list[schema.LoincMaster]` (maximum 10 rows), each item containing:
+    - `loinc_code` (str)
+    - `long_common_name` (str)
+    - `short_name` (str | null)
+    - `component` (str | null)
+    - `system` (str | null)
+
+    **Notes:**
+    - Empty `search_name` returns `[]`.
+    - Results are cached by search term.
+    - Results are sorted by `long_common_name` ascending.
     """
     try:
         if search_name.strip() == "":

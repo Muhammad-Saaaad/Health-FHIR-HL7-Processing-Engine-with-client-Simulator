@@ -17,8 +17,11 @@ def get_all_patients(request: Request, response: Response, db: Session = Depends
     **Query Parameters:** None
 
     **Response (200 OK):**
-    Returns a list of all patient records. Each object includes patient details
-    as defined by the `GetPatient` schema (e.g., `pid`, `mpi`, `fname`, `lname`, `dob`, `gender`).
+    Returns `list[PatientBase]`. Each patient object includes:
+    - `mpi` (int)
+    - `fname` (str)
+    - `lname` (str)
+    - `updated_at` (str, formatted date)
 
     **Note:**
     - Returns an empty list if no patients exist in the system.
@@ -89,8 +92,14 @@ def get_pending_requests(request: Request, response: Response, db: Session = Dep
     **Response (200 OK):**
     Returns a list of unique waiting-list entries for requests with `status == "Pending"`.
     If multiple pending rows share the same `vid`, only the first one is returned.
-    Each object includes:
-    - `test_req_id`, `mpi`, `fname`, `lname`, `status`, `date`, `vid`, `age`, `gender`.
+    Each object is `WaitingPatientList` with:
+    - `test_req_id` (int)
+    - `vid` (str | null)
+    - `mpi` (int)
+    - `fname` (str)
+    - `lname` (str)
+    - `status` (str)
+    - `date` (str, formatted date)
 
     **Note:**
     - Returns an empty list if there are no pending test requests.
@@ -131,8 +140,15 @@ def get_accepted_requests(request: Request, response: Response, db: Session = De
     **Response (200 OK):**
     Returns a list of unique waiting-list entries for requests with `status == "Accepted"`.
     If multiple accepted rows share the same `vid`, only the first one is returned.
-    Each object includes:
-    - `test_req_id`, `mpi`, `fname`, `lname`, `status`, `date`, `vid`, `age`, `gender`.
+    Each object is `AcceptedPatientList` with:
+    - `test_req_id` (int)
+    - `test_name` (str)
+    - `vid` (str | null)
+    - `mpi` (int)
+    - `fname` (str)
+    - `lname` (str)
+    - `status` (str)
+    - `date` (str, formatted date)
 
     **Note:**
     - Returns an empty list if there are no accepted test requests.

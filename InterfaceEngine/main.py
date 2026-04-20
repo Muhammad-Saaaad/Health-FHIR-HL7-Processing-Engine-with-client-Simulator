@@ -118,6 +118,12 @@ app.include_router(endpoint.router, prefix="/endpoint")
 
 @app.get("/")
 def check_health():
+    """
+    Health-check endpoint for InterfaceEngine.
+
+    **Response (200 OK):**
+    - JSON object: `{ "message": "✔ Interface Engine running" }`
+    """
     return {"message": "✔ Interface Engine running"}
 
 active_route_listners = {} # consist of all the running routes|Channels lisning for a soruce endpoint
@@ -398,6 +404,20 @@ async def route_worker(route):
 
 @app.post("/{full_path:path}", status_code=status.HTTP_200_OK)
 async def ingest(full_path: str, req: Request):
+    """
+    Ingest source payloads and fan out to all mapped destination routes.
+
+    **Path Parameters:**
+    - `full_path` (str): Source endpoint URL path registered in InterfaceEngine.
+
+    **Response (200 OK):**
+    - JSON object: `{ "message": "Successfully sent data to all destinations" }`
+
+    **Error Responses:**
+    - `404 Not Found`: Incoming path is not a registered endpoint.
+    - `400 Bad Request`: Validation/parsing error.
+    - `502 Bad Gateway`: One or more downstream deliveries failed.
+    """
     trace_id = req.headers.get("X-Trace-Id") or uuid4().hex[:12]
     try:
         db = session_local()

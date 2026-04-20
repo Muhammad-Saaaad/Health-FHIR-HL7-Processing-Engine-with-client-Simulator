@@ -41,6 +41,9 @@ async def add_patient(req: Request, db: Session = Depends(get_db)):
     Returns a confirmation message:
     - `message`: "Patient Added sucessfully"
 
+    Response payload shape:
+    - `{ "message": str }`
+
     **Note:**
     - This is an internal service-to-service endpoint. Do not call this directly from the front-end.
     - HL7 component separators (`^`) and sub-component separators (`&`) are both handled.
@@ -86,12 +89,19 @@ async def add_patient(req: Request, db: Session = Depends(get_db)):
 
 @router.post("/take_lab_order", status_code=status.HTTP_200_OK)
 async def take_lab_order(req: Request, db: Session = Depends(get_db)):
+    """
+    Receive HL7 lab-order message and create LIS test requests.
+
+    **Response (200 OK):**
+    Returns JSON object with a message key. Possible values include:
+    - `{ "message": "Lab order received successfully" }`
+    - `{ "message": "No lab orders found in the message" }`
+    - `{ "message": "MPI <id> not found in the database" }`
+
+    **Error Responses:**
+    - `400 Bad Request`: Malformed HL7 or processing error.
+    """
     try:
-        """
-        MSH|^~\\&|EHR||LIS||20260203120000||ORM^O01|MSG00002|P|2.5"
-        PID|1||23|||||||||||
-        OBR|01|VID-01||2093-3^Total cholesterol||||||||||| # we can also add field in the OBR-4.3 as ^ln for telling that the system is loinc code.
-        """
         raw = await req.body()
         text_data = raw.decode("utf-8")
         logger.info(f"Received new lab order HL7 message:\n{text_data}")

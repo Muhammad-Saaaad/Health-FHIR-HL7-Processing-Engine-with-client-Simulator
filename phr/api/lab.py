@@ -34,8 +34,11 @@ def get_lab_reports_base(note_id: str, request: Request, response: Response, db:
 
         Returns:
         - `200 OK` with list[`LabReportBase`].
-        - Each item includes fields like `report_id`, `test_name`, `updated_at`,
-            and `test_status` (based on schema).
+        - Each item includes:
+            - `report_id` (int)
+            - `test_name` (str)
+            - `updated_at` (str | null, formatted datetime)
+            - `test_status` (str | null)
 
         Potential errors:
         - `404 Not Found`: Visit note does not exist.
@@ -64,7 +67,11 @@ def get_lab_results(report_id: int, request: Request, response: Response, db: Se
             - `report_id` (int)
             - `test_name` (str)
             - `description` (str | null)
-            - `mini_test_results` (list/object as defined by schema/model)
+            - `mini_test_results` (list[`LabMiniTestResult`] | null), where each mini test has:
+                - `mini_test_id` (int)
+                - `test_name` (str)
+                - `normal_range` (str)
+                - `result_value` (str)
 
         Potential errors:
         - `404 Not Found`: Lab report does not exist.

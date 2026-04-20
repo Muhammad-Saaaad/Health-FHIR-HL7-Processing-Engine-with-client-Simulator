@@ -43,6 +43,12 @@ app.include_router(visit_note.router)
 
 @app.get("/health")
 def check_health():
+    """
+    Health-check endpoint for EHR service.
+
+    **Response (200 OK):**
+    - JSON object: `{ "message": "✔ EHR running" }`
+    """
     return {"message": "✔ EHR running"}
 
 if __name__ == "__main__":

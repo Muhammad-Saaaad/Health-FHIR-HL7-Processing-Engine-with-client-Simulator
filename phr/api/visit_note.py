@@ -35,7 +35,10 @@ def get_doctors_visit_notes(request: Request, response: Response, mpi: str, doct
 
         Returns:
         - `200 OK` with list[`VisitNoteBase`].
-        - Each item contains visit-note summary data defined by schema.
+        - Each item contains:
+            - `note_id` (int)
+            - `visit_date` (str, formatted datetime)
+            - `note_title` (str | null)
 
         Potential errors:
         - `404 Not Found`: Patient does not exist.

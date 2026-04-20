@@ -21,8 +21,13 @@ def create_doctor(doctor: schema.SignUp, request: Request, response: Response, d
     - `password` (str, required): Secure password for authentication.
 
     **Response (201 Created):**
-    Returns a JSON message:
+    Returns a JSON object:
     - `message`: "data inserted sucessfully"
+
+    **Request Schema (`schema.SignUp`):**
+    - `name` (str)
+    - `email` (EmailStr)
+    - `password` (str)
 
     **Constraints:**
     - Email must be unique. Attempting to register with a duplicate email will raise an error.
@@ -56,8 +61,16 @@ def login_doctor(doctor: schema.Login, request: Request, response: Response, db 
     - `password` (str, required): The doctor's password.
 
     **Response (200 OK):**
-    Returns a JSON message on successful authentication:
-    - `message`: "login sucessfully"
+    Returns the authenticated doctor object (database model), including:
+    - `doctor_id` (int)
+    - `name` (str)
+    - `email` (str)
+    - `password` (str)
+    - plus optional profile fields present on the doctor model
+
+    **Request Schema (`schema.Login`):**
+    - `email` (EmailStr)
+    - `password` (str)
 
     **Error Responses:**
     - `404 Not Found`: Email is not registered in the system
@@ -80,6 +93,21 @@ def login_doctor(doctor: schema.Login, request: Request, response: Response, db 
 
 @router.get("/get-all-doctors/", status_code=status.HTTP_200_OK)
 def get_all_doctors(request: Request, response: Response, db: Session = Depends(get_db)):
+    """
+    Retrieve all registered doctors.
+
+    **Response (200 OK):**
+    Returns a JSON array of doctor records from the database.
+    Each item contains doctor model attributes such as:
+    - `doctor_id` (int)
+    - `name` (str)
+    - `email` (str)
+    - `password` (str)
+    - and optional doctor profile/contact fields
+
+    **Error Responses:**
+    - `400 Bad Request`: Unexpected database or server error.
+    """
     try:
         return db.query(model.Doctor).all()
     except Exception as e:

@@ -34,6 +34,12 @@ app.include_router(claims.router)
 
 @app.get("/health", status_code=status.HTTP_200_OK)
 def home():
+    """
+    Health-check endpoint for Payer service.
+
+    **Response (200 OK):**
+    - JSON object: `{ "message": "Final System is Live! 🚀 Go to /docs" }`
+    """
     return {"message": "Final System is Live! 🚀 Go to /docs"}
 
 if __name__ == "__main__":

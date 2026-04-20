@@ -64,7 +64,15 @@ def get_accepted_requests(request: Request, response: Response, db: Session = De
 
     **Response (200 OK):**
     Returns a list of test request objects filtered to `status == "Accepted"` and joined with
-    billing records where `payment_status == "Paid"`. Each object includes full test request details.
+    billing records where `payment_status == "Paid"`.
+
+    Response type: `list[TestRequestOut]`, each item contains:
+    - `test_req_id` (int)
+    - `mpi` (int)
+    - `test_name` (str)
+    - `status` (str)
+    - `locked_by` (int | null)
+    - `locked_at` (datetime | null)
 
     **Rate Limit:**
     - 20 requests per minute per client IP.
@@ -103,7 +111,13 @@ def update_request_status(status_update: TestRequestStatusUpdate, request: Reque
         - Creates one `LabTestBilling` row per request in `req_id_status` using `req_id_bill`.
 
     **Response (200 OK):**
-        Returns a list of updated test request objects.
+        Returns `list[TestRequestOut]`, each item containing:
+        - `test_req_id` (int)
+        - `mpi` (int)
+        - `test_name` (str)
+        - `status` (str)
+        - `locked_by` (int | null)
+        - `locked_at` (datetime | null)
 
     **Error Responses:**
         - `400 Bad Request`: Invalid status value
@@ -171,7 +185,7 @@ def lock_test_request(visit_id: str, user_id: int, request: Request, response: R
     - `user_id` (int, required): ID of the technician locking the requests.
 
     **Response (200 OK):**
-    Returns a list of updated test requests with `locked_by` set to `user_id`
+    Returns `list[TestRequestOut]` with `locked_by` set to `user_id`
     and `locked_at` set to the current timestamp.
 
     **Constraints:**
@@ -217,7 +231,7 @@ def unlock_test_request(visit_id: str, user_id: int, request: Request, response:
         - `user_id` (int, required): ID of the technician requesting the unlock.
 
     **Response (200 OK):**
-        Returns a list of updated test requests after unlocking.
+        Returns `list[TestRequestOut]` after unlocking (`locked_by = null`, `locked_at = null`).
 
     **Constraints:**
     - If the request is locked by a different technician, the unlock is rejected.

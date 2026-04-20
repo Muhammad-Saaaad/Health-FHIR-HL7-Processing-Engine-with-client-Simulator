@@ -26,7 +26,16 @@ if not logger.handlers:
 
 @router.post("/add/patient", status_code=status.HTTP_200_OK)
 async def add_patient(req: Request, db: Session = Depends(get_db)):
-    
+    """
+    Ingest patient FHIR payload from InterfaceEngine and store in PHR database.
+
+    **Response (200 OK):**
+    Returns JSON object:
+    - `message` (dict): extracted FHIR path-value map used for DB insertion.
+
+    **Error Responses:**
+    - `400 Bad Request`: Payload parsing, mapping, or database error.
+    """
     try:
         json_data = await req.json()
 
@@ -76,6 +85,19 @@ async def add_patient(req: Request, db: Session = Depends(get_db)):
 
 @router.post("/get-visit-note", status_code=status.HTTP_200_OK)
 async def get_visit_note(req: Request, db: Session = Depends(get_db)):
+    """
+    Ingest visit-note bundle from InterfaceEngine and persist doctor, visit, and lab references.
+
+    **Response (200 OK):**
+    Returns JSON object with a `message` field. Typical success payload:
+    - `{ "message": "Visit note and lab tests added to DB successfully" }`
+
+    Other valid message payloads are returned for partial/validation scenarios
+    (for example missing resource identifiers, duplicate visit note, or patient not found).
+
+    **Error Responses:**
+    - `400 Bad Request`: Invalid payload or processing error.
+    """
     try:
         json_data = await req.json()
 

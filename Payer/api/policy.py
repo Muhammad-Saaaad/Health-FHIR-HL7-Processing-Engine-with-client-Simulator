@@ -68,12 +68,13 @@ def get_policy(policy_id : int , request: Request, response: Response, db: Sessi
 
     **Response (200 OK):**
     Returns the policy details including:
-    - `p_id`: Associated patient's ID
+    - `policy_id`: Policy ID
+    - `pid`: Associated patient's ID
     - `u_id`: ID of the user/admin who created the policy
     - `category_name`: Insurance plan/category name
     - `total_coverage`: Maximum coverage amount
     - `amount_used`: Amount already used from the coverage
-    - `description`: Additional policy notes
+    - `status`: Policy status (for example, `Active`)
 
     **Error Responses:**
     - `404 Not Found`: No policy exists with the given `policy_id`
@@ -95,7 +96,7 @@ def patients_per_policy_cat(policy_category : str, request: Request, response: R
 
     **Response (200 OK):**
     Returns a list of patient objects enrolled in that category. Each item includes:
-    - `p_id`: Patient's unique ID
+    - `pid`: Patient's unique ID
     - `name`: Patient's full name
     - `date_of_birth`: Patient's date of birth
     - `policy_category`: The category name used to filter

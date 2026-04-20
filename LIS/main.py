@@ -36,6 +36,12 @@ app.include_router(engine_service.router)
 
 @app.get("/health")
 def check_health():
+    """
+    Health-check endpoint for LIS service.
+
+    **Response (200 OK):**
+    - JSON object: `{ "message": "sucessfull" }`
+    """
     return {"message": "sucessfull"}
 
 if __name__ == "__main__":
