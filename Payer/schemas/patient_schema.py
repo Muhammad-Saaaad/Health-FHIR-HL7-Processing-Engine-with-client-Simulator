@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_serializer
 from datetime import date
 
 from schemas.policy_schema import patient_policy
@@ -25,9 +25,18 @@ class PatientDisplay(BaseModel):
 
 class PatientPolicyDetails(BaseModel):
     p_id: int
+    mpi: int | None
     name: str
-    cnic: str
-    date_of_birth: date | None
+    Age: str | date | None
+    phone_no: str | None
+    gender: str | None
 
     patient_policy : list[patient_policy]
 
+    @field_serializer("Age")
+    def serialize_age(self, age_date: date | None) -> str | None:
+        if age_date is None:
+            return None
+        today = date.today()
+        age = today.year - age_date.year - ((today.month, today.day) < (age_date.month, age_date.day))
+        return str(age)

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Date, Numeric, Text
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Date, Numeric, Boolean
 from sqlalchemy.orm import relationship
 from database import Base
 from datetime import datetime
@@ -51,7 +51,6 @@ class InsurancePolicy(Base):
     manager = relationship("SystemUser", back_populates="policies_managed")
     claims = relationship("PatientClaim", back_populates="policy")
 
-
 class PatientClaim(Base):
     __tablename__ = "Patient_Claim"
 
@@ -59,10 +58,11 @@ class PatientClaim(Base):
     policy_id = Column(Integer, ForeignKey("Insurance_Policy.policy_id"), nullable=False) 
     pid = Column(Integer, ForeignKey("Patient.pid"), nullable=False)
 
-    service_name = Column(String(100), nullable=False)
+    service_included = Column(Boolean, nullable=False, default=False)
+    tests_included = Column(Boolean, nullable=False, default=False)
+
     bill_amount = Column(Numeric(10, 2), nullable=False)
-    provider_phone_no = Column(String(20), nullable=True)
-    claim_status = Column(String(10), nullable=False, default="Pending") # pending, Accepted , Rejected
+    claim_status = Column(String(10), nullable=False, default="Pending") # pending, Approved , Rejected
     created_at = Column(DateTime, default=datetime.now(), nullable=False)
     locked_by_user_id = Column(Integer, ForeignKey("SystemUser.user_id"), nullable=True)
     locked_at = Column(DateTime, nullable=True)

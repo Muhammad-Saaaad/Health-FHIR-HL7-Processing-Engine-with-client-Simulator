@@ -8,7 +8,7 @@ from rate_limiting import limiter
 
 router = APIRouter(tags=["Patients"])
 
-@router.post("/reg_patient",  status_code=status.HTTP_201_CREATED, tags=["Patients"])
+@router.post("/reg_patient",  status_code=status.HTTP_201_CREATED)
 @limiter.limit("15/minute")  # Limit to 15 requests per minute per IP
 def register_patient(data: schema.PatientCreate, request: Request, response: Response,  db: Session = Depends(get_db)):
     """
@@ -99,7 +99,7 @@ def register_patient(data: schema.PatientCreate, request: Request, response: Res
             category_name=data.insurance_type,
             total_coverage=total_coverage,
             amount_used=0,
-            status="active"
+            status="Active"
         )
         db.add(new_policy)
         db.commit()
@@ -112,7 +112,7 @@ def register_patient(data: schema.PatientCreate, request: Request, response: Res
         db.rollback()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-@router.get("/get_all_patients", response_model=list[schema.PatientDisplay], status_code=status.HTTP_200_OK, tags=["Patients"])
+@router.get("/get_all_patients", response_model=list[schema.PatientDisplay], status_code=status.HTTP_200_OK)
 @limiter.limit("30/minute")  # Limit to 30 requests per minute per IP
 def get_all_patients(request: Request, response: Response, db: Session = Depends(get_db)):
     """
@@ -146,7 +146,7 @@ def get_all_patients(request: Request, response: Response, db: Session = Depends
                 "gender": p.gender,
                 "date_of_birth": p.date_of_birth,
                 "phone_no": p.phone_no,
-                "policy_number": [policy.policy_id for policy in p.policies if policy.status == "active"][0]
+                "policy_number": [policy.policy_id for policy in p.policies if policy.status == "Active"][0]
             } for p in db.query(models.Patient).all()
         ]
 
@@ -154,7 +154,7 @@ def get_all_patients(request: Request, response: Response, db: Session = Depends
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
-@router.get("/get_patient/{p_id}", response_model=schema.PatientPolicyDetails, status_code=status.HTTP_200_OK, tags=["Patients"])
+@router.get("/get_patient/{p_id}", response_model=schema.PatientPolicyDetails, status_code=status.HTTP_200_OK)
 @limiter.limit("30/minute")  # Limit to 30 requests per minute per IP
 def get_single_patient(p_id: int, request: Request, response: Response, db: Session = Depends(get_db)):
     """
@@ -171,15 +171,14 @@ def get_single_patient(p_id: int, request: Request, response: Response, db: Sess
     - `date_of_birth`: Patient's date of birth
     - `patient_policy`: List of associated insurance policies, each containing:
         - `policy_id`: Policy's unique identifier
-        - `category_name`: Insurance tier (e.g., \"Gold\", \"Silver\", \"Bronze\")
+        - `policy_plan`: Insurance tier (e.g., \"Gold\", \"Silver\", \"Bronze\")
         - `total_coverage`: Maximum coverage amount
         - `amount_used`: Coverage already consumed
-        - `description`: Additional policy notes
 
     **Error Responses:**
     - `404 Not Found`: No patient exists with the given `p_id`
     """
-    patient = db.query(models.Patient).filter(models.Patient.p_id == p_id).first()
+    patient = db.query(models.Patient).filter(models.Patient.pid == p_id).first()
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found")
     
@@ -187,17 +186,20 @@ def get_single_patient(p_id: int, request: Request, response: Response, db: Sess
     for policiy in patient.policies:
         patient_policies.append({
             "policy_id": policiy.policy_id,
-            "category_name": policiy.category_name,
+            "policy_plan": policiy.category_name,
             "total_coverage": policiy.total_coverage,
             "amount_used" : policiy.amount_used,
-            "description": policiy.description
+            "status": policiy.status
+            # "description": policiy.description
         })
+        
     output = {
-        "p_id" : patient.p_id,
+        "p_id" : patient.pid,
+        "mpi": patient.mpi,
         "name" : patient.name,
-        "cnic" : patient.cnic,
-        "date_of_birth": patient.date_of_birth,
-
+        "Age": patient.date_of_birth, # field serializer will convert date to age str.
+        "phone_no": patient.phone_no,
+        "gender": patient.gender,
         "patient_policy": patient_policies
     }
 

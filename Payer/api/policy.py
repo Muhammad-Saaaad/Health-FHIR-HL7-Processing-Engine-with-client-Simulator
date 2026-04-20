@@ -57,7 +57,7 @@ router = APIRouter(tags=["Insurance_Policies"])
 #     db.refresh(new_policy)
 #     return new_policy
 
-@router.get("/single_policy{policy_id}", status_code=200, response_model=schema.PolicyCreate, tags=["Insurance_Policies"])
+@router.get("/single_policy{policy_id}", status_code=200, tags=["Insurance_Policies"])
 @limiter.limit("30/minute")  # Limit to 30 requests per minute per IP
 def get_policy(policy_id : int , request: Request, response: Response, db: Session = Depends(get_db)):
     """
@@ -81,10 +81,10 @@ def get_policy(policy_id : int , request: Request, response: Response, db: Sessi
     policy =  db.query(models.InsurancePolicy).filter(models.InsurancePolicy.policy_id == policy_id).first()
         
     if not policy:    
-        raise HTTPException(status_code=404, detail="Insurance Policy ID not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Insurance Policy ID not found")
     return policy
 
-@router.get("/all_patients_per_policy_category{policy_category}", status_code=200, tags=["Insurance_Policies"])
+@router.get("/all_patients_per_policy_category{policy_category}")
 @limiter.limit("20/minute")  # Limit to 20 requests per minute per IP
 def patients_per_policy_cat(policy_category : str, request: Request, response: Response, db: Session = Depends(get_db)):
     """
@@ -110,12 +110,12 @@ def patients_per_policy_cat(policy_category : str, request: Request, response: R
     """
     try:
         data = db.query(models.Patient).join(models.InsurancePolicy).filter(
-        models.InsurancePolicy.category_name == policy_category).all()
+            models.InsurancePolicy.category_name == policy_category).all()
 
         output = []
         for d in data:
             output.append({
-                "p_id": d.p_id,
+                "pid": d.pid,
                 "name": d.name,
                 "date_of_birth": d.date_of_birth,
                 "policy_category": policy_category
