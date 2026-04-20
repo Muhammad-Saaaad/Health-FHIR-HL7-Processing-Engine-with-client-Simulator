@@ -1,16 +1,24 @@
-from datetime import date
-from pydantic import BaseModel
+from datetime import date, datetime
+from pydantic import BaseModel, field_serializer
 
 class get_patient(BaseModel):
     mpi : int
-    nic : str
     name : str
     phone_no : str | None
     gender : str
-    date_of_birth: date | None
-    address : str | None
 
     model_config = {"from_attributes": True}
+
+class SpecificPatient(get_patient):
+    age: date | str
+    nic : str
+    address : str | None
+
+    @field_serializer("age")
+    def serialize_age(self, value: date):
+        today_date = datetime.now().date()
+        age = today_date.year - value.year - ((today_date.month, today_date.day) < (value.month, value.day))
+        return age
 
 class post_patient(BaseModel):
     nic : str

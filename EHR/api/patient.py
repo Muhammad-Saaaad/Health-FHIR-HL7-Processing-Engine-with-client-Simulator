@@ -44,6 +44,42 @@ def get_patient(request: Request, response: Response, db: Session = Depends(get_
         logger.error(f"Error retrieving patients: {str(e)}")
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
     
+@router.get("/patients/{patient_id}", status_code=status.HTTP_200_OK)
+@limiter.limit("20/minute")
+def get_patient(patient_id: int, request: Request, response: Response, db: Session = Depends(get_db)):
+    """
+    Retrieve a specific patient from the EHR system.
+
+    **Path Parameters:**
+    - `patient_id` (int, required): The unique identifier of the patient to retrieve.
+
+    **Response:**
+    Returns the patient record with complete details
+
+    **Error Responses:**
+    - 404 Not Found: No patient exists with the given `patient_id`
+    - 409 Conflict: Database or data consistency error
+    """
+    try:
+        patient = db.query(model.Patient).filter(model.Patient.mpi == patient_id).first()
+        if not patient:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found")
+        
+        patient_detail = schema.SpecificPatient(
+            mpi=patient.mpi,
+            name=patient.name,
+            phone_no=patient.phone_no,
+            gender=patient.gender,
+            nic=patient.nic,
+            age=patient.date_of_birth,
+            address=patient.address
+        )
+
+        return patient_detail
+    except Exception as e:
+        logger.error(f"Error retrieving patients: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+    
 @router.post("/patients", status_code=status.HTTP_201_CREATED)
 @limiter.limit("10/minute")
 async def add_patient(patient: schema.post_patient, request: Request, response: Response ,db: Session = Depends(get_db)):
