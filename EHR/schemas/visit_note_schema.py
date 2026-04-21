@@ -28,7 +28,7 @@ class ViewBaseNote(BaseModel):
 
     @field_serializer("visit_date")
     def serialize_visit_date(self, value: datetime) -> str:
-        return datetime.strftime(value, "%Y-%m-%d %H:%M:%S %p")
+        return datetime.strftime(value, "%Y-%m-%d %H:%M %p")
     
     model_config = {"from_attributes": True}
 

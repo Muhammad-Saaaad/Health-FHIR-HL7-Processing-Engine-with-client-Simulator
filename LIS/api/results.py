@@ -102,7 +102,7 @@ def add_complete_result(r_in: CompleteTestResultCreate, request: Request, respon
 @router.get("/results/test_req_id/{test_req_id}", response_model=TestResultOut)
 @limiter.limit("10/minute")
 def get_test_result(test_req_id: int, request:Request, response: Response, db: Session = Depends(get_db)):
-        """
+    """
         Retrieve the complete result payload for a test request.
 
         **Path Parameters:**
@@ -116,7 +116,7 @@ def get_test_result(test_req_id: int, request:Request, response: Response, db: S
 
         **Error Responses:**
         - `404 Not Found`: No result exists for the provided request ID.
-        """
+    """
     result = db.query(model.LabResult).filter(model.LabResult.test_req_id == test_req_id).first()
     if not result:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Test result not found for the given test request ID.")
