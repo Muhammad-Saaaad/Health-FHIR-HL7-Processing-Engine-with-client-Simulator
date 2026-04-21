@@ -1,5 +1,5 @@
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, field_serializer
 
 from .lab_schema import LoincMaster
 
@@ -18,6 +18,20 @@ class VisitNote(BaseModel):
 
     model_config = {"from_attributes": True}
 
+class ViewBaseNote(BaseModel):
+    note_id : int
+    mpi : int
+    doctor_id : int
+
+    visit_date : datetime | str
+    note_title : str | None
+
+    @field_serializer("visit_date")
+    def serialize_visit_date(self, value: datetime) -> str:
+        return datetime.strftime(value, "%Y-%m-%d %H:%M:%S %p")
+    
+    model_config = {"from_attributes": True}
+
 class ViewNote(BaseModel):
     note_id : int
 
@@ -25,7 +39,6 @@ class ViewNote(BaseModel):
     doctor_id : int
     bill_id : int | None
 
-    visit_date : datetime
     note_title : str | None
     patient_complaint : str | None
     dignosis : str | None

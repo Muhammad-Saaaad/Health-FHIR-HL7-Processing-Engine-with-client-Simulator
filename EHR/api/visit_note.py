@@ -263,7 +263,7 @@ def get_test_report(
     return True, fhir_message
 
 
-@router.get("/all-visit-notes{doc_id}/{pid}", response_model=list[schema.ViewNote] ,status_code=status.HTTP_200_OK)
+@router.get("/all-visit-notes{doc_id}/{pid}", response_model=list[schema.ViewBaseNote] ,status_code=status.HTTP_200_OK)
 @limiter.limit("30/minute")  # Limit to 30 requests per minute per IP
 def visit_note(doc_id: int, pid: int, request: Request, response: Response, db: Session = Depends(get_db)):
     """
@@ -274,16 +274,12 @@ def visit_note(doc_id: int, pid: int, request: Request, response: Response, db: 
     - `pid` (int, required): The patient's MPI (Master Patient Index).
 
     **Response (200 OK):**
-    Returns `list[schema.ViewNote]` where each item contains:
+    Returns `list[schema.ViewBaseNote]` where each item contains:
     - `note_id` (int)
     - `mpi` (int)
     - `doctor_id` (int)
-    - `bill_id` (int | null)
     - `visit_date` (datetime)
     - `note_title` (str | null)
-    - `patient_complaint` (str | null)
-    - `dignosis` (str | null)
-    - `note_details` (str | null)
 
     **Note:**
     - Returns an empty list if the doctor has no visit notes for the specified patient.
@@ -325,7 +321,6 @@ def visit_note(note_id: int, request: Request, response: Response, db: Session =
     - `mpi` (int)
     - `doctor_id` (int)
     - `bill_id` (int | null)
-    - `visit_date` (datetime)
     - `note_title` (str | null)
     - `patient_complaint` (str | null)
     - `dignosis` (str | null)
