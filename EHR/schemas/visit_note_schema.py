@@ -39,6 +39,9 @@ class ViewNote(BaseModel):
     doctor_id : int
     bill_id : int | None
 
+    bill_amount : float | None
+    bill_status: str
+
     note_title : str | None
     patient_complaint : str | None
     dignosis : str | None
