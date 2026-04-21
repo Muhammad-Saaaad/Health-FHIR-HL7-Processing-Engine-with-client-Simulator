@@ -325,6 +325,9 @@ def visit_note(note_id: int, request: Request, response: Response, db: Session =
     - `patient_complaint` (str | null)
     - `dignosis` (str | null)
     - `note_details` (str | null)
+    - `bill_amount` (float | null)
+    - `bill_status` (str)
+
 
     **Error Responses:**
     - `404 Not Found`: No visit note exists with the given `note_id`
