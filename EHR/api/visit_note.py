@@ -36,7 +36,23 @@ def add_visit_note(visit_note: schema.VisitNote ,request: Request, response: Res
     - `note_details` (str, optional): Additional notes or details from the visit.
     - `bill_amount` (float, required): Total insurance/billing amount for this visit.
     - `lab_name` (str, optional): Name of the laboratory for ordered tests (required if test_names is provided).
-    - `test_names` (list[str], optional): List of lab test names to order for this visit.
+    - `test_names`
+        
+        [{
+
+            **loinc_code: str**
+            
+            **long_common_name: str**
+            
+            **short_name: str | None**
+            
+            **component: str | None**
+            
+            **system: str | None**
+
+        }]
+        
+        : List of lab test to order for this visit.
 
     **Request Schema (`schema.VisitNote`) fields:**
     - `mpi` (int), `doctor_id` (int)

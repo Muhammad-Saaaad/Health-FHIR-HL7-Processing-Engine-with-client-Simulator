@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import Literal
 
 class AddUpdateServer(BaseModel):
@@ -7,6 +7,23 @@ class AddUpdateServer(BaseModel):
     ip: str
     port: int
     protocol: Literal["FHIR", "HL7"]
+
+    @field_validator("name", "ip", mode="before")
+    @classmethod
+    def strip_required_strings(cls, value):
+        if not isinstance(value, str):
+            return value
+        value = value.strip()
+        if not value:
+            raise ValueError("must not be empty")
+        return value
+
+    @field_validator("port")
+    @classmethod
+    def validate_port(cls, value: int) -> int:
+        if value < 1 or value > 65535:
+            raise ValueError("port must be between 1 and 65535")
+        return value
 
 class GetServer(BaseModel):
     

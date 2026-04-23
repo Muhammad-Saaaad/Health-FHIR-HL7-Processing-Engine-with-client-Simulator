@@ -14,7 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi.errors import RateLimitExceeded
 
-from api import server, route, endpoint
+from api import route, endpoint, server
 from database import engine, session_local
 import models
 from rate_limiting import limiter, rate_limit_exceeded_handler

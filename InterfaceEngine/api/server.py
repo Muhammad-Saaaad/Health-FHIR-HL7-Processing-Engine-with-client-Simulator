@@ -1,4 +1,6 @@
 import asyncio
+import logging
+from logging.handlers import RotatingFileHandler
 
 import httpx
 from fastapi import APIRouter, status, HTTPException, Depends, Request, Response
@@ -10,6 +12,34 @@ from database import get_db, session_local
 from rate_limiting import limiter
 
 router = APIRouter(tags=["Server"])
+
+logger = logging.getLogger("server_logger")
+logger.setLevel(logging.INFO)
+
+formater = logging.Formatter("%(asctime)s- %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s")
+
+class ExcludeHealthCheckLogs(logging.Filter):
+    """Keep recurring health-check noise out of server.log."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        message = record.getMessage().lower()
+        health_markers = (
+            "health check",
+            "checking health",
+            "while checking health",
+            "/health",
+        )
+        return not any(marker in message for marker in health_markers)
+
+if not logger.handlers:
+    rotating_file_handler = RotatingFileHandler(
+        r"./logs/server.log",
+        maxBytes=20000, # 20KB
+        backupCount=1
+    )
+    rotating_file_handler.setFormatter(formater)
+    rotating_file_handler.addFilter(ExcludeHealthCheckLogs())
+    logger.addHandler(rotating_file_handler)
 
 @router.post("/add-server", status_code=status.HTTP_201_CREATED)
 @limiter.limit("10/minute")  # Limit to 10 requests per minute per IP
@@ -44,15 +74,25 @@ async def add_server(server: AddUpdateServer, request: Request, response: Respon
     - `400 Bad Request`: Server is unreachable or health check failed
     - `400 Bad Request`: Unexpected database error
     """
+    print("start adding server")
     if db.query(models.Server).filter(models.Server.name == server.name).first():
+        logger.warning(f"Attempt to add server with duplicate name: {server.name}")
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Server with this name already exists")
     
     if db.query(models.Server).filter(models.Server.ip == server.ip, models.Server.port == server.port).first():
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Server with the same ip, port already exists")
+        logger.warning(f"Attempt to add server with duplicate IP and port: {server.ip}:{server.port}")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Server with the same ip and port already exists")
 
-    async with httpx.AsyncClient() as client:
-        if not await server_health_check(client, server.ip, server.port):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Server is not reachable or unhealthy")
+    async with httpx.AsyncClient(timeout=httpx.Timeout(10.0)) as client:
+        is_reachable, reason = await add_server_reachability_check(client, server.ip, server.port)
+        if not is_reachable:
+            logger.error(
+                f"Add-server failed for {server.name} ({server.ip}:{server.port}): {reason}"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Server is not reachable or unhealthy: {reason}"
+            )
 
     # config means that the server accept this kind of data, and send this kind of data, we will use this config in
     # the transformation part to know how to transform the data, for example if the date format is different in the
@@ -99,9 +139,11 @@ async def add_server(server: AddUpdateServer, request: Request, response: Respon
         )
         db.add(new_server)
         db.commit()
-        db.refresh(new_server)
+        logger.info(f"Added server {server.name} successfully with IP {server.ip} and port {server.port}")
         return {"message": "Server added successfully"}
     except Exception as e:
+        db.rollback()
+        logger.exception(f"Error adding server {server.name}: {str(e)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
 
 @router.get("/all-servers", status_code=status.HTTP_200_OK, response_model=list[GetServer])
@@ -131,6 +173,7 @@ def all_servers(db: Session = Depends(get_db)):
         servers = db.query(models.Server).all()
         return servers
     except Exception as e:
+        logger.exception(f"Error retrieving all servers: {str(e)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
 
 
@@ -151,6 +194,7 @@ def specific_server(server_id: int, db: Session = Depends(get_db)):
     """
     is_server = db.get(models.Server, server_id)
     if not is_server:
+        logger.exception(f"Attempt to retrieve non-existent server with id: {server_id}")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Server id {server_id} not found")
         
     return is_server
@@ -184,10 +228,12 @@ def update_server(server_id: int, server: AddUpdateServer, request: Request, res
     """
     existing_server = db.query(models.Server).filter(models.Server.server_id == server_id).first()
     if not existing_server:
+        logger.exception(f"Attempt to update non-existent server with id: {server_id}")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Server not found")
     
     # if you want to implement or here you write a or_() in the filter and then the conditions
     if db.query(models.Server).filter(models.Server.server_id != server_id, models.Server.name == server.name).first():
+        logger.exception(f"Attempt to update server id {server_id} with duplicate name: {server.name}")
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Server with this name already exists")
         
     try:
@@ -196,6 +242,7 @@ def update_server(server_id: int, server: AddUpdateServer, request: Request, res
         existing_server.port = server.port
         existing_server.protocol = server.protocol
         db.commit()
+        logger.info(f"Updated server {existing_server.name} successfully")
         return {"message": "Server updated successfully"}
 
     except Exception as e:
@@ -224,14 +271,17 @@ def delete_server(server_id: int, request: Request, response: Response, db: Sess
     """
     existing_server = db.query(models.Server).filter(models.Server.server_id == server_id).first()
     if not existing_server:
+        logger.exception(f"Attempt to delete non-existent server with id: {server_id}")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Server not found")
         
     try:
         db.delete(existing_server)
         db.commit()
+        logger.info(f"Deleted server with id {server_id} successfully")
         return {"message": "Server deleted successfully"}
 
     except Exception as e:
+        logger.exception(f"Error deleting server with id {server_id}: {str(e)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
 
 async def server_health():
@@ -259,12 +309,14 @@ async def server_health():
                         new_status = 'Active' if is_alive else 'Inactive'
                         if server.status != new_status:
                             server.status = new_status
+                            logger.info(f"Updated status for server {server.name} ({server.ip}:{server.port}) to {new_status}")
                 
                 db.commit()
         except Exception as exp:
             if db:
                 db.rollback()
             print(f"Exception Error while checking status: {str(exp)}")
+            logger.exception(f"Exception occurred during server health check: {str(exp)}")
         finally:
             if db:
                 db.close()
@@ -275,7 +327,7 @@ async def server_health_check(client, ip: str, port: int):
     """
     Perform a single health check against a server's `/health` endpoint.
 
-    Sends `GET http://{ip}:{port}/health` with a 5-second timeout.
+    Sends `GET http://{ip}:{port}/health` with a 10-second timeout.
 
     Args:
         client (httpx.AsyncClient): A shared async HTTP client.
@@ -286,7 +338,30 @@ async def server_health_check(client, ip: str, port: int):
         bool: `True` if the server responds with HTTP 200, `False` for any error or non-200 response.
     """
     try:
-        response = await client.get(f"http://{ip}:{port}/health", timeout=5)
+        response = await client.get(f"http://{ip}:{port}/health", timeout=10)
+        if response.status_code != 200:
+            logger.warning(f"Health check failed for {ip}:{port} with status code {response.status_code}")  
         return response.status_code == 200
     except:
+        logger.error(f"Exception occurred while checking health for {ip}:{port}")
         return False
+
+
+async def add_server_reachability_check(client: httpx.AsyncClient, ip: str, port: int):
+    """Return detailed reason when add-server cannot reach a target server."""
+    target_url = f"http://{ip}:{port}/health"
+    try:
+        response = await client.get(target_url, timeout=10)
+        if response.status_code == 200:
+            return True, "ok"
+        return False, f"health endpoint returned HTTP {response.status_code}"
+    except httpx.ConnectTimeout:
+        return False, "connection timed out"
+    except httpx.ReadTimeout:
+        return False, "server response timed out"
+    except httpx.ConnectError:
+        return False, "connection refused or host unreachable"
+    except httpx.RequestError as exp:
+        return False, f"request error: {exp}"
+    except Exception as exp:
+        return False, f"unexpected error: {exp}"
