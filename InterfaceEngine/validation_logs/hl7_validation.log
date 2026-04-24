@@ -243,3 +243,15 @@
 2026-04-12 13:24:26,862 - [hl7_validation.py:270] -INFO - Processing component index 1
 2026-04-12 13:24:26,862 - [hl7_validation.py:270] -INFO - Processing component index 2
 2026-04-12 13:24:26,862 - [hl7_validation.py:283] -INFO - appending line OBR|2|||100346-6^cbc2
+2026-04-23 12:04:18,126 - [hl7_validation.py:39] -DEBUG - Extracting paths from segment: PID|1||23||saad^Muhammad||20041006|M|||||
+2026-04-23 12:04:18,135 - [hl7_validation.py:62] -DEBUG - Extracted paths for segment PID: ['PID-1', 'PID-3', 'PID-5.1', 'PID-5.2', 'PID-7', 'PID-8']
+
+
+2026-04-23 12:04:18,164 - [hl7_validation.py:39] -DEBUG - Extracting paths from segment: IN1|||||||||||||||Silver|||||||||||||||||||||9||||||||||||||||
+2026-04-23 12:04:18,164 - [hl7_validation.py:62] -DEBUG - Extracted paths for segment IN1: ['IN1-15', 'IN1-36']
+
+
+2026-04-23 12:05:01,477 - [hl7_validation.py:39] -DEBUG - Extracting paths from segment: PID|1||23||saad^Muhammad||20041006|M|||||+92-315-3726612
+2026-04-23 12:05:01,478 - [hl7_validation.py:62] -DEBUG - Extracted paths for segment PID: ['PID-1', 'PID-3', 'PID-5.1', 'PID-5.2', 'PID-7', 'PID-8', 'PID-13']
+
+

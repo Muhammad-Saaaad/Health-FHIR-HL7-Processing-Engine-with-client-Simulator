@@ -1,99 +1,89 @@
-2026-04-08 08:29:21,175- INFO - [endpoint.py:250] - Mapped path Invoice-participant[0].actor.reference to canonical name invoice_participant_ref_id
-2026-04-08 08:29:21,175- INFO - [endpoint.py:250] - Mapped path Invoice-totalNet.value to canonical name invoice_total_net
-2026-04-08 08:29:21,179- WARNING - [endpoint.py:360] - No canonical mapping found for path ServiceRequest-id, skipping.
-2026-04-08 08:29:21,179- INFO - [endpoint.py:250] - Mapped path ServiceRequest-status to canonical name lab_order_status
-2026-04-08 08:29:21,180- INFO - [endpoint.py:250] - Mapped path ServiceRequest-intent to canonical name lab_order_intent
-2026-04-08 08:29:21,182- INFO - [endpoint.py:250] - Mapped path ServiceRequest-code.coding[0].code to canonical name lab_order_code
-2026-04-08 08:29:21,182- INFO - [endpoint.py:250] - Mapped path ServiceRequest-code.coding[0].display to canonical name lab_order_name
-2026-04-08 08:29:21,184- INFO - [endpoint.py:250] - Mapped path ServiceRequest-subject.reference to canonical name lab_order_patient_ref
-2026-04-08 08:29:21,184- INFO - [endpoint.py:250] - Mapped path ServiceRequest-performer[0].identifier.value to canonical name lab_order_performer_id
-2026-04-08 08:29:21,184- INFO - [endpoint.py:250] - Mapped path ServiceRequest-performer[0].display to canonical name lab_order_performer_name
-2026-04-08 08:29:21,223- INFO - [endpoint.py:264] - FHIR field extraction completed for endpoint_id=132, total_fields_added=24
-2026-04-08 08:29:21,228- INFO - [endpoint.py:150] - FHIR endpoint fields added successfully for endpoint_id=132
-2026-04-08 08:30:28,758- INFO - [endpoint.py:105] - Add endpoint request received: server_id=13, url=/get-visit-note, server_protocol=FHIR
-2026-04-08 08:30:28,777- INFO - [endpoint.py:137] - Endpoint created and flushed successfully: endpoint_id=133
-2026-04-08 08:30:28,781- INFO - [endpoint.py:223] - FHIR field extraction started for endpoint_id=133
-2026-04-08 08:30:28,783- INFO - [endpoint.py:240] - Path Extraction Completed for endpoint_id=133, withh paths:
+2026-04-23 12:06:38,504- INFO - [endpoint.py:137] - Endpoint created and flushed successfully: endpoint_id=33
+2026-04-23 12:06:39,085- INFO - [endpoint.py:223] - FHIR field extraction started for endpoint_id=33
+2026-04-23 12:06:39,086- INFO - [endpoint.py:240] - Path Extraction Completed for endpoint_id=33, withh paths:
 ['Practitioner-id', 'Practitioner-identifier[0].value', 'Practitioner-name[0].text', 'Practitioner-telecom[0].value', 'Practitioner-extension[0].valueString', 'PractitionerRole-id', 'PractitionerRole-specialty[0].coding[0].display', 'PractitionerRole-practitioner.reference', 'Encounter-id', 'Encounter-identifier[0].value', 'Encounter-status', 'Encounter-class.code', 'Encounter-type[0].text', 'Encounter-reasonCode[0].text', 'Encounter-diagnosis[0].condition.display', 'Encounter-subject.reference', 'Encounter-extension[0].valueString', 'Invoice-id', 'Invoice-status', 'Invoice-subject.reference', 'Invoice-participant[0].actor.reference', 'Invoice-totalNet.value', 'ServiceRequest-id', 'ServiceRequest-status', 'ServiceRequest-intent', 'ServiceRequest-code.coding[0].code', 'ServiceRequest-code.coding[0].display', 'ServiceRequest-subject.reference', 'ServiceRequest-performer[0].identifier.value', 'ServiceRequest-performer[0].display']
-2026-04-08 08:30:28,783- WARNING - [endpoint.py:360] - No canonical mapping found for path Practitioner-id, skipping.
-2026-04-08 08:30:28,785- INFO - [endpoint.py:250] - Mapped path Practitioner-identifier[0].value to canonical name practitioner_id
-2026-04-08 08:30:28,785- INFO - [endpoint.py:250] - Mapped path Practitioner-name[0].text to canonical name practitioner_fullname
-2026-04-08 08:30:28,785- INFO - [endpoint.py:250] - Mapped path Practitioner-telecom[0].value to canonical name practitioner_phone
-2026-04-08 08:30:28,787- WARNING - [endpoint.py:360] - No canonical mapping found for path Practitioner-extension[0].valueString, skipping.
-2026-04-08 08:30:28,789- WARNING - [endpoint.py:360] - No canonical mapping found for path PractitionerRole-id, skipping.
-2026-04-08 08:30:28,789- INFO - [endpoint.py:250] - Mapped path PractitionerRole-specialty[0].coding[0].display to canonical name practitioner_role_specialization
-2026-04-08 08:30:28,791- INFO - [endpoint.py:250] - Mapped path PractitionerRole-practitioner.reference to canonical name practitioner_role_practitioner_ref
-2026-04-08 08:30:28,791- WARNING - [endpoint.py:360] - No canonical mapping found for path Encounter-id, skipping.
-2026-04-08 08:30:28,791- INFO - [endpoint.py:250] - Mapped path Encounter-identifier[0].value to canonical name VID
-2026-04-08 08:30:28,791- INFO - [endpoint.py:250] - Mapped path Encounter-status to canonical name encounter_status
-2026-04-08 08:30:28,791- INFO - [endpoint.py:250] - Mapped path Encounter-class.code to canonical name patient_class
-2026-04-08 08:30:28,795- INFO - [endpoint.py:250] - Mapped path Encounter-type[0].text to canonical name encounter_title
-2026-04-08 08:30:28,795- INFO - [endpoint.py:250] - Mapped path Encounter-reasonCode[0].text to canonical name encounter_complaint
-2026-04-08 08:30:28,795- INFO - [endpoint.py:250] - Mapped path Encounter-diagnosis[0].condition.display to canonical name encounter_diagnosis
-2026-04-08 08:30:28,797- INFO - [endpoint.py:250] - Mapped path Encounter-subject.reference to canonical name encounter_patient_ref
-2026-04-08 08:30:28,797- INFO - [endpoint.py:250] - Mapped path Encounter-extension[0].valueString to canonical name encounter_notes
-2026-04-08 08:30:28,797- WARNING - [endpoint.py:360] - No canonical mapping found for path Invoice-id, skipping.
-2026-04-08 08:30:28,797- INFO - [endpoint.py:250] - Mapped path Invoice-status to canonical name invoice_status
-2026-04-08 08:30:28,797- INFO - [endpoint.py:250] - Mapped path Invoice-subject.reference to canonical name invoice_patient_ref
-2026-04-08 08:30:28,797- INFO - [endpoint.py:250] - Mapped path Invoice-participant[0].actor.reference to canonical name invoice_participant_ref_id
-2026-04-08 08:30:28,797- INFO - [endpoint.py:250] - Mapped path Invoice-totalNet.value to canonical name invoice_total_net
-2026-04-08 08:30:28,797- WARNING - [endpoint.py:360] - No canonical mapping found for path ServiceRequest-id, skipping.
-2026-04-08 08:30:28,797- INFO - [endpoint.py:250] - Mapped path ServiceRequest-status to canonical name lab_order_status
-2026-04-08 08:30:28,803- INFO - [endpoint.py:250] - Mapped path ServiceRequest-intent to canonical name lab_order_intent
-2026-04-08 08:30:28,804- INFO - [endpoint.py:250] - Mapped path ServiceRequest-code.coding[0].code to canonical name lab_order_code
-2026-04-08 08:30:28,804- INFO - [endpoint.py:250] - Mapped path ServiceRequest-code.coding[0].display to canonical name lab_order_name
-2026-04-08 08:30:28,807- INFO - [endpoint.py:250] - Mapped path ServiceRequest-subject.reference to canonical name lab_order_patient_ref
-2026-04-08 08:30:28,807- INFO - [endpoint.py:250] - Mapped path ServiceRequest-performer[0].identifier.value to canonical name lab_order_performer_id
-2026-04-08 08:30:28,807- INFO - [endpoint.py:250] - Mapped path ServiceRequest-performer[0].display to canonical name lab_order_performer_name
-2026-04-08 08:30:28,819- INFO - [endpoint.py:264] - FHIR field extraction completed for endpoint_id=133, total_fields_added=24
-2026-04-08 08:30:28,820- INFO - [endpoint.py:150] - FHIR endpoint fields added successfully for endpoint_id=133
-2026-04-09 10:33:34,854- INFO - [endpoint.py:105] - Add endpoint request received: server_id=14, url=/take_lab_order, server_protocol=HL7
-2026-04-09 10:33:34,886- INFO - [endpoint.py:137] - Endpoint created and flushed successfully: endpoint_id=134
-2026-04-09 10:33:34,886- INFO - [endpoint.py:294] - HL7 field extraction started for endpoint_id=134
-2026-04-09 10:33:34,887- WARNING - [endpoint.py:360] - No canonical mapping found for path PID-1, skipping.
-2026-04-09 10:33:34,887- INFO - [endpoint.py:309] - Mapped path PID-3 to canonical name MPI
-2026-04-09 10:33:34,892- WARNING - [endpoint.py:360] - No canonical mapping found for path OBR-1, skipping.
-2026-04-09 10:33:34,893- INFO - [endpoint.py:309] - Mapped path OBR-2 to canonical name VID
-2026-04-09 10:33:34,893- INFO - [endpoint.py:309] - Mapped path OBR-4.1 to canonical name lab_order_code
-2026-04-09 10:33:34,894- INFO - [endpoint.py:309] - Mapped path OBR-4.2 to canonical name lab_order_name
-2026-04-09 10:33:34,901- INFO - [endpoint.py:323] - HL7 field extraction completed for endpoint_id=134, total_fields_added=4
-2026-04-09 10:33:34,902- INFO - [endpoint.py:156] - HL7 endpoint fields added successfully for endpoint_id=134
-2026-04-09 11:05:02,150- INFO - [suggestion.py:40] - Generating suggestion for encounter_patient_ref (subject_reference_format) -> MPI (id_format)
-2026-04-09 11:05:15,515- INFO - [suggestion.py:40] - Generating suggestion for VID (id_format) -> VID (id_format)
-2026-04-09 11:05:16,577- INFO - [suggestion.py:40] - Generating suggestion for VID (id_format) -> VID (id_format)
-2026-04-09 11:05:18,643- INFO - [suggestion.py:40] - Generating suggestion for VID (id_format) -> VID (id_format)
-2026-04-09 11:05:43,674- INFO - [suggestion.py:40] - Generating suggestion for VID (id_format) -> VID (id_format)
-2026-04-09 11:13:43,323- INFO - [suggestion.py:40] - Generating suggestion for encounter_patient_ref (subject_reference_format) -> MPI (id_format)
-2026-04-09 11:13:48,783- INFO - [suggestion.py:40] - Generating suggestion for VID (id_format) -> VID (id_format)
-2026-04-09 11:13:49,827- INFO - [suggestion.py:40] - Generating suggestion for VID (id_format) -> VID (id_format)
-2026-04-09 11:13:59,218- INFO - [suggestion.py:40] - Generating suggestion for VID (id_format) -> VID (id_format)
-2026-04-09 11:14:10,814- INFO - [suggestion.py:40] - Generating suggestion for VID (id_format) -> VID (id_format)
-2026-04-09 11:17:45,576- INFO - [suggestion.py:40] - Generating suggestion for encounter_patient_ref (subject_reference_format) -> MPI (id_format)
-2026-04-09 11:17:51,271- INFO - [suggestion.py:40] - Generating suggestion for VID (id_format) -> VID (id_format)
-2026-04-09 11:17:52,305- INFO - [suggestion.py:40] - Generating suggestion for VID (id_format) -> VID (id_format)
-2026-04-09 11:17:54,336- INFO - [suggestion.py:40] - Generating suggestion for VID (id_format) -> VID (id_format)
-2026-04-09 11:17:58,372- INFO - [suggestion.py:40] - Generating suggestion for VID (id_format) -> VID (id_format)
-2026-04-09 11:19:58,692- INFO - [suggestion.py:40] - Generating suggestion for VID (id_format) -> VID (id_format)
-2026-04-09 11:19:59,721- INFO - [suggestion.py:40] - Generating suggestion for VID (id_format) -> VID (id_format)
-2026-04-09 11:20:12,501- INFO - [suggestion.py:40] - Generating suggestion for VID (id_format) -> VID (id_format)
-2026-04-09 11:20:16,929- INFO - [suggestion.py:40] - Generating suggestion for VID (id_format) -> VID (id_format)
-2026-04-09 11:20:44,821- INFO - [suggestion.py:40] - Generating suggestion for encounter_patient_ref (subject_reference_format) -> MPI (id_format)
-2026-04-09 11:25:37,887- INFO - [suggestion.py:40] - Generating suggestion for encounter_patient_ref (subject_reference_format) -> MPI (id_format)
-2026-04-09 11:25:41,344- INFO - [suggestion.py:40] - Generating suggestion for VID (id_format) -> VID (id_format)
-2026-04-09 11:25:45,294- INFO - [suggestion.py:40] - Generating suggestion for lab_order_code (string) -> lab_order_code (string)
-2026-04-09 11:25:48,196- INFO - [suggestion.py:40] - Generating suggestion for lab_order_name (string) -> lab_order_name (string)
-2026-04-09 11:31:10,622- INFO - [suggestion.py:40] - Generating suggestion for MPI (id_format) -> MPI (id_format)
-2026-04-09 11:31:23,338- INFO - [suggestion.py:40] - Generating suggestion for MPI_type (string) -> phone (phone)
-2026-04-09 11:31:24,381- INFO - [suggestion.py:40] - Generating suggestion for MPI_type (string) -> phone (phone)
-2026-04-09 11:31:26,426- INFO - [suggestion.py:40] - Generating suggestion for MPI_type (string) -> phone (phone)
-2026-04-09 11:31:30,476- INFO - [suggestion.py:40] - Generating suggestion for MPI_type (string) -> phone (phone)
-2026-04-09 12:33:03,108 - ingest_func - INFO - Ingest function module loaded, logger initialized.
-2026-04-09 12:33:58,433- INFO - [ingest_func.py:26] - Ingest function module loaded, logger initialized.
-2026-04-10 19:59:35,161- INFO - [suggestion.py:40] - Generating suggestion for encounter_patient_ref (subject_reference_format) -> MPI (id_format)
-2026-04-10 20:00:24,442- INFO - [suggestion.py:40] - Generating suggestion for VID (id_format) -> VID (id_format)
-2026-04-10 20:00:28,189- INFO - [suggestion.py:40] - Generating suggestion for lab_order_code (string) -> lab_order_code (string)
-2026-04-10 20:00:31,367- INFO - [suggestion.py:40] - Generating suggestion for lab_order_name (string) -> lab_order_name (string)
-2026-04-10 20:03:34,903- INFO - [suggestion.py:40] - Generating suggestion for encounter_patient_ref (subject_reference_format) -> MPI (id_format)
-2026-04-10 20:03:41,569- INFO - [suggestion.py:40] - Generating suggestion for VID (id_format) -> VID (id_format)
-2026-04-10 20:03:44,283- INFO - [suggestion.py:40] - Generating suggestion for lab_order_code (string) -> lab_order_code (string)
-2026-04-10 20:03:47,753- INFO - [suggestion.py:40] - Generating suggestion for lab_order_name (string) -> lab_order_name (string)
+2026-04-23 12:06:39,089- WARNING - [endpoint.py:360] - No canonical mapping found for path Practitioner-id, skipping.
+2026-04-23 12:06:39,090- INFO - [endpoint.py:250] - Mapped path Practitioner-identifier[0].value to canonical name practitioner_id
+2026-04-23 12:06:39,090- INFO - [endpoint.py:250] - Mapped path Practitioner-name[0].text to canonical name practitioner_fullname
+2026-04-23 12:06:39,091- INFO - [endpoint.py:250] - Mapped path Practitioner-telecom[0].value to canonical name practitioner_phone
+2026-04-23 12:06:39,091- WARNING - [endpoint.py:360] - No canonical mapping found for path Practitioner-extension[0].valueString, skipping.
+2026-04-23 12:06:39,093- WARNING - [endpoint.py:360] - No canonical mapping found for path PractitionerRole-id, skipping.
+2026-04-23 12:06:39,094- INFO - [endpoint.py:250] - Mapped path PractitionerRole-specialty[0].coding[0].display to canonical name practitioner_role_specialization
+2026-04-23 12:06:39,094- INFO - [endpoint.py:250] - Mapped path PractitionerRole-practitioner.reference to canonical name practitioner_role_practitioner_ref
+2026-04-23 12:06:39,095- WARNING - [endpoint.py:360] - No canonical mapping found for path Encounter-id, skipping.
+2026-04-23 12:06:39,096- INFO - [endpoint.py:250] - Mapped path Encounter-identifier[0].value to canonical name VID
+2026-04-23 12:06:39,096- INFO - [endpoint.py:250] - Mapped path Encounter-status to canonical name encounter_status
+2026-04-23 12:06:39,098- INFO - [endpoint.py:250] - Mapped path Encounter-class.code to canonical name patient_class
+2026-04-23 12:06:39,099- INFO - [endpoint.py:250] - Mapped path Encounter-type[0].text to canonical name encounter_title
+2026-04-23 12:06:39,102- INFO - [endpoint.py:250] - Mapped path Encounter-reasonCode[0].text to canonical name encounter_complaint
+2026-04-23 12:06:39,102- INFO - [endpoint.py:250] - Mapped path Encounter-diagnosis[0].condition.display to canonical name encounter_diagnosis
+2026-04-23 12:06:39,102- INFO - [endpoint.py:250] - Mapped path Encounter-subject.reference to canonical name encounter_patient_ref
+2026-04-23 12:06:39,103- INFO - [endpoint.py:250] - Mapped path Encounter-extension[0].valueString to canonical name encounter_notes
+2026-04-23 12:06:39,103- WARNING - [endpoint.py:360] - No canonical mapping found for path Invoice-id, skipping.
+2026-04-23 12:06:39,104- INFO - [endpoint.py:250] - Mapped path Invoice-status to canonical name invoice_status
+2026-04-23 12:06:39,104- INFO - [endpoint.py:250] - Mapped path Invoice-subject.reference to canonical name invoice_patient_ref
+2026-04-23 12:06:39,104- INFO - [endpoint.py:250] - Mapped path Invoice-participant[0].actor.reference to canonical name invoice_participant_ref_id
+2026-04-23 12:06:39,106- INFO - [endpoint.py:250] - Mapped path Invoice-totalNet.value to canonical name invoice_total_net
+2026-04-23 12:06:39,106- WARNING - [endpoint.py:360] - No canonical mapping found for path ServiceRequest-id, skipping.
+2026-04-23 12:06:39,107- INFO - [endpoint.py:250] - Mapped path ServiceRequest-status to canonical name lab_order_status
+2026-04-23 12:06:39,108- INFO - [endpoint.py:250] - Mapped path ServiceRequest-intent to canonical name lab_order_intent
+2026-04-23 12:06:39,109- INFO - [endpoint.py:250] - Mapped path ServiceRequest-code.coding[0].code to canonical name lab_order_code
+2026-04-23 12:06:39,111- INFO - [endpoint.py:250] - Mapped path ServiceRequest-code.coding[0].display to canonical name lab_order_name
+2026-04-23 12:06:39,113- INFO - [endpoint.py:250] - Mapped path ServiceRequest-subject.reference to canonical name lab_order_patient_ref
+2026-04-23 12:06:39,114- INFO - [endpoint.py:250] - Mapped path ServiceRequest-performer[0].identifier.value to canonical name lab_order_performer_id
+2026-04-23 12:06:39,114- INFO - [endpoint.py:250] - Mapped path ServiceRequest-performer[0].display to canonical name lab_order_performer_name
+2026-04-23 12:06:39,178- INFO - [endpoint.py:264] - FHIR field extraction completed for endpoint_id=33, total_fields_added=24
+2026-04-23 12:06:39,179- INFO - [endpoint.py:150] - FHIR endpoint fields added successfully for endpoint_id=33
+2026-04-23 12:07:24,331- INFO - [endpoint.py:105] - Add endpoint request received: server_id=28, url=/get-visit-note, server_protocol=FHIR
+2026-04-23 12:07:24,351- INFO - [endpoint.py:137] - Endpoint created and flushed successfully: endpoint_id=34
+2026-04-23 12:07:24,355- INFO - [endpoint.py:223] - FHIR field extraction started for endpoint_id=34
+2026-04-23 12:07:24,357- INFO - [endpoint.py:240] - Path Extraction Completed for endpoint_id=34, withh paths:
+['Practitioner-id', 'Practitioner-identifier[0].value', 'Practitioner-name[0].text', 'Practitioner-telecom[0].value', 'Practitioner-extension[0].valueString', 'PractitionerRole-id', 'PractitionerRole-specialty[0].coding[0].display', 'PractitionerRole-practitioner.reference', 'Encounter-id', 'Encounter-identifier[0].value', 'Encounter-status', 'Encounter-class.code', 'Encounter-type[0].text', 'Encounter-reasonCode[0].text', 'Encounter-diagnosis[0].condition.display', 'Encounter-subject.reference', 'Encounter-extension[0].valueString', 'Invoice-id', 'Invoice-status', 'Invoice-subject.reference', 'Invoice-participant[0].actor.reference', 'Invoice-totalNet.value', 'ServiceRequest-id', 'ServiceRequest-status', 'ServiceRequest-intent', 'ServiceRequest-code.coding[0].code', 'ServiceRequest-code.coding[0].display', 'ServiceRequest-subject.reference', 'ServiceRequest-performer[0].identifier.value', 'ServiceRequest-performer[0].display']
+2026-04-23 12:07:24,357- WARNING - [endpoint.py:360] - No canonical mapping found for path Practitioner-id, skipping.
+2026-04-23 12:07:24,358- INFO - [endpoint.py:250] - Mapped path Practitioner-identifier[0].value to canonical name practitioner_id
+2026-04-23 12:07:24,359- INFO - [endpoint.py:250] - Mapped path Practitioner-name[0].text to canonical name practitioner_fullname
+2026-04-23 12:07:24,359- INFO - [endpoint.py:250] - Mapped path Practitioner-telecom[0].value to canonical name practitioner_phone
+2026-04-23 12:07:24,360- WARNING - [endpoint.py:360] - No canonical mapping found for path Practitioner-extension[0].valueString, skipping.
+2026-04-23 12:07:24,360- WARNING - [endpoint.py:360] - No canonical mapping found for path PractitionerRole-id, skipping.
+2026-04-23 12:07:24,361- INFO - [endpoint.py:250] - Mapped path PractitionerRole-specialty[0].coding[0].display to canonical name practitioner_role_specialization
+2026-04-23 12:07:24,362- INFO - [endpoint.py:250] - Mapped path PractitionerRole-practitioner.reference to canonical name practitioner_role_practitioner_ref
+2026-04-23 12:07:24,363- WARNING - [endpoint.py:360] - No canonical mapping found for path Encounter-id, skipping.
+2026-04-23 12:07:24,364- INFO - [endpoint.py:250] - Mapped path Encounter-identifier[0].value to canonical name VID
+2026-04-23 12:07:24,364- INFO - [endpoint.py:250] - Mapped path Encounter-status to canonical name encounter_status
+2026-04-23 12:07:24,365- INFO - [endpoint.py:250] - Mapped path Encounter-class.code to canonical name patient_class
+2026-04-23 12:07:24,365- INFO - [endpoint.py:250] - Mapped path Encounter-type[0].text to canonical name encounter_title
+2026-04-23 12:07:24,366- INFO - [endpoint.py:250] - Mapped path Encounter-reasonCode[0].text to canonical name encounter_complaint
+2026-04-23 12:07:24,366- INFO - [endpoint.py:250] - Mapped path Encounter-diagnosis[0].condition.display to canonical name encounter_diagnosis
+2026-04-23 12:07:24,367- INFO - [endpoint.py:250] - Mapped path Encounter-subject.reference to canonical name encounter_patient_ref
+2026-04-23 12:07:24,367- INFO - [endpoint.py:250] - Mapped path Encounter-extension[0].valueString to canonical name encounter_notes
+2026-04-23 12:07:24,368- WARNING - [endpoint.py:360] - No canonical mapping found for path Invoice-id, skipping.
+2026-04-23 12:07:24,368- INFO - [endpoint.py:250] - Mapped path Invoice-status to canonical name invoice_status
+2026-04-23 12:07:24,369- INFO - [endpoint.py:250] - Mapped path Invoice-subject.reference to canonical name invoice_patient_ref
+2026-04-23 12:07:24,369- INFO - [endpoint.py:250] - Mapped path Invoice-participant[0].actor.reference to canonical name invoice_participant_ref_id
+2026-04-23 12:07:24,370- INFO - [endpoint.py:250] - Mapped path Invoice-totalNet.value to canonical name invoice_total_net
+2026-04-23 12:07:24,370- WARNING - [endpoint.py:360] - No canonical mapping found for path ServiceRequest-id, skipping.
+2026-04-23 12:07:24,371- INFO - [endpoint.py:250] - Mapped path ServiceRequest-status to canonical name lab_order_status
+2026-04-23 12:07:24,371- INFO - [endpoint.py:250] - Mapped path ServiceRequest-intent to canonical name lab_order_intent
+2026-04-23 12:07:24,372- INFO - [endpoint.py:250] - Mapped path ServiceRequest-code.coding[0].code to canonical name lab_order_code
+2026-04-23 12:07:24,373- INFO - [endpoint.py:250] - Mapped path ServiceRequest-code.coding[0].display to canonical name lab_order_name
+2026-04-23 12:07:24,374- INFO - [endpoint.py:250] - Mapped path ServiceRequest-subject.reference to canonical name lab_order_patient_ref
+2026-04-23 12:07:24,374- INFO - [endpoint.py:250] - Mapped path ServiceRequest-performer[0].identifier.value to canonical name lab_order_performer_id
+2026-04-23 12:07:24,375- INFO - [endpoint.py:250] - Mapped path ServiceRequest-performer[0].display to canonical name lab_order_performer_name
+2026-04-23 12:07:24,392- INFO - [endpoint.py:264] - FHIR field extraction completed for endpoint_id=34, total_fields_added=24
+2026-04-23 12:07:24,395- INFO - [endpoint.py:150] - FHIR endpoint fields added successfully for endpoint_id=34
+2026-04-23 12:08:31,285- INFO - [endpoint.py:105] - Add endpoint request received: server_id=28, url=/add/patients, server_protocol=FHIR
+2026-04-23 12:08:31,305- INFO - [endpoint.py:137] - Endpoint created and flushed successfully: endpoint_id=35
+2026-04-23 12:08:31,308- INFO - [endpoint.py:223] - FHIR field extraction started for endpoint_id=35
+2026-04-23 12:08:31,309- INFO - [endpoint.py:240] - Path Extraction Completed for endpoint_id=35, withh paths:
+['Patient-identifier[0].type.coding[0].code', 'Patient-identifier[0].value', 'Patient-identifier[1].type.coding[0].code', 'Patient-identifier[1].value', 'Patient-name[0].text', 'Patient-gender', 'Patient-birthDate', 'Patient-address[0].text', 'Patient-telecom[0].value']
+2026-04-23 12:08:31,309- INFO - [endpoint.py:250] - Mapped path Patient-identifier[0].type.coding[0].code to canonical name MPI_type
+2026-04-23 12:08:31,310- INFO - [endpoint.py:250] - Mapped path Patient-identifier[0].value to canonical name MPI
+2026-04-23 12:08:31,310- INFO - [endpoint.py:250] - Mapped path Patient-identifier[1].type.coding[0].code to canonical name nic_type
+2026-04-23 12:08:31,311- INFO - [endpoint.py:250] - Mapped path Patient-identifier[1].value to canonical name nic
+2026-04-23 12:08:31,313- INFO - [endpoint.py:250] - Mapped path Patient-name[0].text to canonical name fullname
+2026-04-23 12:08:31,313- INFO - [endpoint.py:250] - Mapped path Patient-gender to canonical name gender
+2026-04-23 12:08:31,314- INFO - [endpoint.py:250] - Mapped path Patient-birthDate to canonical name birth_date
+2026-04-23 12:08:31,314- INFO - [endpoint.py:250] - Mapped path Patient-address[0].text to canonical name address
+2026-04-23 12:08:31,316- INFO - [endpoint.py:250] - Mapped path Patient-telecom[0].value to canonical name phone
+2026-04-23 12:08:31,348- INFO - [endpoint.py:264] - FHIR field extraction completed for endpoint_id=35, total_fields_added=9
+2026-04-23 12:08:31,349- INFO - [endpoint.py:150] - FHIR endpoint fields added successfully for endpoint_id=35
