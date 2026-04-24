@@ -73,13 +73,13 @@ add_patient ={ // phr -> endpoint => /add/patient
 
 
 add_patient = // LIS -> endpoint => /get/new-patient
-"MSH|^~\\&|EHR||LIS||20260203120000||ADT^A01|MSG00001|P|2.5"
-"PID|1||23||saad^Muhammad||20041006|M|||||+92-315-3726612"
+MSH|^~\\&|EHR||LIS||20260203120000||ADT^A01|MSG00001|P|2.5
+PID|1||23||saad^Muhammad||20041006|M|||||+92-315-3726612
 
 add_patient = // Payer -> endpoint => /get/registed_patient
-"MSH|^~\\&|EHR||payer||20260203120000||ADT^A01|MSG00001|P|2.5"
-"PID|1||23||saad^Muhammad||20041006|M|||||"
-"IN1|||||||||||||||Silver|||||||||||||||||||||9||||||||||||||||"
+MSH|^~\\&|EHR||payer||20260203120000||ADT^A01|MSG00001|P|2.5
+PID|1||23||saad^Muhammad||20041006|M|||||
+IN1|||||||||||||||Silver|||||||||||||||||||||9||||||||||||||||
 
 // -----------------------------------------------------------------------------------------------------------------------------------------
 
@@ -270,8 +270,8 @@ add_visit_note = { // phr -> endpoint => /get-visit-note
     }
 
 add_visit_note = // lis => endpoint -> /take_lab_order
-"MSH|^~\\&|EHR||LIS||20260203120000||ORM^O01|MSG00002|P|2.5"
-"PID|1||23|||||||||||"
-"OBR|01|VID-01||2093-3^Total cholesterol|||||||||||"
+MSH|^~\\&|EHR||LIS||20260203120000||ORM^O01|MSG00002|P|2.5
+PID|1||23|||||||||||
+OBR|01|VID-01||2093-3^Total cholesterol|||||||||||
 
 console.log(JSON.parse(JSON.stringify(json_data)));
