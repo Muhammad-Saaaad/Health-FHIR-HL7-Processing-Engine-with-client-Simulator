@@ -91,6 +91,32 @@ def get_lab_results(report_id: int, request: Request, response: Response, db: Se
         # logger.error(f"Error fetching lab report details for report ID {report_id}: {str(exp)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
 
+
+@router.get("/lab_test_search", status_code=status.HTTP_200_OK)
+def test_loinc(db: Session = Depends(get_db)):
+    """
+    Test endpoint to verify LOINC master data retrieval.
+
+    **Response (200 OK):**
+    Returns a list of `LoincMaster` records, each containing:
+    - `loinc_code` (str)
+    - `long_common_name` (str)
+    - `short_name` (str | null)
+    - `component` (str | null)
+    - `system` (str | null)
+    - `display_name` (str | null)
+    - `mobile_name` (str | null)
+
+    **Notes:**
+    - This endpoint is for testing purposes and does not accept any parameters.
+    - It retrieves the first 10 records from the LOINC master table.
+    """
+    try:
+        results = db.query(model.LoincMaster).limit(10).all()
+        return [r.to_dict() for r in results]
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f'{str(e)}')
+
 @router.get("/lab_test_search", response_model=list[schema.LoincMaster], status_code=status.HTTP_200_OK)
 @limiter.limit("80/minute")
 async def test_search(search_name: str, request: Request, response: Response, db: Session = Depends(get_db)):
