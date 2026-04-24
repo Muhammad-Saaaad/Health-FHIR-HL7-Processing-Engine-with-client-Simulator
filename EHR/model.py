@@ -77,8 +77,38 @@ class LoincMaster(Base):
     long_common_name = Column(Text, nullable=False)
     short_name       = Column(String(150), nullable=True)
     component        = Column(String(200), nullable=True)  # what is being measured ("WBC, RBC, Glucose")
-    system           = Column(String(100), nullable=True)  # The specimen from which the measurement is taken (Blood, Urine, etc.)
+    system           = Column(String(100), nullable=True)  # The specimen from which the measurement is taken (Blood, Urine, etc.)  
+
+    @property
+    def display_name(self) -> str:
+        """Short display name safe for mobile — never null."""
+        if self.short_name:
+            return self.short_name
+        if self.component and self.system:
+            return f"{self.component} ({self.system})"
+        if self.component:
+            return self.component
+        return self.long_common_name[:50]
+
+    @property
+    def mobile_name(self) -> str:
+        """Hard cap at 40 chars for very narrow screens."""
+        name = self.display_name
+        return name if len(name) <= 40 else name[:37] + "..."
     
+    @mobile_name.setter
+    def mobile_name(self, value):
+        pass  # this is use for validation whenever someone do like this: obj.mobile_name = "some_value"
+
+    def to_dict(self) -> dict:
+        return {
+            "loinc_code":       self.loinc_code,
+            "long_common_name": self.long_common_name,
+            "display_name":     self.display_name,   # for desktop
+            "mobile_name":      self.mobile_name,    # for mobile
+            "component":        self.component,
+            "system":           self.system,
+        }
 
 class LabReport(Base): 
     # add the lab results column here as well (description, bill amount, amount_status(paid or not paid) )

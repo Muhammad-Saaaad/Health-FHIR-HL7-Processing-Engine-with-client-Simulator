@@ -21,11 +21,26 @@ class LabReport(BaseModel):
 
     model_config = {"from_attributes": True}
 
+class LabMiniTestResult(BaseModel):
+    mini_test_id: int
+    test_name: str
+    normal_range: str
+    result_value: str
+
+class LabResult(BaseModel):
+    report_id: int
+
+    test_name: str
+    description: str | None
+    mini_test_results: list[LabMiniTestResult] | None
+
 class LoincMaster(BaseModel):
     loinc_code: str
     long_common_name: str
-    short_name: str | None
-    component: str | None
-    system: str | None
+    short_name: str | None = None
+    component: str | None = None
+    system: str | None = None
+    display_name: str | None = None
+    mobile_name: str | None = None
 
     model_config = {"from_attributes": True}

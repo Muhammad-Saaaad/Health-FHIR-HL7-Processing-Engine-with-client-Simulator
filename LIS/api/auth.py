@@ -8,7 +8,7 @@ from rate_limiting import limiter
 
 router = APIRouter(tags=["Authentication"])
 
-@router.post("/SignUp", status_code=status.HTTP_201_CREATED, tags=["user"])
+@router.post("/SignUp", status_code=status.HTTP_201_CREATED)
 @limiter.limit("5/minute")  # Limit to 5 sign-up attempts per minute per IP
 def SignUp(user: SignUp,request: Request, response: Response, db: Session = Depends(get_db)):
     """
@@ -44,7 +44,7 @@ def SignUp(user: SignUp,request: Request, response: Response, db: Session = Depe
     db.refresh(db_user)
     return db_user
 
-@router.post("/Login", status_code=status.HTTP_200_OK, response_model=UserOut, tags=["user"])
+@router.post("/Login", status_code=status.HTTP_200_OK, response_model=UserOut)
 @limiter.limit("10/minute")  # Limit to 10 login attempts per minute per IP
 def login(data: Login, request: Request, response: Response, db: Session = Depends(get_db)):
     """

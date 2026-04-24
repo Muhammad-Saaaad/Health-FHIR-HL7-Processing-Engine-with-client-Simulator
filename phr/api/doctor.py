@@ -95,7 +95,7 @@ def get_doctor_encountered_by_patient(request: Request, response: Response, mpi:
 
         Returns:
         - `200 OK` with list[`DoctorBase`] built from visit-note joins.
-        - Each item contains `doctor_id`, `name`, `phone_no`, `specialization`, `last_visit`.
+        - Each item contains `doctor_id`, `name`, `phone_no`, `specialization`, `last_visit`, `about`.
         - Empty list if patient has no encountered doctors.
 
         Potential errors:
@@ -113,7 +113,8 @@ def get_doctor_encountered_by_patient(request: Request, response: Response, mpi:
                 "name": doctor.doctor.name,
                 "phone_no": doctor.doctor.phone_no,
                 "specialization": doctor.doctor.specialization,
-                "last_visit": doctor.doctor.last_visit
+                "last_visit": doctor.doctor.last_visit,
+                "about": doctor.doctor.about
             } for doctor in joined_response
         ]
         

@@ -247,11 +247,13 @@ def get_test_report(
         if not loinc_entry:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"LOINC code {test_detail.loinc_code} not found for test: {test_detail.long_common_name}")
         
+        loinc_entry = loinc_entry.to_dict()  # Convert SQLAlchemy model to dict for easier access
+
         lab_report = model.LabReport(
             visit_id=visit_id,
             loinc_code=test_detail.loinc_code,
             lab_name=lab_name,
-            test_name=test_detail.long_common_name,
+            test_name=test_detail.display_name,
         )
         lab_reports.append(lab_report)
         fhir_message["entry"].append(

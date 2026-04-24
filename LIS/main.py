@@ -12,7 +12,7 @@ from rate_limiting import limiter, rate_limit_exceeded_handler
 
 os.makedirs("logs", exist_ok=True)
 
-app = FastAPI()
+app = FastAPI(title="Laboratory Information System (LIS)")
 
 app.add_middleware(
     CORSMiddleware,

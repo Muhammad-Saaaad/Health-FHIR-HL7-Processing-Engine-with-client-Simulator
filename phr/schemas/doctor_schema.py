@@ -8,6 +8,7 @@ class DoctorBase(BaseModel):
     phone_no: str | None = None
     specialization: str | None = None
     last_visit: date
+    about: str | None = None
 
     # Runs before standard validation to accept incoming "YYYY-MM-DD" strings.
     # @classmethod is REQUIRED because validators run during object CREATION, before any instance exists.

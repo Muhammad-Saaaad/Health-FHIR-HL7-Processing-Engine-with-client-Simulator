@@ -91,46 +91,51 @@ def get_accepted_requests(request: Request, response: Response, db: Session = De
 @limiter.limit("15/minute")  # Limit to 10 requests per minute per IP
 def update_request_status(status_update: TestRequestStatusUpdate, request: Request, response: Response, db: Session = Depends(get_db)):
     """
-        Update statuses for one or more lab test requests and create billing entries for them.
+    Bulk update test-request statuses for a visit and create billing rows.
 
-        **Path Parameters:** None
+    **Path Parameters:** None
 
-        **Request Body:**
-        - `req_id_status` (dict[int, str], required): Mapping of request IDs to statuses.
-            Example: `{123: "Accepted", 124: "Declined"}`.
-        - `req_id_bill` (dict[int, float], required): Mapping of request IDs to billing amounts.
-            Example: `{123: 1200.0, 124: 900.0}`.
-        - `user_id` (int, required): Technician/user ID performing the update.
-        - `visit_id` (str, required): Visit ID that all provided request IDs must belong to.
+    **Request Body (`TestRequestStatusUpdate`):**
+    - `req_id_status` (dict[int, str], required): Mapping of test request IDs to target statuses.
+      Example: `{123: "Accepted", 124: "Declined"}`.
+    - `req_id_bill` (dict[int, float], required): Mapping of test request IDs to billing amounts.
+      Example: `{123: 1200.0, 124: 900.0}`.
+    - `user_id` (int, required): Technician ID that must match each request lock owner.
+    - `visit_id` (str, required): Visit ID that all request IDs in the payload must belong to.
 
-        **Behavior:**
-        - Validates that `visit_id` exists.
-        - Validates each status is one of: `Pending`, `Accepted`, `Declined`, `Completed`.
-        - Validates each request exists and belongs to the provided `visit_id`.
-        - Validates each request is locked and locked by `user_id`.
-        - Creates one `LabTestBilling` row per request in `req_id_status` using `req_id_bill`.
+    **Behavior:**
+    - Verifies at least one test request exists for `visit_id`.
+    - For each request in `req_id_status`:
+        - Validates status is one of `Pending`, `Accepted`, `Declined`, `Completed`.
+        - Validates request ID exists.
+        - Validates request `vid` matches payload `visit_id`.
+        - Validates request is locked and locked by `user_id`.
+        - Validates the same request ID exists in `req_id_bill`.
+    - Updates each request status.
+    - Creates one `LabTestBilling` row per updated request with:
+        - `mpi`, `test_req_id`, `vid` from the request
+        - `bill_amount` from `req_id_bill[req_id]`
+        - `payment_status` set to `"pending"`
 
     **Response (200 OK):**
-        Returns `list[TestRequestOut]`, each item containing:
-        - `test_req_id` (int)
-        - `mpi` (int)
-        - `test_name` (str)
-        - `status` (str)
-        - `locked_by` (int | null)
-        - `locked_at` (datetime | null)
+    Returns `list[TestRequestOut]`, where each item contains:
+    - `test_req_id` (int)
+    - `mpi` (int)
+    - `test_name` (str)
+    - `status` (str)
+    - `locked_by` (int | null)
+    - `locked_at` (datetime | null)
 
     **Error Responses:**
-        - `400 Bad Request`: Invalid status value
-        - `400 Bad Request`: Request `visit_id` does not match payload `visit_id`
-        - `403 Forbidden`: Request is not locked or locked by another technician
-        - `404 Not Found`: Visit ID not found
-        - `404 Not Found`: Test request ID not found
-        - `404 Not Found`: Request ID missing from `req_id_bill`
-
-        **Rate Limit:**
-        - 15 requests per minute per client IP.
+    - `400 Bad Request`: Invalid status value.
+    - `400 Bad Request`: Request visit ID does not match payload `visit_id`.
+    - `403 Forbidden`: Request is unlocked or locked by another technician.
+    - `404 Not Found`: Visit ID not found.
+    - `404 Not Found`: Test request ID not found.
+    - `404 Not Found`: Request ID present in `req_id_status` but missing from `req_id_bill`.
+    - `429 Too Many Requests`: Rate limit exceeded (`15/minute`).
+    - `500 Internal Server Error`: Unexpected unhandled server/database error.
     """
-    print('acb')
     if not db.query(model.LabTestRequest).filter(model.LabTestRequest.vid == status_update.visit_id).first():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Visit ID {status_update.visit_id} not found.")
     
@@ -156,6 +161,9 @@ def update_request_status(status_update: TestRequestStatusUpdate, request: Reque
         
         if req_id not in status_update.req_id_bill:
             raise HTTPException(status=status.HTTP_404_NOT_FOUND, detail=f"Their was a conflit in the req_id_status {status_update.req_id_status} and req_id_bill {status_update.req_id_bill}. The req_id {req_id} is not found in the req_id_bill.")
+        
+        if status_update.req_id_bill[req_id] < 0:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid bill amount for request ID {req_id}. Bill amount cannot be negative.")
         
         updated_request.status = new_status
         updated_requests.append(updated_request)
