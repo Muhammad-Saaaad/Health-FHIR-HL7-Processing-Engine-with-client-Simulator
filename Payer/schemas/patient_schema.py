@@ -31,7 +31,8 @@ class PatientPolicyDetails(BaseModel):
     phone_no: str | None
     gender: str | None
 
-    patient_policy : list[patient_policy]
+    # patient_policy : list[patient_policy]
+    patient_policy : patient_policy
 
     @field_serializer("Age")
     def serialize_age(self, age_date: date | None) -> str | None:

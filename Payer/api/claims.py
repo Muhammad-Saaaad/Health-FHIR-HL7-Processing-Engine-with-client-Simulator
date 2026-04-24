@@ -137,40 +137,40 @@ def get_all_pending_claims(request: Request, response: Response, db: Session = D
 
     return claims
 
-@router.get("/claims_per_patient{pid}", response_model=schema.ClaimsPerPatient)
-@limiter.limit("30/minute") 
-def claims_per_patient(pid : int, request: Request, response: Response,  db: Session = Depends(get_db)):
-    """
-    Get all claims associated with a specific patient.
+# @router.get("/claims_per_patient{pid}", response_model=schema.ClaimsPerPatient)
+# @limiter.limit("30/minute") 
+# def claims_per_patient(pid : int, request: Request, response: Response,  db: Session = Depends(get_db)):
+#     """
+#     Get all claims associated with a specific patient.
 
-    **Path Parameters:**
-    - `pid` (int, required): The patient's unique ID.
+#     **Path Parameters:**
+#     - `pid` (int, required): The patient's unique ID.
 
-    **Response (200 OK):**
-        Returns `schema.ClaimsPerPatient` containing:
-        - `patient_id` (int)
-        - `all_claims` (list[`schema.AllClaims`]) where each item has
-            `claim_id`, `mpi`, `policy_number`, `name`, `created_at`, `status`.
+#     **Response (200 OK):**
+#         Returns `schema.ClaimsPerPatient` containing:
+#         - `patient_id` (int)
+#         - `all_claims` (list[`schema.AllClaims`]) where each item has
+#             `claim_id`, `mpi`, `policy_number`, `name`, `created_at`, `status`.
 
-    **Note:**
-    - Returns an object with an empty `all_claims` array if the patient has no claims.
-    - Does not validate whether the patient ID exists; simply returns no data if not found.
-    """
-    data = db.query(models.PatientClaim).filter(models.PatientClaim.pid == pid).all()
+#     **Note:**
+#     - Returns an object with an empty `all_claims` array if the patient has no claims.
+#     - Does not validate whether the patient ID exists; simply returns no data if not found.
+#     """
+#     data = db.query(models.PatientClaim).filter(models.PatientClaim.pid == pid).all()
 
-    output = [
-        {
-            "claim_id" : claim.claim_id,
-            "mpi": db.get(models.Patient, claim.pid).mpi,
-            "policy_number": claim.policy_id,
-            "name": claim.patient.name,
-            "created_at": claim.created_at,
-            "status": claim.claim_status
-        }
-        for claim in data 
-    ]
-    out_data = {"patient_id": pid, "all_claims": output}
-    return out_data
+#     output = [
+#         {
+#             "claim_id" : claim.claim_id,
+#             "mpi": db.get(models.Patient, claim.pid).mpi,
+#             "policy_number": claim.policy_id,
+#             "name": claim.patient.name,
+#             "created_at": claim.created_at,
+#             "status": claim.claim_status
+#         }
+#         for claim in data 
+#     ]
+#     out_data = {"patient_id": pid, "all_claims": output}
+#     return out_data
 
 @router.get("/get_single_claim{claim_id}", response_model=schema.PatientClaimDisplay)
 @limiter.limit("30/minute")  # Limit to 30 requests per minute per IP

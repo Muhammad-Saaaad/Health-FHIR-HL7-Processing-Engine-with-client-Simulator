@@ -165,18 +165,30 @@ def get_single_patient(p_id: int, request: Request, response: Response, db: Sess
 
     **Response (200 OK):**
         Returns `schema.PatientPolicyDetails` with:
-        - `p_id` (int)
-        - `mpi` (int | null)
-        - `name` (str)
-        - `Age` (str | null): serialized age derived from date of birth
-        - `phone_no` (str | null)
-        - `gender` (str | null)
-        - `patient_policy` (list[`patient_policy`]) where each policy item has:
-            - `policy_id` (int)
-            - `policy_plan` (str)
-            - `total_coverage` (float)
-            - `amount_used` (float)
-            - `status` (str)
+        
+        * `p_id` (int)
+        
+        * `mpi` (int | null)
+        
+        * `name` (str)
+        
+        * `Age` (str | null): serialized age derived from date of birth
+        
+        * `phone_no` (str | null)
+        
+        * `gender` (str | null)
+        
+        * `patient_policy` (dict) where each policy item has:
+            
+            * `policy_id` (int)
+            
+            * `policy_plan` (str)
+            
+            * `total_coverage` (float)
+            
+            * `amount_used` (float)
+            
+            * `status` (str)
 
     **Error Responses:**
     - `404 Not Found`: No patient exists with the given `p_id`
@@ -185,16 +197,18 @@ def get_single_patient(p_id: int, request: Request, response: Response, db: Sess
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found")
     
-    patient_policies = []
+    patient_policies = {}
     for policiy in patient.policies:
-        patient_policies.append({
-            "policy_id": policiy.policy_id,
-            "policy_plan": policiy.category_name,
-            "total_coverage": policiy.total_coverage,
-            "amount_used" : policiy.amount_used,
-            "status": policiy.status
-            # "description": policiy.description
-        })
+        if policiy.status == "Active":
+            patient_policies = {
+                "policy_id": policiy.policy_id,
+                "policy_plan": policiy.category_name,
+                "total_coverage": policiy.total_coverage,
+                "amount_used" : policiy.amount_used,
+                "status": policiy.status
+                # "description": policiy.description
+            }
+            break
         
     output = {
         "p_id" : patient.pid,
