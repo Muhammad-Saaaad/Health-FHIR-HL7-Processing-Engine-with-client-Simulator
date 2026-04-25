@@ -255,3 +255,119 @@
 2026-04-23 12:05:01,478 - [hl7_validation.py:62] -DEBUG - Extracted paths for segment PID: ['PID-1', 'PID-3', 'PID-5.1', 'PID-5.2', 'PID-7', 'PID-8', 'PID-13']
 
 
+2026-04-25 10:41:05,372 - [hl7_validation.py:150] -INFO - Building HL7 message with src: EHR, dest: LIS, msg_type: ORM, output_data keys: ['PID[1]-3', 'OBR[1]-2', 'OBR[1]-4.1', 'OBR[2]-4.1', 'OBR[1]-4.2', 'OBR[2]-4.2']
+2026-04-25 10:41:05,374 - [hl7_validation.py:214] -DEBUG - Segment data structure after parsing output_data: {'PID': {1: {3: {1: {1: '1144'}}}}, 'OBR': {1: {2: {1: {1: '60'}}, 4: {1: {1: '58410-2'}, 2: {1: 'CBC panel - Blood by Automated count'}}}, 2: {4: {1: {1: '74412-8'}, 2: {1: 'CBC W Differential panel - Cord blood'}}}}}
+2026-04-25 10:41:05,374 - [hl7_validation.py:246] -INFO - segment PID occurrence count: 1
+2026-04-25 10:41:05,375 - [hl7_validation.py:260] -INFO - Processing field index 3
+2026-04-25 10:41:05,375 - [hl7_validation.py:270] -INFO - Processing component index 1
+2026-04-25 10:41:05,375 - [hl7_validation.py:283] -INFO - appending line PID|1||1144
+2026-04-25 10:41:05,376 - [hl7_validation.py:246] -INFO - segment OBR occurrence count: 1
+2026-04-25 10:41:05,377 - [hl7_validation.py:260] -INFO - Processing field index 2
+2026-04-25 10:41:05,377 - [hl7_validation.py:270] -INFO - Processing component index 1
+2026-04-25 10:41:05,377 - [hl7_validation.py:260] -INFO - Processing field index 4
+2026-04-25 10:41:05,378 - [hl7_validation.py:270] -INFO - Processing component index 1
+2026-04-25 10:41:05,378 - [hl7_validation.py:270] -INFO - Processing component index 2
+2026-04-25 10:41:05,378 - [hl7_validation.py:283] -INFO - appending line OBR|1|60||58410-2^CBC panel - Blood by Automated count
+2026-04-25 10:41:05,379 - [hl7_validation.py:260] -INFO - Processing field index 4
+2026-04-25 10:41:05,379 - [hl7_validation.py:270] -INFO - Processing component index 1
+2026-04-25 10:41:05,379 - [hl7_validation.py:270] -INFO - Processing component index 2
+2026-04-25 10:41:05,379 - [hl7_validation.py:283] -INFO - appending line OBR|2|||74412-8^CBC W Differential panel - Cord blood
+2026-04-25 11:13:34,536 - [hl7_validation.py:152] -INFO - Building HL7 message with src: EHR, dest: LIS, msg_type: ORM, output_data keys: ['PID[1]-3', 'OBR[1]-2', 'OBR[1]-4.1', 'OBR[1]-4.2']
+2026-04-25 11:13:34,537 - [hl7_validation.py:216] -DEBUG - Segment data structure after parsing output_data: {'PID': {1: {3: {1: {1: '1227'}}}}, 'OBR': {1: {2: {1: {1: '61'}}, 4: {1: {1: '24730-4'}, 2: {1: 'NM Brain Views'}}}}}
+2026-04-25 11:13:34,537 - [hl7_validation.py:248] -INFO - segment PID occurrence count: 1
+2026-04-25 11:13:34,538 - [hl7_validation.py:262] -INFO - Processing field index 3
+2026-04-25 11:13:34,538 - [hl7_validation.py:272] -INFO - Processing component index 1
+2026-04-25 11:13:34,539 - [hl7_validation.py:285] -INFO - appending line PID|1||1227
+2026-04-25 11:13:34,539 - [hl7_validation.py:248] -INFO - segment OBR occurrence count: 1
+2026-04-25 11:13:34,539 - [hl7_validation.py:262] -INFO - Processing field index 2
+2026-04-25 11:13:34,539 - [hl7_validation.py:272] -INFO - Processing component index 1
+2026-04-25 11:13:34,540 - [hl7_validation.py:262] -INFO - Processing field index 4
+2026-04-25 11:13:34,540 - [hl7_validation.py:272] -INFO - Processing component index 1
+2026-04-25 11:13:34,540 - [hl7_validation.py:272] -INFO - Processing component index 2
+2026-04-25 11:13:34,541 - [hl7_validation.py:285] -INFO - appending line OBR|1|61||24730-4^NM Brain Views
+2026-04-25 11:18:17,149 - [hl7_validation.py:152] -INFO - Building HL7 message with src: EHR, dest: LIS, msg_type: ORM, output_data keys: ['PID[1]-3', 'OBR[1]-2', 'OBR[1]-4.1', 'OBR[2]-4.1', 'OBR[3]-4.1', 'OBR[1]-4.2', 'OBR[2]-4.2', 'OBR[3]-4.2']
+2026-04-25 11:18:17,149 - [hl7_validation.py:216] -DEBUG - Segment data structure after parsing output_data: {'PID': {1: {3: {1: {1: '1228'}}}}, 'OBR': {1: {2: {1: {1: '62'}}, 4: {1: {1: '42300-4'}, 2: {1: 'MR Thyroid gland'}}}, 2: {4: {1: {1: '38045-1'}, 2: {1: 'US Parathyroid gland'}}}, 3: {4: {1: {1: '36053-7'}, 2: {1: 'MR Parathyroid gland'}}}}}
+2026-04-25 11:18:17,150 - [hl7_validation.py:248] -INFO - segment PID occurrence count: 1
+2026-04-25 11:18:17,150 - [hl7_validation.py:262] -INFO - Processing field index 3
+2026-04-25 11:18:17,150 - [hl7_validation.py:272] -INFO - Processing component index 1
+2026-04-25 11:18:17,151 - [hl7_validation.py:285] -INFO - appending line PID|1||1228
+2026-04-25 11:18:17,151 - [hl7_validation.py:248] -INFO - segment OBR occurrence count: 1
+2026-04-25 11:18:17,151 - [hl7_validation.py:262] -INFO - Processing field index 2
+2026-04-25 11:18:17,152 - [hl7_validation.py:272] -INFO - Processing component index 1
+2026-04-25 11:18:17,152 - [hl7_validation.py:262] -INFO - Processing field index 4
+2026-04-25 11:18:17,152 - [hl7_validation.py:272] -INFO - Processing component index 1
+2026-04-25 11:18:17,153 - [hl7_validation.py:272] -INFO - Processing component index 2
+2026-04-25 11:18:17,153 - [hl7_validation.py:285] -INFO - appending line OBR|1|62||42300-4^MR Thyroid gland
+2026-04-25 11:18:17,154 - [hl7_validation.py:262] -INFO - Processing field index 4
+2026-04-25 11:18:17,154 - [hl7_validation.py:272] -INFO - Processing component index 1
+2026-04-25 11:18:17,154 - [hl7_validation.py:272] -INFO - Processing component index 2
+2026-04-25 11:18:17,155 - [hl7_validation.py:285] -INFO - appending line OBR|2|||38045-1^US Parathyroid gland
+2026-04-25 11:18:17,155 - [hl7_validation.py:262] -INFO - Processing field index 4
+2026-04-25 11:18:17,155 - [hl7_validation.py:272] -INFO - Processing component index 1
+2026-04-25 11:18:17,155 - [hl7_validation.py:272] -INFO - Processing component index 2
+2026-04-25 11:18:17,156 - [hl7_validation.py:285] -INFO - appending line OBR|3|||36053-7^MR Parathyroid gland
+2026-04-25 11:35:39,075 - [hl7_validation.py:152] -INFO - Building HL7 message with src: EHR, dest: LIS, msg_type: ADT, output_data keys: ['PID[1]-3', 'PID[1]-8', 'PID[1]-13', 'PID[1]-7', 'PID[1]-5.1', 'PID[1]-5.2']
+2026-04-25 11:35:39,075 - [hl7_validation.py:216] -DEBUG - Segment data structure after parsing output_data: {'PID': {1: {3: {1: {1: '1229'}}, 8: {1: {1: 'M'}}, 13: {1: {1: '+92-315-3628891'}}, 7: {1: {1: '20070220'}}, 5: {1: {1: 'Hanan'}, 2: {1: 'ALI'}}}}}
+2026-04-25 11:35:39,075 - [hl7_validation.py:248] -INFO - segment PID occurrence count: 1
+2026-04-25 11:35:39,076 - [hl7_validation.py:262] -INFO - Processing field index 3
+2026-04-25 11:35:39,076 - [hl7_validation.py:272] -INFO - Processing component index 1
+2026-04-25 11:35:39,076 - [hl7_validation.py:262] -INFO - Processing field index 5
+2026-04-25 11:35:39,077 - [hl7_validation.py:272] -INFO - Processing component index 1
+2026-04-25 11:35:39,077 - [hl7_validation.py:272] -INFO - Processing component index 2
+2026-04-25 11:35:39,077 - [hl7_validation.py:262] -INFO - Processing field index 7
+2026-04-25 11:35:39,078 - [hl7_validation.py:272] -INFO - Processing component index 1
+2026-04-25 11:35:39,078 - [hl7_validation.py:262] -INFO - Processing field index 8
+2026-04-25 11:35:39,078 - [hl7_validation.py:272] -INFO - Processing component index 1
+2026-04-25 11:35:39,079 - [hl7_validation.py:262] -INFO - Processing field index 13
+2026-04-25 11:35:39,079 - [hl7_validation.py:272] -INFO - Processing component index 1
+2026-04-25 11:35:39,079 - [hl7_validation.py:285] -INFO - appending line PID|1||1229||Hanan^ALI||20070220|M|||||+92-315-3628891
+2026-04-25 11:35:39,459 - [hl7_validation.py:152] -INFO - Building HL7 message with src: EHR, dest: Payer, msg_type: ADT, output_data keys: ['PID[1]-3', 'PID[1]-7', 'PID[1]-8', 'IN1[1]-15', 'IN1[1]-36', 'PID[1]-5.1', 'PID[1]-5.2']
+2026-04-25 11:35:39,459 - [hl7_validation.py:216] -DEBUG - Segment data structure after parsing output_data: {'PID': {1: {3: {1: {1: '1229'}}, 7: {1: {1: '20070220'}}, 8: {1: {1: 'M'}}, 5: {1: {1: 'Hanan'}, 2: {1: 'ALI'}}}}, 'IN1': {1: {15: {1: {1: 'Golden'}}, 36: {1: {1: '0'}}}}}
+2026-04-25 11:35:39,459 - [hl7_validation.py:248] -INFO - segment PID occurrence count: 1
+2026-04-25 11:35:39,460 - [hl7_validation.py:262] -INFO - Processing field index 3
+2026-04-25 11:35:39,460 - [hl7_validation.py:272] -INFO - Processing component index 1
+2026-04-25 11:35:39,460 - [hl7_validation.py:262] -INFO - Processing field index 5
+2026-04-25 11:35:39,461 - [hl7_validation.py:272] -INFO - Processing component index 1
+2026-04-25 11:35:39,461 - [hl7_validation.py:272] -INFO - Processing component index 2
+2026-04-25 11:35:39,461 - [hl7_validation.py:262] -INFO - Processing field index 7
+2026-04-25 11:35:39,462 - [hl7_validation.py:272] -INFO - Processing component index 1
+2026-04-25 11:35:39,462 - [hl7_validation.py:262] -INFO - Processing field index 8
+2026-04-25 11:35:39,462 - [hl7_validation.py:272] -INFO - Processing component index 1
+2026-04-25 11:35:39,463 - [hl7_validation.py:285] -INFO - appending line PID|1||1229||Hanan^ALI||20070220|M
+2026-04-25 11:35:39,463 - [hl7_validation.py:248] -INFO - segment IN1 occurrence count: 1
+2026-04-25 11:35:39,463 - [hl7_validation.py:262] -INFO - Processing field index 15
+2026-04-25 11:35:39,464 - [hl7_validation.py:272] -INFO - Processing component index 1
+2026-04-25 11:35:39,464 - [hl7_validation.py:262] -INFO - Processing field index 36
+2026-04-25 11:35:39,464 - [hl7_validation.py:272] -INFO - Processing component index 1
+2026-04-25 11:35:39,464 - [hl7_validation.py:285] -INFO - appending line IN1|1||||||||||||||Golden|||||||||||||||||||||0
+2026-04-25 12:41:51,754 - [hl7_validation.py:152] -INFO - Building HL7 message with src: EHR, dest: LIS, msg_type: ORM, output_data keys: ['PID[1]-3', 'OBR[1]-2', 'OBR[1]-4.1', 'OBR[2]-4.1', 'OBR[3]-4.1', 'OBR[4]-4.1', 'OBR[1]-4.2', 'OBR[2]-4.2', 'OBR[3]-4.2', 'OBR[4]-4.2', 'OBR[2]-2', 'OBR[3]-2', 'OBR[4]-2']
+2026-04-25 12:41:51,755 - [hl7_validation.py:216] -DEBUG - Segment data structure after parsing output_data: {'PID': {1: {3: {1: {1: '1229'}}}}, 'OBR': {1: {2: {1: {1: '63'}}, 4: {1: {1: '58410-2'}, 2: {1: 'CBC panel - Blood by Automated count'}}}, 2: {4: {1: {1: '25010-0'}, 2: {1: 'US Thyroid gland'}}, 2: {1: {1: '63'}}}, 3: {4: {1: {1: '24590-2'}, 2: {1: 'MR Brain'}}, 2: {1: {1: '63'}}}, 4: {4: {1: {1: '44229-3'}, 2: {1: 'CT Bone'}}, 2: {1: {1: '63'}}}}}
+2026-04-25 12:41:51,755 - [hl7_validation.py:248] -INFO - segment PID occurrence count: 1
+2026-04-25 12:41:51,755 - [hl7_validation.py:262] -INFO - Processing field index 3
+2026-04-25 12:41:51,756 - [hl7_validation.py:272] -INFO - Processing component index 1
+2026-04-25 12:41:51,756 - [hl7_validation.py:285] -INFO - appending line PID|1||1229
+2026-04-25 12:41:51,756 - [hl7_validation.py:248] -INFO - segment OBR occurrence count: 1
+2026-04-25 12:41:51,757 - [hl7_validation.py:262] -INFO - Processing field index 2
+2026-04-25 12:41:51,757 - [hl7_validation.py:272] -INFO - Processing component index 1
+2026-04-25 12:41:51,757 - [hl7_validation.py:262] -INFO - Processing field index 4
+2026-04-25 12:41:51,758 - [hl7_validation.py:272] -INFO - Processing component index 1
+2026-04-25 12:41:51,758 - [hl7_validation.py:272] -INFO - Processing component index 2
+2026-04-25 12:41:51,758 - [hl7_validation.py:285] -INFO - appending line OBR|1|63||58410-2^CBC panel - Blood by Automated count
+2026-04-25 12:41:51,758 - [hl7_validation.py:262] -INFO - Processing field index 2
+2026-04-25 12:41:51,759 - [hl7_validation.py:272] -INFO - Processing component index 1
+2026-04-25 12:41:51,759 - [hl7_validation.py:262] -INFO - Processing field index 4
+2026-04-25 12:41:51,759 - [hl7_validation.py:272] -INFO - Processing component index 1
+2026-04-25 12:41:51,760 - [hl7_validation.py:272] -INFO - Processing component index 2
+2026-04-25 12:41:51,760 - [hl7_validation.py:285] -INFO - appending line OBR|2|63||25010-0^US Thyroid gland
+2026-04-25 12:41:51,760 - [hl7_validation.py:262] -INFO - Processing field index 2
+2026-04-25 12:41:51,761 - [hl7_validation.py:272] -INFO - Processing component index 1
+2026-04-25 12:41:51,761 - [hl7_validation.py:262] -INFO - Processing field index 4
+2026-04-25 12:41:51,761 - [hl7_validation.py:272] -INFO - Processing component index 1
+2026-04-25 12:41:51,761 - [hl7_validation.py:272] -INFO - Processing component index 2
+2026-04-25 12:41:51,762 - [hl7_validation.py:285] -INFO - appending line OBR|3|63||24590-2^MR Brain
+2026-04-25 12:41:51,762 - [hl7_validation.py:262] -INFO - Processing field index 2
+2026-04-25 12:41:51,762 - [hl7_validation.py:272] -INFO - Processing component index 1
+2026-04-25 12:41:51,763 - [hl7_validation.py:262] -INFO - Processing field index 4
+2026-04-25 12:41:51,763 - [hl7_validation.py:272] -INFO - Processing component index 1
+2026-04-25 12:41:51,763 - [hl7_validation.py:272] -INFO - Processing component index 2
+2026-04-25 12:41:51,763 - [hl7_validation.py:285] -INFO - appending line OBR|4|63||44229-3^CT Bone

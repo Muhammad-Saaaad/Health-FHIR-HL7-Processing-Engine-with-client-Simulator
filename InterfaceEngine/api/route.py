@@ -15,10 +15,12 @@ router = APIRouter(tags=["Route"])
 
 logger = logging.getLogger("route_logger")
 logger.setLevel(logging.INFO)
+logger.propagate = False
 
-handler = RotatingFileHandler("logs/route.log", maxBytes=20000, backupCount=1)
-handler.setFormatter(logging.Formatter("%(asctime)s- %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s"))
-logger.addHandler(handler)
+if not logger.handlers:
+    handler = RotatingFileHandler("logs/route.log", maxBytes=20000, backupCount=1)
+    handler.setFormatter(logging.Formatter("%(asctime)s- %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s"))
+    logger.addHandler(handler)
 
 
 @router.get("/all-routes", status_code=status.HTTP_200_OK, response_model=list[GetRoute])

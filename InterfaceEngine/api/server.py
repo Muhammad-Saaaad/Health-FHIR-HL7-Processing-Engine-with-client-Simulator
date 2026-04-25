@@ -15,6 +15,7 @@ router = APIRouter(tags=["Server"])
 
 logger = logging.getLogger("server_logger")
 logger.setLevel(logging.INFO)
+logger.propagate = False
 
 formater = logging.Formatter("%(asctime)s- %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s")
 

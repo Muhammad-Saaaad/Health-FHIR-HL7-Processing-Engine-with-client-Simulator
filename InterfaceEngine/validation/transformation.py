@@ -95,24 +95,89 @@ def increment_segment(output_data: dict | None=None, segment_path: str="", list_
 #         else:
 #             return
 
+def fill_duplicate_missing_values(output_data):
+    """
+    This will take the outpput_data, that I will be send to the destination server. it will check
+    if any value in the segments_to_fill is not available, or not found. if yes then it will fill it
+    with the first occurace of that segment, if first occurace is also not available then it won't do anything else.
+
+    """
+    segments_to_fill = ["OBR-2"]
+    for segment in segments_to_fill:
+        segment_max_count = 0
+
+        # Extract segment family name before '-'.
+        # "OBR-2" -> "OBR"
+        segment_simple_name = segment.split("-")[0]
+
+        # Stores which normalized segment matched first (e.g., "OBR-2").
+        matched_segment = ""
+
+        # First available value for the target field; this becomes the default fill value.
+        first_occurance_segment_value = None
+
+        # Scan all existing output keys to:
+        #   1) discover max occurrence index
+        #   2) find first value for the exact segment-field target
+        for output_key in output_data.keys():
+            # Strip occurrence syntax to get family name.
+            # Examples:
+            #   "Patient[1]-name" -> "Patient"
+            #   "OBR[1]-2" -> "OBR"
+            #   "OBR-2" -> "OBR"
+            output_simple_name = output_key.split("[", 1)[0].split("]", 1)[0]
+
+            # If this key belongs to the same segment family (e.g., OBR), try reading occurrence index.
+            if output_simple_name == segment_simple_name:
+                try:
+
+                    output_count = int(output_key.split("[",1)[1].split("]",1)[0]) # Patient[1]-name -> 1, OBR[1]-2 -> 1, OBR-2 -> error but I will handle it with try except and consider it as 0
+                except:
+                    # Non-indexed format like "OBR-2" is treated as 0.
+                    output_count = 0
+
+                # Keep the highest observed occurrence index.
+                if output_count > segment_max_count:
+                    segment_max_count = output_count
+                
+
+            output_simple_name += "-" + output_key.split("-")[-1] # Patient[1]-name -> Patient-name or OBR-2 -> OBR-2 or OBR[1]-2 -> OBR-2
+            
+            if output_simple_name not in segments_to_fill or first_occurance_segment_value is not None:
+                continue
+            matched_segment = output_simple_name
+            first_occurance_segment_value = output_data[output_key]
+
+
+        if matched_segment != "" and segment_max_count >1:
+            print("first occurance segment value for ", matched_segment, " is ", first_occurance_segment_value)
+            for i in range(1, segment_max_count+1):
+                segment_to_fill = segment_simple_name + f"[{i}]" + "-" + segment.split("-")[1] # OBR[1]-2, OBR[2]-2, OBR[3]-2
+                if segment_to_fill not in output_data:
+                    output_data[segment_to_fill] = first_occurance_segment_value
+                    print("filling the missing value for ", segment_to_fill, " with value ", first_occurance_segment_value)
+    
+    return output_data
+
 
 if __name__ == "__main__":
 
-    output_data = {
-        "Patient[1]-name": "John Doe",
-        "Patient[2]-name": "Jane Doe",
+    fill_duplicate_missing_values({'PID[1]-3': '1228', 'OBR[1]-2': '62', 'OBR[1]-4.1': '42300-4', 'OBR[2]-4.1': '38045-1', 'OBR[3]-4.1': '36053-7', 'OBR[1]-4.2': 'MR Thyroid gland', 'OBR[2]-4.2': 'US Parathyroid gland', 'OBR[3]-4.2': 'MR Parathyroid gland'})
+    # output_data = {
+    #     "Patient[1]-name": "John Doe",
+    #     "Patient[2]-name": "Jane Doe",
 
-        "Patient-identifier[1].value": "12345",
-        "Patient-identifier[2].value": "67890",
+    #     "Patient-identifier[1].value": "12345",
+    #     "Patient-identifier[2].value": "67890",
 
-        "PID[1]-5.1": "John",
-        "PID[2]-5.1": "Jane",
-        "ServiceRequest[2]-name": "Blood Test"
-    }
+    #     "PID[1]-5.1": "John",
+    #     "PID[2]-5.1": "Jane",
+    #     "ServiceRequest[2]-name": "Blood Test"
+    # }
 
     # print("Patient-identifier[1].value -> ",increment_segment(output_data, "Patient-identifier[1].value"))
     # print("\nPatient[1]-identifier[0].type.coding[0].code -> ",increment_segment(output_data, "Patient[1]-identifier[0].type.coding[0].code"))
-    print("\nPatient-name -> ",increment_segment(output_data, "Patient-name"))
+    # print("\nPatient-name -> ",increment_segment(output_data, "Patient-name"))
     # print("\nPatient[1]-name.text -> ",increment_segment(output_data, "Patient[1]-name.text"))
     # print("\nPatient[2]-name -> ",increment_segment(output_data, "Patient[2]-name"))
     # print("\nPID-5.1 -> ",increment_segment(output_data, "PID-5.1"))

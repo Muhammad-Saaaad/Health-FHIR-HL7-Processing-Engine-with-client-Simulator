@@ -8,14 +8,16 @@ from .transformation import increment_segment
 
 logger = logging.getLogger("hl7_validation")
 logger.setLevel(logging.DEBUG)
-handler = RotatingFileHandler(
-    r"validation_logs\hl7_validation.log",
-    maxBytes=5*1024*1024,  # 5 MB
-    backupCount=1
-)
-formatter = logging.Formatter('%(asctime)s - [%(filename)s:%(lineno)d] -%(levelname)s - %(message)s')
-handler.setFormatter(formatter)
-logger.addHandler(handler)
+logger.propagate = False # means a logger only writes to its own handler, else it will write to its parent handler as well.
+if not logger.handlers:
+    handler = RotatingFileHandler(
+        r"validation_logs\hl7_validation.log",
+        maxBytes=5*1024*1024,  # 5 MB
+        backupCount=1
+    )
+    formatter = logging.Formatter('%(asctime)s - [%(filename)s:%(lineno)d] -%(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
 
 
 def hl7_extract_paths(segment) -> list:

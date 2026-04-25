@@ -16,6 +16,7 @@ router = APIRouter(tags=["Endpoint"])
 
 logger = logging.getLogger("mapping_logger")
 logger.setLevel(logging.INFO)
+logger.propagate = False
 
 formater = logging.Formatter("%(asctime)s- %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s")
 

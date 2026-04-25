@@ -18,7 +18,7 @@ from api import route, endpoint, server
 from database import engine, session_local
 import models
 from rate_limiting import limiter, rate_limit_exceeded_handler
-from validation.transformation import regex_replace_with_template, increment_segment
+from validation.transformation import fill_duplicate_missing_values, regex_replace_with_template, increment_segment
 from validation.fhir_validation import validate_unknown_fhir_resource, get_fhir_value_by_path, fhir_extract_paths
 from validation.fhir_validation import build_fhir_message
 from validation.hl7_validation import get_hl7_value_by_path, hl7_extract_paths
@@ -59,9 +59,15 @@ class MidnightSingleFileHandler(TimedRotatingFileHandler):
         self.rolloverAt = self.computeRollover(current_time)
 
 
-logger = logging.getLogger()
+logger = logging.getLogger("interface_engine.main")
 logger.setLevel(logging.INFO)
 logger.handlers.clear()
+logger.propagate = False
+
+logger_mapping = logging.getLogger("interface_engine.mapping")
+logger_mapping.setLevel(logging.INFO)
+logger_mapping.handlers.clear() 
+logger_mapping.propagate = False
 
 main_log_handler = MidnightSingleFileHandler(
     filename="logs/main.log",
@@ -72,6 +78,16 @@ main_log_handler = MidnightSingleFileHandler(
 )
 main_log_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s"))
 main_log_handler.addFilter(HealthRequestFilter(only_health=False))
+
+main_log_handler_mapping = MidnightSingleFileHandler(
+    filename="logs/main_mapping.log",
+    when="midnight",
+    interval=1,
+    backupCount=0,
+    encoding="utf-8",
+)
+main_log_handler_mapping.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s"))
+main_log_handler_mapping.addFilter(HealthRequestFilter(only_health=False))
 
 health_log_handler = MidnightSingleFileHandler(
     filename="logs/health_checks.log",
@@ -85,6 +101,8 @@ health_log_handler.addFilter(HealthRequestFilter(only_health=True))
 
 logger.addHandler(main_log_handler)
 logger.addHandler(health_log_handler)
+
+logger_mapping.addHandler(main_log_handler_mapping)
 
 @asynccontextmanager # handle lifespan events like startup or shutdown
 async def lifeSpan(app: FastAPI):
@@ -258,10 +276,9 @@ async def route_worker(route):
                             normal_src_paths_counter.append(src_path) # just to keep the count of the src paths that we have, and to increment the segment if there is multiple same segments.
 
                             if src_path not in src_path_to_value:
-                                logger.info(f"The src path {src_path} not found in src_path_to_value: {src_path_to_value}")
+                                logger.warning(f"The src path {src_path} not found in src_path_to_value: {src_path_to_value}")
                                 continue
                             value = src_path_to_value[src_path]
-                            logger.debug(f"src_path: {src_path}, value: {value}")
 
                             if rule.transform_type == 'map':
                                 # here the first value will give me the map value, if the mapping value is not found then return the default value
@@ -285,14 +302,15 @@ async def route_worker(route):
                             dest_path = dest_id_to_path[rule.dest_field_id]
                             dest_path = increment_segment(output_data=output_data, segment_path=dest_path) # here PID-5.1 will become PID[1]-5.1
                             output_data[dest_path] = value
+                            logger_mapping.info(f"src_path: {src_path}, dest_path: {dest_path} value: {value}")
 
-                logger.info(f"output data dictionary before concat and split transformation for route {route.name} -> {output_data}")
+                logger.info(f"output data dictionary before & without concat and split transformation for route {route.name} -> {output_data}")
                 logger.info(f"concat_data for route {route.name} -> {concat_data}")
                 logger.info(f"split_data for route {route.name} -> {split_data}")
 
                 ################################## Concat Data ##################################
                 for dest_id , concat_rules in concat_data.items(): 
-                    logger.debug(f"Applying concat transformation for dest_id: {dest_id} with rules: {concat_rules}")
+                    logger_mapping.info(f"Applying concat transformation for dest_id: {dest_id} with rules: {concat_rules}")
                     multiple_src_paths_to_concat: dict[int, list[str]] = dict() # this will contain data like this: {1: [PID-5.1, PID[1]-5.1], 2: [PID-5.2, PID[1]-5.2]} this is useful when we have multiple same src paths to concatinate, and also to take care of the counter in the segment name.
                     
                     delimiter = " "
@@ -325,7 +343,7 @@ async def route_worker(route):
                 
                 #################################### Split Data ####################################
                 for src_id, split_rules in split_data.items():
-                    logger.debug(f"Applying split transformation for src_id: {src_id} with split_rules: {split_rules}")
+                    logger_mapping.info(f"Applying split transformation for src_id: {src_id} with split_rules: {split_rules}")
 
                     for _ in range(simple_path_counts[src_id_to_path[src_id]]): # if there is multiple same src paths then we have to do the transformation for that many times, and also have to take care of the counter in the segment name.
                         src_path = src_id_to_path[src_id]
@@ -354,8 +372,9 @@ async def route_worker(route):
                             output_data[last_dest_path] += " " + (' ').join(parts[len(split_rules):]) # join all the remaining parts with the remining data
                         elif last_dest_path is None:
                             logger.warning(f"while Splitting, last_dest_path is None: {last_dest_path}, means no split data is mapped to any destination")
-                logger.info(f"Output for route -> {route.name}: {output_data}")
 
+                output_data = fill_duplicate_missing_values(output_data)
+                logger.info(f"Output for route -> {route.name}: {output_data}")
             except Exception as exp:
                 logger.exception(f"{exp} -> This came when processing data for route -> '{route.name}'")
                 if not result_future.done():
@@ -365,11 +384,11 @@ async def route_worker(route):
             try:
                 # BUILD MESSAGE
                 if dest_server.protocol == "FHIR":
-                    logger.debug(f"Building FHIR message for route -> {route.name} with output_data: {output_data} and dest_path_to_resource: {dest_path_to_resource}")
+                    logger_mapping.info(f"Building FHIR message for route -> {route.name} with output_data: {output_data} and dest_path_to_resource: {dest_path_to_resource}")
                     msg = build_fhir_message(output_data, dest_path_to_resource) # make a fhir message with the data
 
                 else:
-                    logger.debug(f"Building HL7 message for route -> {route.name} with output_data: {output_data}")
+                    logger_mapping.info(f"Building HL7 message for route -> {route.name} with output_data: {output_data}")
                     msg = build_hl7_message(output_data=output_data, src=src_server.name,
                                                    dest=dest_server.name, msg_type=route.msg_type)
                 logger.info(f"Built message for route -> {route.name}:\n {msg}")

@@ -11,6 +11,23 @@ router = APIRouter(tags=['lab'])
 
 cached_data = {}
 
+
+def _dedupe_loinc_records(records: list[model.LoincMaster]) -> list[dict]:
+    seen_display_names: set[str] = set()
+    deduped_records: list[dict] = []
+
+    for record in records:
+        data = record.to_dict()
+        display_name = data.get("display_name")
+
+        if display_name in seen_display_names:
+            continue
+
+        seen_display_names.add(display_name)
+        deduped_records.append(data)
+
+    return deduped_records
+
 @router.get("/lab-reports-by-{note_id}", response_model=list[schema.LabReport], status_code=status.HTTP_200_OK)
 @limiter.limit("30/minute")
 def fetch_lab_report(note_id: int, request: Request, response: Response, db: Session = Depends(get_db)):
@@ -173,8 +190,8 @@ async def test_search(search_name: str, request: Request, response: Response, db
                     model.LoincMaster.loinc_code.ilike(pattern),
                 )) \
                 .order_by(relevance, func.length(model.LoincMaster.long_common_name)) \
-                    .limit(15).all()
-        data = [r.to_dict() for r in results]
+                    .limit(25).all()
+        data = _dedupe_loinc_records(results)
         cached_data[cache_key] = data
         return data
     except Exception as e:
