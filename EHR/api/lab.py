@@ -92,7 +92,7 @@ def get_lab_results(report_id: int, request: Request, response: Response, db: Se
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
 
 
-@router.get("/lab_test_search", status_code=status.HTTP_200_OK)
+@router.get("/lab_test_preview", status_code=status.HTTP_200_OK)
 def test_loinc(db: Session = Depends(get_db)):
     """
     Test endpoint to verify LOINC master data retrieval.
@@ -142,15 +142,18 @@ async def test_search(search_name: str, request: Request, response: Response, db
     - Results are sorted by `long_common_name` ascending.
     """
     try:
-        if search_name.strip() == "":
+        normalized_search = search_name.strip()
+        cache_key = normalized_search.lower()
+
+        if normalized_search == "":
             return []
 
-        if search_name.lower().strip() in cached_data:
-            return cached_data[search_name.lower().strip()]
+        if cache_key in cached_data:
+            return cached_data[cache_key]
 
-        pattern      = f"%{search_name}%"
-        starts_with  = f"{search_name}%"
-        word_match   = f"% {search_name} %"
+        pattern      = f"%{normalized_search}%"
+        starts_with  = f"{normalized_search}%"
+        word_match   = f"% {normalized_search} %"
 
         relevance = case(
             (model.LoincMaster.long_common_name.ilike(pattern),        1),  # exact
@@ -169,10 +172,10 @@ async def test_search(search_name: str, request: Request, response: Response, db
                     model.LoincMaster.component.ilike(pattern),
                     model.LoincMaster.loinc_code.ilike(pattern),
                 )) \
-                .order_by(relevance, func.len(model.LoincMaster.long_common_name)) \
+                .order_by(relevance, func.length(model.LoincMaster.long_common_name)) \
                     .limit(15).all()
         data = [r.to_dict() for r in results]
-        cached_data[search_name.lower().strip()] = data
+        cached_data[cache_key] = data
         return data
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f'{str(e)}')

@@ -76,6 +76,7 @@ def generate_single_suggestion(
 def get_suggestion(src_profile: dict, dest_profile: dict, src_field_type: str, dest_field_type: str, src_canonical_name: str, dest_canonical_name: str) -> dict:
 
     if (src_field_type == dest_field_type) and (src_field_type != "string"):
+        print("getting suggestion for same types with type: ", src_field_type)
         # _________________ Date ____________________
         if src_field_type == "date":
             src_fmt = src_profile.get("date_format", "%Y-%m-%d")
@@ -145,6 +146,8 @@ def get_suggestion(src_profile: dict, dest_profile: dict, src_field_type: str, d
             else:
                 logger.error(f"Type mismatch for regex-based field: {src_canonical_name} ({src_field_type}) -> {dest_canonical_name} ({dest_field_type})")
                 raise ValueError(f"Type mismatch between {src_canonical_name} ({src_field_type}) and {dest_canonical_name} ({dest_field_type})")
+        else:
+            return {"transform": "copy", "config": {}}
                 
     else:
         # here the src_field_type and dest_field_types are different.
