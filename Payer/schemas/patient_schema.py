@@ -21,6 +21,12 @@ class PatientDisplay(BaseModel):
     phone_no: str | None
     policy_number: int | None
 
+    @field_serializer("date_of_birth")
+    def serialize_date_of_birth(self, dob: date | None) -> str | None:
+        if dob is None:
+            return None
+        return dob.strftime("%B %d, %Y")
+
     model_config = {"from_attributes": True}
 
 class PatientPolicyDetails(BaseModel):

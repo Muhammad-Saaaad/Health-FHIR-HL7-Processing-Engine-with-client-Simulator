@@ -4,6 +4,7 @@ from pydantic import BaseModel, field_serializer
 
 class LabReportBase(BaseModel):
     report_id: int
+    lab_name: str
     test_name: str
     updated_at: datetime | None = None
     test_status: str | None

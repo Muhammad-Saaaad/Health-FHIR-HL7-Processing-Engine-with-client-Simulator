@@ -46,7 +46,6 @@ class PatientClaimDisplay(BaseModel):
     amount_used: float = Field(validation_alias=AliasPath("policy", "amount_used"))
     service_included: bool
     tests_included: bool   
-    claim_status: str
 
     # this helps when you return data take from database object
     # it not only validate the data but also make sure that the data is converted into

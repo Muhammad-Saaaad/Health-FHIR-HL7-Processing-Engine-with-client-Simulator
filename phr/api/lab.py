@@ -36,6 +36,7 @@ def get_lab_reports_base(note_id: str, request: Request, response: Response, db:
         - `200 OK` with list[`LabReportBase`].
         - Each item includes:
             - `report_id` (int)
+            - `lab_name` (str)
             - `test_name` (str)
             - `updated_at` (str | null, formatted datetime)
             - `test_status` (str | null)

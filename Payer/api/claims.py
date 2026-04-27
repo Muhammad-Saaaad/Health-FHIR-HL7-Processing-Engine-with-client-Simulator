@@ -194,7 +194,6 @@ def get_single_claims(claim_id : int, request: Request, response: Response, db: 
     - `amount_used` (float)
     - `service_included` (bool)
     - `tests_included` (bool)
-    - `claim_status` (str)
 
     **Error Responses:**
     - `404 Not Found`: No claim exists with the given `claim_id`
