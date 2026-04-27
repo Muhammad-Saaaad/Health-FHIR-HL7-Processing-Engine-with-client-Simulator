@@ -25,6 +25,7 @@ class LabMiniTestResult(BaseModel):
     mini_test_id: int
     test_name: str
     normal_range: str
+    unit: str
     result_value: str
 
 class LabResult(BaseModel):

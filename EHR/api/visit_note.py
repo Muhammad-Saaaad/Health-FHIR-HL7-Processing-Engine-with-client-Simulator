@@ -358,14 +358,19 @@ def visit_note(note_id: int, request: Request, response: Response, db: Session =
             logger.exception(f"Visit note with ID {note_id} not found")
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Note id not found")
         
+        total_bill = note.bill.insurance_amount if note.bill else 0
+        total_bill += note.lab_charges if note.lab_charges else 0
+
         output_data = schema.ViewNote(
             note_id = note.note_id,
             mpi = note.mpi,
             doctor_id = note.doctor_id,
             bill_id = note.bill_id,
 
-            bill_amount = note.bill.insurance_amount if note.bill else None,
+            consultation_bill = note.bill.insurance_amount if note.bill else None,
             bill_status = "paid" if note.bill and note.bill.bill_status else "unpaid",
+            lab_bill=note.lab_charges if note.lab_charges else 0,
+            total_bill=total_bill,
 
             note_title = note.note_title,
             patient_complaint = note.patient_complaint,

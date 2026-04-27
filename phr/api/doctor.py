@@ -107,16 +107,19 @@ def get_doctor_encountered_by_patient(request: Request, response: Response, mpi:
             joinedload(model.VisitingNotes.doctor)
         ).all()
 
-        doctors =[
-            {
-                "doctor_id": doctor.doctor.doctor_id,
-                "name": doctor.doctor.name,
-                "phone_no": doctor.doctor.phone_no,
-                "specialization": doctor.doctor.specialization,
-                "last_visit": doctor.doctor.last_visit,
-                "about": doctor.doctor.about
-            } for doctor in joined_response
-        ]
+        unique_doctors = {}
+        for note in joined_response:
+            if note.doctor and note.doctor.doctor_id not in unique_doctors:
+                unique_doctors[note.doctor.doctor_id] = {
+                    "doctor_id": note.doctor.doctor_id,
+                    "name": note.doctor.name,
+                    "phone_no": note.doctor.phone_no,
+                    "specialization": note.doctor.specialization,
+                    "last_visit": note.doctor.last_visit,
+                    "about": note.doctor.about
+                }
+
+        doctors = list(unique_doctors.values())
         
         if doctors is []:
             logger.warning(f"This patient with MPI {mpi} has not encountered any doctor yet.")

@@ -137,6 +137,7 @@ class MiniLabResult(Base):
     test_name = Column(String(50), nullable=False)
     normal_range = Column(String(20), nullable=False)
     result_value = Column(String(7), nullable=False)
+    unit = Column(String(20), nullable=False)
 
     test_report = relationship("LabReport", back_populates="mini_test")
 

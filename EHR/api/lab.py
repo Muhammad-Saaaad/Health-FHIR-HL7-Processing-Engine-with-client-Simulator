@@ -84,6 +84,7 @@ def get_lab_results(report_id: int, request: Request, response: Response, db: Se
                 - `mini_test_id` (int)
                 - `test_name` (str)
                 - `normal_range` (str)
+                - `unit` (str)
                 - `result_value` (str)
 
         Potential errors:
@@ -109,8 +110,8 @@ def get_lab_results(report_id: int, request: Request, response: Response, db: Se
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
 
 
-@router.get("/lab_test_preview", status_code=status.HTTP_200_OK)
-def test_loinc(db: Session = Depends(get_db)):
+@router.get("/lab_test_preview/{name}", status_code=status.HTTP_200_OK)
+def test_loinc(name: str | None = None, db: Session = Depends(get_db)):
     """
     Test endpoint to verify LOINC master data retrieval.
 
@@ -124,13 +125,40 @@ def test_loinc(db: Session = Depends(get_db)):
     - `display_name` (str | null)
     - `mobile_name` (str | null)
 
+    **Inputs:**
+    - `name` can be passed either as a path parameter (`/lab_test_preview/{name}`)
+      or query parameter (`/lab_test_preview?name=...`).
+
     **Notes:**
-    - This endpoint is for testing purposes and does not accept any parameters.
-    - It retrieves the first 10 records from the LOINC master table.
+    - This endpoint is for testing purposes.
+    - It loads LOINC records from the table and filters matches in memory.
+    - It returns up to 10 matching records.
+    - Query parameter form is safer for names containing `/` or other URL-sensitive characters.
     """
     try:
-        results = db.query(model.LoincMaster).limit(10).all()
-        return [r.to_dict() for r in results]
+        normalized_name = " ".join((name or "").split())
+        if normalized_name == "":
+            return []
+
+        needle = normalized_name.lower()
+        all_records = db.query(model.LoincMaster).all()
+
+        filtered = []
+        for record in all_records:
+            long_common_name = (record.long_common_name or "").lower()
+            short_name = (record.short_name or "").lower()
+            component = (record.component or "").lower()
+            loinc_code = (record.loinc_code or "").lower()
+
+            if (
+                needle in long_common_name
+                or needle in short_name
+                or needle in component
+                or needle in loinc_code
+            ):
+                filtered.append(record)
+
+        return [r.to_dict() for r in filtered[:10]]
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f'{str(e)}')
 
@@ -159,7 +187,8 @@ async def test_search(search_name: str, request: Request, response: Response, db
     - Results are sorted by `long_common_name` ascending.
     """
     try:
-        normalized_search = search_name.strip()
+        # Normalize extra whitespace so equivalent inputs map to one cache key.
+        normalized_search = " ".join(search_name.split())
         cache_key = normalized_search.lower()
 
         if normalized_search == "":
@@ -192,7 +221,11 @@ async def test_search(search_name: str, request: Request, response: Response, db
                 .order_by(relevance, func.length(model.LoincMaster.long_common_name)) \
                     .limit(25).all()
         data = _dedupe_loinc_records(results)
-        cached_data[cache_key] = data
+
+        # Avoid caching empty result sets; they can become stale after data updates.
+        if data:
+            cached_data[cache_key] = data
+
         return data
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f'{str(e)}')
