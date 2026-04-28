@@ -109,16 +109,15 @@ def fill_duplicate_missing_values(output_data):
         # Extract segment family name before '-'.
         # "OBR-2" -> "OBR"
         segment_simple_name = segment.split("-")[0]
-
-        # Stores which normalized segment matched first (e.g., "OBR-2").
-        matched_segment = ""
+        segment_field = segment.split("-")[1]  # "OBR-2" -> "2"
 
         # First available value for the target field; this becomes the default fill value.
+        # IMPORTANT: Explicitly look for [1] first occurrence, not just the first found in iteration
         first_occurance_segment_value = None
 
         # Scan all existing output keys to:
         #   1) discover max occurrence index
-        #   2) find first value for the exact segment-field target
+        #   2) find first value for the exact segment-field target (from OBR[1])
         for output_key in output_data.keys():
             # Strip occurrence syntax to get family name.
             # Examples:
@@ -130,7 +129,6 @@ def fill_duplicate_missing_values(output_data):
             # If this key belongs to the same segment family (e.g., OBR), try reading occurrence index.
             if output_simple_name == segment_simple_name:
                 try:
-
                     output_count = int(output_key.split("[",1)[1].split("]",1)[0]) # Patient[1]-name -> 1, OBR[1]-2 -> 1, OBR-2 -> error but I will handle it with try except and consider it as 0
                 except:
                     # Non-indexed format like "OBR-2" is treated as 0.
@@ -140,19 +138,15 @@ def fill_duplicate_missing_values(output_data):
                 if output_count > segment_max_count:
                     segment_max_count = output_count
                 
+                # Check if this is the first occurrence [1] and the correct field
+                normalized_key = output_simple_name + "-" + output_key.split("-")[-1]
+                if normalized_key == segment and output_count == 1 and first_occurance_segment_value is None:
+                    first_occurance_segment_value = output_data[output_key]
 
-            output_simple_name += "-" + output_key.split("-")[-1] # Patient[1]-name -> Patient-name or OBR-2 -> OBR-2 or OBR[1]-2 -> OBR-2
-            
-            if output_simple_name not in segments_to_fill or first_occurance_segment_value is not None:
-                continue
-            matched_segment = output_simple_name
-            first_occurance_segment_value = output_data[output_key]
-
-
-        if matched_segment != "" and segment_max_count >1:
-            print("first occurance segment value for ", matched_segment, " is ", first_occurance_segment_value)
+        if first_occurance_segment_value is not None and segment_max_count > 1:
+            print("first occurance segment value for ", segment, " is ", first_occurance_segment_value)
             for i in range(1, segment_max_count+1):
-                segment_to_fill = segment_simple_name + f"[{i}]" + "-" + segment.split("-")[1] # OBR[1]-2, OBR[2]-2, OBR[3]-2
+                segment_to_fill = segment_simple_name + f"[{i}]" + "-" + segment_field # OBR[1]-2, OBR[2]-2, OBR[3]-2
                 if segment_to_fill not in output_data:
                     output_data[segment_to_fill] = first_occurance_segment_value
                     print("filling the missing value for ", segment_to_fill, " with value ", first_occurance_segment_value)
