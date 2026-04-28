@@ -101,7 +101,7 @@ class LoincMaster(base):
     long_common_name = Column(Text, nullable=False)
     short_name       = Column(String(150), nullable=True) # short name is not always available so it will be just for frontend.
     component        = Column(String(200), nullable=True)  # what is being measured ("WBC, RBC, Glucose")
-    system           = Column(String(100), nullable=True)  # The specimen from which the measurement is taken (Blood, Urine, etc.)
+    system           = Column(String(500), nullable=True)  # The specimen from which the measurement is taken (Blood, Urine, etc.)
     
 # create a table for the lab tests, where the laboutry have their own test codes,
 # on that table. i will map the lab tests with the loinc master table's test names.
