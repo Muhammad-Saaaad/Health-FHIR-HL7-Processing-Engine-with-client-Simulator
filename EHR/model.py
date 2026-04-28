@@ -77,7 +77,7 @@ class LoincMaster(Base):
     long_common_name = Column(Text, nullable=False)
     short_name       = Column(String(150), nullable=True)
     component        = Column(String(200), nullable=True)  # what is being measured ("WBC, RBC, Glucose")
-    system           = Column(String(100), nullable=True)  # The specimen from which the measurement is taken (Blood, Urine, etc.)  
+    system           = Column(String(500), nullable=True)  # The specimen from which the measurement is taken (Blood, Urine, etc.)  
 
     @property
     def display_name(self) -> str:

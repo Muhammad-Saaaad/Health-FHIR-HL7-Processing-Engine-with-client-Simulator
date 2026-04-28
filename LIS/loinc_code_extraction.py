@@ -7,7 +7,7 @@ from model import LoincMaster
 
 load_dotenv()
 
-engine = create_engine(os.getenv("DATABASE_URL_LIS"), echo=False, future=True)
+engine = create_engine(os.getenv("DATABASE_URL_EHR"), echo=False, future=True)
 
 LOINC_CSV_PATH = r"E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\LIS\Loinc.csv"
 
