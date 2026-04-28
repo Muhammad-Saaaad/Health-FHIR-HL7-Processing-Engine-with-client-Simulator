@@ -1,6 +1,7 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, JSON, UniqueConstraint
+from sqlalchemy import Column, Integer, String, ForeignKey, JSON, UniqueConstraint, DateTime, Text
 from sqlalchemy.orm import relationship
 from database import Base # Ensure your engine uses a shared or local Base
+from datetime import datetime
 
 class Server(Base):
     __tablename__ = "server"
@@ -12,7 +13,7 @@ class Server(Base):
     protocol = Column(String(5)) # e.g. FHIR, HL7
     status = Column(String(20)) # e.g. Active, Inactive
     profile = Column(JSON, nullable=False) # e.g. contians JSON that tells what kind of data does that server expect to send and recieve.
-    category = Column(String(20)) # e.g. EHR, LIS, PHR, Payer
+    # category = Column(String(20)) # e.g. EHR, LIS, PHR, Payer
 
     endpoints = relationship("Endpoints", back_populates="server")
 
@@ -84,3 +85,15 @@ class MappingRule(Base):
 
     src_field = relationship("EndpointFields", back_populates="mapping_rules_src", foreign_keys=[src_field_id])
     dest_field = relationship("EndpointFields", back_populates="mapping_rules_dest", foreign_keys=[dest_field_id])
+
+# class Logs(Base):
+#     __tablename__ = "logs"
+
+#     log_id = Column(Integer, primary_key=True, index=True)
+#     datetime = Column(DateTime, default=datetime.now(), nullable=False)
+#     status = Column(String(20), nullable=False)  # Success, Fail
+#     operation_heading = Column(String(255), nullable=False)
+#     operation_message = Column(Text, nullable=True)
+#     src_message = Column(Text, nullable=True)
+#     dest_message = Column(Text, nullable=True)
+    
