@@ -55,8 +55,8 @@ class PatientClaimDisplay(BaseModel):
     
 class ExpenseBreakdown(BaseModel):
     claim_date: datetime | str
-    service: str
-    tests: str
+    service_included: bool
+    tests_included: bool
     total_amount: float
     status: str
 

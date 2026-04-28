@@ -65,9 +65,9 @@ def expense_breakdown(pid: int, policy_id: int, request: Request, response: Resp
 
     **Response (200 OK):**
     Returns `list[schema.ExpenseBreakdown]`. Each entry includes:
-    - `claim_date` (str): formatted claim date
-    - `service` (str): billed service name
-    - `tests` (str): currently `"N/A"`
+    - `claim_date` (datetime): claim creation timestamp
+    - `service_included` (bool): 
+    - `tests_included` (bool): 
     - `total_amount` (float): billed amount
     - `status` (str): current claim status
 
@@ -94,8 +94,8 @@ def expense_breakdown(pid: int, policy_id: int, request: Request, response: Resp
         claim_expense.append(
             schema.ExpenseBreakdown(
                 claim_date=claim.created_at,
-                service=claim.service_name,
-                tests="N/A",
+                service_included=claim.service_included,
+                tests_included=claim.tests_included,
                 total_amount=float(claim.bill_amount),
                 status=claim.claim_status
             )
@@ -116,8 +116,7 @@ def get_all_pending_claims(request: Request, response: Response, db: Session = D
     - `mpi` (int)
     - `policy_number` (int)
     - `name` (str)
-    - `created_at` (str | null)
-    - `status` (str)
+    - `created_at` (datetime | null)
 
     **Note:**
     - Only claims with `claim_status == "Pending"` are returned.
@@ -205,7 +204,7 @@ def get_single_claims(claim_id : int, request: Request, response: Response, db: 
     
     return claim
 
-@router.put("/change_claim_status{claim_id}/{claim_status}", status_code=status.HTTP_202_ACCEPTED, tags=['Claims'])
+@router.put("/change_claim_status{claim_id}/{claim_status}", status_code=status.HTTP_202_ACCEPTED)
 @limiter.limit("20/minute")  # Limit to 20 requests per minute per IP
 def claim_status(claim_id : int, claim_status: str, request: Request, response: Response, db: Session = Depends(get_db)):
     """
@@ -248,7 +247,7 @@ def claim_status(claim_id : int, claim_status: str, request: Request, response: 
 
     return {"message": f"status set to {claim_status}"}
 
-@router.put("/lock_claim{claim_id}/by{user_id}", status_code=status.HTTP_202_ACCEPTED, tags=['Claims'])
+@router.put("/lock_claim{claim_id}/by{user_id}", status_code=status.HTTP_202_ACCEPTED)
 @limiter.limit("20/minute")  # Limit to 20 requests per minute per IP
 def claim_lock(claim_id : int, user_id: int, request: Request, response: Response, db: Session = Depends(get_db)):
     """
@@ -281,16 +280,16 @@ def claim_lock(claim_id : int, user_id: int, request: Request, response: Respons
     
     if claim.locked_by_user_id != None and claim.locked_by_user_id != user_id:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="claim already locked")
-    
+
     claim.locked_by_user_id = user_id
     claim.locked_at = datetime.now()
-
+    
+    db.add(claim)
     db.commit()
-    db.refresh(claim)
 
     return {"message": f"claim locked by {user.user_name}"}
 
-@router.put("/unlock_claim{claim_id}/by{user_id}", status_code=status.HTTP_202_ACCEPTED, tags=['Claims'])
+@router.put("/unlock_claim{claim_id}/by{user_id}", status_code=status.HTTP_202_ACCEPTED)
 @limiter.limit("20/minute")
 def claim_unlock(claim_id : int, user_id: int, request: Request, response: Response, db: Session = Depends(get_db)):
     """
@@ -305,30 +304,30 @@ def claim_unlock(claim_id : int, user_id: int, request: Request, response: Respo
     - `message`: e.g., "claim unlocked by john_doe"
 
     **Constraints:**
-    - Only the user who originally locked the claim can unlock it.
-    - Cannot unlock a claim that is already unlocked.
+    - Only the user who originally locked the claim can unlock it (if currently locked).
+    - If the claim is already unlocked, the operation succeeds (idempotent).
 
     **Error Responses:**
     - `404 Not Found`: No claim exists with the given `claim_id`
     - `404 Not Found`: No user exists with the given `user_id`
-    - `409 Conflict`: The claim is already unlocked (not locked by anyone)
+    - `409 Conflict`: The claim is locked by another user
     """
     claim = db.query(models.PatientClaim).filter(models.PatientClaim.claim_id == claim_id).first()
     if not claim:
         raise HTTPException(status_code=404, detail="claim id not found")
-    
-    
+
     user = db.query(models.SystemUser).filter(models.SystemUser.user_id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="user id not found")
     
-    if claim.locked_by_user_id == None:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="claim already unlocked")
+    # If claim is locked by another user, reject the unlock
+    if claim.locked_by_user_id is not None and claim.locked_by_user_id != user_id:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="claim locked by another user")
     
     claim.locked_by_user_id = None
     claim.locked_at = None
 
+    db.add(claim)
     db.commit()
     db.refresh(claim)
-
     return {"message": f"claim unlocked by {user.user_name}"}
