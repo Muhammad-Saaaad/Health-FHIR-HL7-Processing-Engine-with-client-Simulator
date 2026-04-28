@@ -12,6 +12,7 @@ class Server(Base):
     protocol = Column(String(5)) # e.g. FHIR, HL7
     status = Column(String(20)) # e.g. Active, Inactive
     profile = Column(JSON, nullable=False) # e.g. contians JSON that tells what kind of data does that server expect to send and recieve.
+    category = Column(String(20)) # e.g. EHR, LIS, PHR, Payer
 
     endpoints = relationship("Endpoints", back_populates="server")
 
