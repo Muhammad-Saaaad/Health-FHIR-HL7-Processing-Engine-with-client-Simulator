@@ -7,4 +7,3 @@ logs
 **/validation_logs/
 *.log
 *.log.*
-**/migrations/
