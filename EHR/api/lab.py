@@ -1,3 +1,6 @@
+import logging
+from logging.handlers import RotatingFileHandler
+
 from fastapi import APIRouter, status, Depends, HTTPException, Request, Response
 from sqlalchemy import case, or_, func
 from sqlalchemy.orm import Session
@@ -8,6 +11,14 @@ import model
 from rate_limiting import limiter
 
 router = APIRouter(tags=['lab'])
+
+logger = logging.getLogger("ehr_lab_service")
+logger.setLevel(logging.INFO)
+formatter = logging.Formatter("%(asctime)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s")
+
+handler = RotatingFileHandler(r"logs/lab.log", maxBytes=1000000, backupCount=2)
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
 cached_data = {}
 
@@ -55,13 +66,21 @@ def fetch_lab_report(note_id: int, request: Request, response: Response, db: Ses
     - `400 Bad Request`: Unexpected database or server error
     """
     try:
+        logger.info(f"Fetching lab reports for visit note ID: {note_id}")
         notes = db.query(model.LabReport) \
             .filter(model.LabReport.visit_id == note_id).all()
+        
         if not notes:
+            logger.warning(f"No lab reports found for visit note ID: {note_id}")
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND , detail="Note id not found or not lab reports for this note")
+        
+        logger.info(f"Retrieved {len(notes)} lab reports for visit note ID: {note_id}")
         return notes
 
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.error(f"Error fetching lab reports for visit note ID {note_id}: {str(e)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f'{str(e)}')
 
 @router.get("/lab-results/{report_id}", response_model=schema.LabResult)
@@ -92,9 +111,10 @@ def get_lab_results(report_id: int, request: Request, response: Response, db: Se
         - `400 Bad Request`: Any unexpected database/server exception.
     """
     try:
+        logger.info(f"Fetching lab results for report ID: {report_id}")
         lab_report = db.get(model.LabReport, report_id)
         if lab_report is None:
-            # logger.warning(f"Lab report with ID {report_id} not found.")
+            logger.warning(f"Lab report with ID {report_id} not found.")
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Lab report with the given ID {report_id} not found.")
         
         response_data = {
@@ -103,10 +123,13 @@ def get_lab_results(report_id: int, request: Request, response: Response, db: Se
             "description": lab_report.description,
             "mini_test_results": lab_report.mini_test
         }
+        logger.info(f"Successfully retrieved lab results for report ID: {report_id}")
         return response_data
     
+    except HTTPException:
+        raise
     except Exception as exp:
-        # logger.error(f"Error fetching lab report details for report ID {report_id}: {str(exp)}")
+        logger.error(f"Error fetching lab report details for report ID {report_id}: {str(exp)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
 
 
@@ -136,12 +159,15 @@ def test_loinc(name: str | None = None, db: Session = Depends(get_db)):
     - Query parameter form is safer for names containing `/` or other URL-sensitive characters.
     """
     try:
+        logger.info(f"LOINC preview search requested for name: {name}")
         normalized_name = " ".join((name or "").split())
         if normalized_name == "":
+            logger.debug("Empty search term provided, returning empty list")
             return []
 
         needle = normalized_name.lower()
         all_records = db.query(model.LoincMaster).all()
+        logger.debug(f"Total LOINC records in database: {len(all_records)}")
 
         filtered = []
         for record in all_records:
@@ -158,8 +184,11 @@ def test_loinc(name: str | None = None, db: Session = Depends(get_db)):
             ):
                 filtered.append(record)
 
-        return [r.to_dict() for r in filtered[:10]]
+        results = [r.to_dict() for r in filtered[:10]]
+        logger.info(f"LOINC preview search for '{normalized_name}' returned {len(results)} results")
+        return results
     except Exception as e:
+        logger.error(f"Error in LOINC preview search for name '{name}': {str(e)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f'{str(e)}')
 
 @router.get("/lab_test_search", response_model=list[schema.LoincMaster], status_code=status.HTTP_200_OK)
@@ -187,14 +216,17 @@ async def test_search(search_name: str, request: Request, response: Response, db
     - Results are sorted by `long_common_name` ascending.
     """
     try:
+        logger.info(f"LOINC search requested for: '{search_name}'")
         # Normalize extra whitespace so equivalent inputs map to one cache key.
         normalized_search = " ".join(search_name.split())
         cache_key = normalized_search.lower()
 
         if normalized_search == "":
+            logger.debug("Empty search term provided, returning empty list")
             return []
 
         if cache_key in cached_data:
+            logger.debug(f"Returning cached results for search term: '{normalized_search}'")
             return cached_data[cache_key]
 
         pattern      = f"%{normalized_search}%"
@@ -224,8 +256,11 @@ async def test_search(search_name: str, request: Request, response: Response, db
 
         # Avoid caching empty result sets; they can become stale after data updates.
         if data:
+            logger.debug(f"Caching {len(data)} results for search term: '{normalized_search}'")
             cached_data[cache_key] = data
 
+        logger.info(f"LOINC search for '{normalized_search}' returned {len(data)} results")
         return data
     except Exception as e:
+        logger.error(f"Error in LOINC search for term '{search_name}': {str(e)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f'{str(e)}')

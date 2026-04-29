@@ -25,10 +25,14 @@ class post_patient(BaseModel):
     name : str
     phone_no : str | None
     gender : str
-    date_of_birth: date
+    date_of_birth: date | str
     address : str | None
     insurance_company: str
     policy_number: int
     plan_type: str
+
+    @field_serializer("date_of_birth")
+    def serialize_date_of_birth(self, value: str):
+        return datetime.strptime(value, "%Y-%m-%d").date()
 
     model_config = {"from_attributes": True}
