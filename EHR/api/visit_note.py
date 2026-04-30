@@ -191,7 +191,7 @@ def add_visit_note(visit_note: schema.VisitNote ,request: Request, response: Res
         }
 
         if visit_note.test_names and visit_note.lab_name: # if both lab name and test are provided, then only process lab tests
-            
+            logger.info(f"Lab test details provided for visit note ID {new_visit_note.note_id}, processing lab tests")
             is_sucess, patient_visit = get_test_report(
                 unique_id = unique_id,
                 fhir_message = patient_visit,

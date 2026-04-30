@@ -149,7 +149,7 @@ def get_rules(request: Request, response: Response, route_id: int, db: Session =
         concat_data = []
 
         for rule in mapping_rules_of_route: # this rule is from the database hence it can only be access via . not like this: ['']
-            if rule.transform_type in ['copy', 'map', 'format']:
+            if rule.transform_type in ['copy', 'map', 'format', 'regex']:
                 mapping = {
                     "src_field" : {
                         "endpoint_field_id": rule.src_field_id,

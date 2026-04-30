@@ -15,14 +15,13 @@ class Login(BaseModel):
     model_config = {"from_attributes": True}
 
 class DoctorResponse(BaseModel):
-    """Doctor object response schema for all endpoints returning doctor data."""
     doctor_id: int
     name: str
     email: str
     password: str
-    specialization: str = None
+    specialization: str | None = None
     date_join: datetime
-    about: str = None
-    phone_no: str = None
+    about: str | None = None
+    phone_no: str | None = None
 
     model_config = {"from_attributes": True}

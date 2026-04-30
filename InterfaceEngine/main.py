@@ -267,7 +267,7 @@ async def route_worker(route):
                         # here we have a singe src id, that will split into multiple destinations
                         split_data.setdefault(rule.src_field_id, []).append(rule)
                     
-                    else: # map | copy | formate | regex
+                    else: # map | copy | format | regex
                         src_path = src_id_to_path[rule.src_field_id]
 
                         for _ in range(simple_path_counts[src_path]): # if there is multiple same src paths then we have to do the transformation for that many times, and also have to take care of the counter in the segment name.
