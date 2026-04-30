@@ -75,7 +75,7 @@ def get_patient_detail(mpi: int, request: Request, response: Response, db: Sessi
             "test_name": lab_detail.test_name,
             "vid": lab_detail.vid,
             "status": str(lab_detail.status).capitalize()
-        } for lab_detail in lab_details if lab_detail.status in ("Completed", "Accepted", "accepted", "completed")
+        } for lab_detail in lab_details if lab_detail.status in ("Completed", "Accepted", "accepted", "completed", "Pending", "pending")
     ]
 
     response["lab_reports"] = reports

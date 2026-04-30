@@ -405,7 +405,7 @@ async def route_worker(route):
                             content=msg,
                             headers={"Content-Type": "text/plain"}
                         )
-                    if response.status_code in (200, 201):
+                    if response.status_code in (200, 201, 202, 203, 204):
                         logger.info(f"Successfully sent to url: {dest_endpoint_url}")
                         result_future.set_result(True)
                     else:
