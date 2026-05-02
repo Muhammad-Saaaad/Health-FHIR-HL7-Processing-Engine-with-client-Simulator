@@ -13,6 +13,8 @@ from fastapi import FastAPI, status, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi.errors import RateLimitExceeded
+from sqlalchemy.exc import SAWarning
+import warnings
 
 from api import route, endpoint, server
 from database import engine, session_local
@@ -24,6 +26,7 @@ from validation.fhir_validation import build_fhir_message
 from validation.hl7_validation import get_hl7_value_by_path, hl7_extract_paths
 from validation.hl7_validation import build_hl7_message
 
+warnings.filterwarnings("ignore", category=SAWarning)
 os.makedirs("logs", exist_ok=True)
 os.makedirs("validation_logs", exist_ok=True)
 
@@ -146,7 +149,7 @@ def check_health():
 
 active_route_listners = {} # consist of all the running routes|Channels lisning for a soruce endpoint
 route_queue = {} # consist of each route key with that route value that it gets from source endpoint
-
+data_queue = {}
 
 def _payload_preview(data, max_len: int = 400) -> str:
     text = str(data)
@@ -172,6 +175,7 @@ async def route_manager():
                     if route.route_id not in active_route_listners:
 
                         route_queue[route.route_id] = asyncio.Queue() # make a async queue for a new route that is not listning
+                        data_queue[route.route_id] = asyncio.Queue() # Once the dest message is be created, then we put the data in this queue, after that we will send to the dest server.
                         task = asyncio.create_task(route_worker(route)) # this start the listning the route.
                         active_route_listners[route.route_id] = task
                         logger.info(f"route_worker start for route -> {route.name}")
@@ -292,7 +296,11 @@ async def route_worker(route):
                                     dt = datetime.strptime(str(value), rule.config["from"])
                                     value = dt.strftime(rule.config["to"])
                                 except Exception as exp:
-                                    logger.error(f"Error while transformation: {str(exp)}")
+                                    try:
+                                        dt = datetime.strptime(str(value), "%Y-%m-%d %H:%M:%S")
+                                        value = dt.strftime(rule.config["to"])
+                                    except ValueError:
+                                        logger.error(f"Error while transformation: {str(exp)}")
 
                             if rule.dest_field_id not in dest_id_to_path:
                                 logger.error(f"""The destination id in rule {rule.dest_field_id}
@@ -393,9 +401,13 @@ async def route_worker(route):
                                                    dest=dest_server.name, msg_type=route.msg_type)
                 logger.info(f"Built message for route -> {route.name}:\n {msg}")
 
+                await data_queue[route.route_id].put(msg) # put the message in the data queue, after that we will send to the dest server.
                 # DELIVER — resolve the future so ingest() knows the result
+                # while True:
+                #     if dest_server.status == "Inactive": 
+                        
                 async with httpx.AsyncClient() as client:
-                    if dest_server.protocol == "FHIR":
+                    if dest_server.protocol == "FHIR":                            
                         response = await client.post(url=dest_endpoint_url, json=msg)
                     else:
                         # HL7 is plain text — do NOT json= encode it or it arrives as a
@@ -472,6 +484,7 @@ async def ingest(full_path: str, req: Request):
 
             is_valid, message = validate_unknown_fhir_resource(fhir_data=payload) # validating fhir message
             if not is_valid:
+                logger.exception(f"trace={trace_id} FHIR validation failed: {message}")
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(message))
         else:
             # Try JSON first (EHR may wrap the HL7 string in JSON).

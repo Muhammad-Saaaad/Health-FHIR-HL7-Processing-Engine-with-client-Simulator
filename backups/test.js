@@ -270,8 +270,55 @@ add_visit_note = { // phr -> endpoint => /get-visit-note
     }
 
 add_visit_note = // lis => endpoint -> /take_lab_order
-MSH|^~\\&|EHR||LIS||20260203120000||ORM^O01|MSG00002|P|2.5
-PID|1||23|||||||||||
-OBR|01|VID-01||2093-3^Total cholesterol|||||||||||
+"MSH|^~\\&|EHR||LIS||20260203120000||ORM^O01|MSG00002|P|2.5"
+"PID|1||23|||||||||||"
+"OBR|01|VID-01||2093-3^Total cholesterol|||||||||||"
 
-console.log(JSON.parse(JSON.stringify(json_data)));
+
+// ---------------------------------------------------------------------------------------------------------------------------------------------
+
+submit_claim ={   // ehr => endpoint => /fhir/submit-claim
+    "resourceType": "Claim",
+        "id": "claim-example-01",
+        "status": "active",
+        "type": {
+            "coding": [
+                {
+                    "display": "Service_LabTest"
+                }   
+            ]
+        },
+        "use": "claim",
+        "patient": {
+            "reference": "Patient/23"
+        },
+        "created": "2026-02-03T12:00:00Z",
+        "provider": {
+            "reference":  "Encounter/123"
+        },
+        "priority": {
+            "coding": [
+                {
+                    "code": "normal"
+                }
+            ]
+        },
+        "insurance": [
+            {
+                "sequence": 1,
+                "focal": true,
+                "coverage": {
+                    "display": "Payer Health Insurance"
+                }
+            }
+        ],
+        "total": {
+            "value": 150.00
+        }
+    }
+
+submit_claim = // Payer => endpoint => /submit-claim
+MSH|^~\\&|EHR||LIS||20260203120000||ADT^A01|MSG00001|P|2.5
+PID|1||123||
+PV1|1||||||||||||||||||1231
+FT1|1|||20260203120000|||Service_LabTest|150.00||||||||||||||||

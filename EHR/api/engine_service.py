@@ -76,3 +76,20 @@ def send_visit_note_to_engine(data: dict):
         # Re-raise so the calling endpoint knows delivery failed
         logger.error(f"Failed to send visit note to engine: {str(exp)}")
         raise
+
+def send_claim_to_engine(data: dict):
+    try:
+        logger.info(f"Sending claim to engine: {data}")
+        response = httpx.post("http://127.0.0.1:9000/fhir/submit-claim", json=data, timeout=7)
+        
+        if response.status_code in (200, 201):
+            logger.info(f"Successfully sent claim to engine: {data['id']}")
+            return "sucessfull"
+        
+    except httpx.RequestError as req_err:
+        logger.error(f"HTTP request error while sending claim to engine: {str(req_err)}")
+        raise Exception(f"HTTP request error: {str(req_err)}") from req_err
+    except Exception as exp:
+        # Re-raise so the calling endpoint knows delivery failed
+        logger.error(f"Failed to send claim to engine: {str(exp)} with response: {response}")
+        raise

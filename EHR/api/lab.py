@@ -132,65 +132,6 @@ def get_lab_results(report_id: int, request: Request, response: Response, db: Se
         logger.error(f"Error fetching lab report details for report ID {report_id}: {str(exp)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
 
-
-@router.get("/lab_test_preview/{name}", status_code=status.HTTP_200_OK)
-def test_loinc(name: str | None = None, db: Session = Depends(get_db)):
-    """
-    Test endpoint to verify LOINC master data retrieval.
-
-    **Response (200 OK):**
-    Returns a list of `LoincMaster` records, each containing:
-    - `loinc_code` (str)
-    - `long_common_name` (str)
-    - `short_name` (str | null)
-    - `component` (str | null)
-    - `system` (str | null)
-    - `display_name` (str | null)
-    - `mobile_name` (str | null)
-
-    **Inputs:**
-    - `name` can be passed either as a path parameter (`/lab_test_preview/{name}`)
-      or query parameter (`/lab_test_preview?name=...`).
-
-    **Notes:**
-    - This endpoint is for testing purposes.
-    - It loads LOINC records from the table and filters matches in memory.
-    - It returns up to 10 matching records.
-    - Query parameter form is safer for names containing `/` or other URL-sensitive characters.
-    """
-    try:
-        logger.info(f"LOINC preview search requested for name: {name}")
-        normalized_name = " ".join((name or "").split())
-        if normalized_name == "":
-            logger.debug("Empty search term provided, returning empty list")
-            return []
-
-        needle = normalized_name.lower()
-        all_records = db.query(model.LoincMaster).all()
-        logger.debug(f"Total LOINC records in database: {len(all_records)}")
-
-        filtered = []
-        for record in all_records:
-            long_common_name = (record.long_common_name or "").lower()
-            short_name = (record.short_name or "").lower()
-            component = (record.component or "").lower()
-            loinc_code = (record.loinc_code or "").lower()
-
-            if (
-                needle in long_common_name
-                or needle in short_name
-                or needle in component
-                or needle in loinc_code
-            ):
-                filtered.append(record)
-
-        results = [r.to_dict() for r in filtered[:10]]
-        logger.info(f"LOINC preview search for '{normalized_name}' returned {len(results)} results")
-        return results
-    except Exception as e:
-        logger.error(f"Error in LOINC preview search for name '{name}': {str(e)}")
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f'{str(e)}')
-
 @router.get("/lab_test_search", response_model=list[schema.LoincMaster], status_code=status.HTTP_200_OK)
 @limiter.limit("80/minute")
 async def test_search(search_name: str, request: Request, response: Response, db: Session = Depends(get_db)):

@@ -103,7 +103,7 @@ async def add_server(server: AddUpdateServer, request: Request, response: Respon
     if server.protocol == "FHIR":
         config = {
             "date_format": "%Y-%m-%d",
-            "date_time_format": "%Y-%m-%dT%H:%M:%S",
+            "date_time_format": "%Y-%m-%dT%H:%M:%SZ",
             "name_style": "split",
             "gender_code": {"male": "male", "female": "female"},
             "status_code": {

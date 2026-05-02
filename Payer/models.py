@@ -57,6 +57,7 @@ class PatientClaim(Base):
     claim_id = Column(Integer, primary_key=True, index=True) 
     policy_id = Column(Integer, ForeignKey("Insurance_Policy.policy_id"), nullable=False) 
     pid = Column(Integer, ForeignKey("Patient.pid"), nullable=False)
+    vid = Column(Integer, nullable=True) # its not for now, but for later, if lab send claim to payer directly.
 
     service_included = Column(Boolean, nullable=False, default=False)
     tests_included = Column(Boolean, nullable=False, default=False)

@@ -15,6 +15,17 @@ class LabReport(BaseModel):
     def serialize_updated_at(self, value: datetime) -> str:
         return datetime.strftime(value, "%Y-%m-%d %H:%M %p")
     
+    @field_serializer("test_status")
+    def serialize_test_status(self, value: str) -> str:
+        if value is None or value is "Ordered":
+            return "Pending"
+        if value is "Arrived":
+            return "Completed"
+        if value in ["Cancelled", "Rejected", "Declined", "Decline", "declined", "decline"]:
+            return "Rejected"
+        
+        return value.capitalize()
+    
     @field_serializer("created_at")
     def serialize_created_at(self, value: datetime) -> str:
         return datetime.strftime(value, "%Y-%m-%d %H:%M %p")

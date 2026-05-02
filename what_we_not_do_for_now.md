@@ -1,1 +1,0 @@
-1. We are not sending the component and the system of the lab test, as it will increase the complexity on both, frontend and backend.

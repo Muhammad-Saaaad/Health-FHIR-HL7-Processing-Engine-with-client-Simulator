@@ -11,7 +11,10 @@ from api import authentication, doctor, engine_service, visit_note, lab
 from database import engine
 import model
 from rate_limiting import limiter, rate_limit_exceeded_handler
+from sqlalchemy.exc import SAWarning
+import warnings
 
+warnings.filterwarnings("ignore", category=SAWarning)
 os.makedirs("logs", exist_ok=True)
 
 # warnings.filterwarnings("ignore", category=SAWarning)

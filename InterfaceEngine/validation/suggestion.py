@@ -133,8 +133,8 @@ def get_suggestion(src_profile: dict, dest_profile: dict, src_field_type: str, d
             return { "transform": "map", "config": config }
         
         # _________________ regex ____________________
-        elif src_field_type in ("id_format", "subject_reference_format", "practitioner_reference_format"):
-            if dest_field_type in ("id_format", "subject_reference_format", "practitioner_reference_format"):
+        elif src_field_type in ("id_format", "subject_reference_format", "practitioner_reference_format", "encounter_reference_format"):
+            if dest_field_type in ("id_format", "subject_reference_format", "practitioner_reference_format", "encounter_reference_format"):
 
                 src_pattern = src_profile.get(src_field_type, {})
                 dest_pattern = dest_profile.get(dest_field_type, {})
@@ -152,8 +152,8 @@ def get_suggestion(src_profile: dict, dest_profile: dict, src_field_type: str, d
     else:
         # here the src_field_type and dest_field_types are different.
         # _________________ regex ____________________
-        if src_field_type in ("id_format", "subject_reference_format", "practitioner_reference_format"):
-            if dest_field_type in ("id_format", "subject_reference_format", "practitioner_reference_format"):
+        if src_field_type in ("id_format", "subject_reference_format", "practitioner_reference_format", "encounter_reference_format"):
+            if dest_field_type in ("id_format", "subject_reference_format", "practitioner_reference_format", "encounter_reference_format"):
 
                 src_pattern = src_profile.get(src_field_type, {})
                 dest_pattern = dest_profile.get(dest_field_type, {})
@@ -217,6 +217,7 @@ def get_field_type(canonical_name: str) -> str:
         "MPI":                                "id_format",
         "VID":                                "id_format",
         "practitioner_id":                    "id_format",
+        "claim_patient_ref":                  "subject_reference_format",
         "coverage_patient_ref":               "subject_reference_format",
         "invoice_patient_ref":                "subject_reference_format",
         "encounter_patient_ref":              "subject_reference_format",
@@ -225,9 +226,12 @@ def get_field_type(canonical_name: str) -> str:
         "practitioner_role_practitioner_ref": "practitioner_reference_format",
         "invoice_participant_ref_id":         "practitioner_reference_format",
 
+        "claim_encounter_ref":                   "encounter_reference_format",
+
         # "":  "encounter_reference_format",
 
         # dates
+        "date":                  "date",
         "birth_date":                  "date",
         "deceased_date":               "date",
         "vaccine_expiry":              "date",
@@ -256,6 +260,7 @@ def get_field_type(canonical_name: str) -> str:
         "plan_expiration_date":        "date",
 
         # datetimes
+        "datetime":                    "datetime",
         "message_datetime":            "datetime",
         "admit_datetime":              "datetime",
         "discharge_datetime":          "datetime",

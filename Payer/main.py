@@ -9,7 +9,10 @@ from database import engine
 import models
 from api import auth, claims, engine_service, patient, policy
 from rate_limiting import limiter, rate_limit_exceeded_handler
+from sqlalchemy.exc import SAWarning
+import warnings
 
+warnings.filterwarnings("ignore", category=SAWarning)
 os.makedirs(r"logs", exist_ok=True)
 
 app = FastAPI(title="Hospital Insurance System")

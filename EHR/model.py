@@ -38,13 +38,14 @@ class Patient(Base):
 
     visiting_notes = relationship("VisitingNotes", back_populates="patient")
 
-class Bill(Base):
+class Bill(Base): # Total Bill
     __tablename__ = 'bill'
 
     bill_id = Column(Integer, primary_key=True, index=True)
 
-    insurance_amount = Column(Float, nullable=False) # service amount, lab amount(1000+2000 = 3000))
-    bill_status = Column(Boolean, default=False) # true or false
+    consultation_amount = Column(Float, nullable=False, server_default='0.0') # service amount, lab amount(1000+2000 = 3000))
+    lab_charges = Column(Float, nullable=True, server_default='0.0')
+    bill_status = Column(String(10), default="Unpaid") # "Paid" or "Unpaid" or "In Process"
     bill_date = Column(DateTime, default=datetime.now())
 
     visiting_notes = relationship("VisitingNotes", back_populates="bill")
@@ -63,7 +64,6 @@ class VisitingNotes(Base):
     patient_complaint = Column(String(255), nullable=True)
     dignosis = Column(String(255), nullable=True)
     note_details = Column(String(1000), nullable=True)
-    lab_charges = Column(Float, nullable=True)
 
     doctor = relationship("Doctor", back_populates="visiting_notes")
     patient = relationship("Patient", back_populates="visiting_notes")

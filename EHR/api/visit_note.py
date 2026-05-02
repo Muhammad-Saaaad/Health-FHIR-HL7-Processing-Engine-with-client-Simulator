@@ -76,8 +76,8 @@ def add_visit_note(visit_note: schema.VisitNote ,request: Request, response: Res
     try:
         logger.info(f"Received request to add visit note for patient MPI: {visit_note.mpi} by doctor ID: {visit_note.doctor_id}")
         new_bill = model.Bill(
-            insurance_amount = visit_note.bill_amount,
-            bill_status = False,
+            consultation_amount = visit_note.bill_amount,
+            bill_status = "Unpaid",
         )
 
         db.add(new_bill)
@@ -358,8 +358,9 @@ def visit_note(note_id: int, request: Request, response: Response, db: Session =
             logger.exception(f"Visit note with ID {note_id} not found")
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Note id not found")
         
-        total_bill = note.bill.insurance_amount if note.bill else 0
-        total_bill += note.lab_charges if note.lab_charges else 0
+        total_bill = note.bill.consultation_amount if note.bill else 0
+        if note.bill and note.bill.lab_charges:
+            total_bill += note.bill.lab_charges
 
         output_data = schema.ViewNote(
             note_id = note.note_id,
@@ -367,9 +368,9 @@ def visit_note(note_id: int, request: Request, response: Response, db: Session =
             doctor_id = note.doctor_id,
             bill_id = note.bill_id,
 
-            consultation_bill = note.bill.insurance_amount if note.bill else None,
-            bill_status = "paid" if note.bill and note.bill.bill_status else "unpaid",
-            lab_bill=note.lab_charges if note.lab_charges else 0,
+            consultation_bill = note.bill.consultation_amount if note.bill else 0,
+            bill_status =  str(note.bill.bill_status).capitalize() if note.bill else "Unpaid",
+            lab_bill= note.bill.lab_charges if note.bill else 0,
             total_bill=total_bill,
 
             note_title = note.note_title,

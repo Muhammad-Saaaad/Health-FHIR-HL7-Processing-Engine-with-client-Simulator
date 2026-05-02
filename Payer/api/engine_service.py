@@ -153,7 +153,7 @@ async def get_registed_patient(req: Request, db: Session = Depends(get_db)):
                 }
             )
             if response.status_code == 201:
-                logger.info(f"Successfully registered new patient via /reg_patient endpoint for HL7 data: {data}")
+                logger.info(f"Successfully registered new patient via /reg_patient endpoint for HL7.")
                 return JSONResponse(
                     content={"message": "Patient not found, but registration endpoint was called to create a new patient."},
                     status_code=status.HTTP_200_OK
@@ -164,6 +164,74 @@ async def get_registed_patient(req: Request, db: Session = Depends(get_db)):
                     content={"message": "Patient not found, and registration endpoint failed to create a new patient. error: " + response.text},
                     status_code=status.HTTP_404_NOT_FOUND
                 )
+
+@router.post("/submit-claim")
+async def submit_claim_from_engine(req: Request, db: Session = Depends(get_db)):
+    """
+    Internal engine endpoint to receive a claim submission from the InterfaceEngine.
+
+    This is called by the InterfaceEngine when it delivers a claim submission (FHIR Claim resource)
+    to the Payer system. The endpoint should process the claim and return a 200 OK if successful.
+    """
+    try:
+        raw = await req.body()
+        data = raw.decode("utf-8", errors="replace")
+        logger.info(f"Received HL7 message for patient registration: {data}")
+
+        # Parse all segments
+        all_values = {}
+        for segment in data.splitlines()[1:]:
+            if not segment.strip():
+                logger.warning(f"Skipping empty HL7 segment in message: {data}")
+                continue
+            _, paths = hl7_extract_paths(segment=segment)
+            segment_values = get_hl7_value_by_path(data, paths)
+            all_values.update(segment_values)
+
+        logger.info(f"Extracted values from HL7 message: {all_values}")
+
+        mpi = all_values.get('PID-3')
+        vid = all_values.get('PV1-19') or all_values.get('PV1-20')
+        if not mpi or not vid:
+            logger.error(f"Missing required MPI or VID in claim submission from engine: {data}")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing required MPI or VID in claim submission")
+        
+        is_patient = db.query(models.Patient).filter(models.Patient.mpi == int(mpi.strip())).first()
+
+        if not is_patient:
+            logger.error(f"No patient found with MPI {mpi.strip()} for claim submission from engine: {data}")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No patient found with MPI {mpi.strip()} for claim submission")
+
+        policy = db.query(models.InsurancePolicy).filter(models.InsurancePolicy.pid == is_patient.pid).first()
+        if not policy:
+            logger.error(f"No insurance policy found for patient with MPI {mpi.strip()} for claim submission from engine: {data}")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No insurance policy found for patient with MPI {mpi.strip()} for claim submission")
+
+        dt = datetime.strptime(all_values.get('FT1-4'), "%Y%m%d%H%M%S")
+        date_time = dt.strftime("%Y-%m-%d %H:%M:%S")
+
+        service_included = True
+        tests_included = False
+        if all_values.get('FT1-7', "") == "Service_LabTest":
+            tests_included = True
+        total_fee = float(all_values.get('FT1-8', 0))
+
+        new_claim = models.PatientClaim(
+            policy_id = policy.policy_id,
+            pid = is_patient.pid,
+            vid = int(vid.strip()),
+            service_included = service_included,
+            tests_included = tests_included,
+            bill_amount = total_fee,
+            created_at = date_time
+        )
+        db.add(new_claim)
+        db.commit()
+        logger.info(f"Successfully added claim to db for patient with MPI {mpi.strip()} from claim submission from engine: {data}")
+        return JSONResponse(content={"message": "Claim received successfully"}, status_code=status.HTTP_200_OK)
+    except Exception as exp:
+        logger.error(f"Error processing claim submission from engine: {str(exp)}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
 
 def hl7_extract_paths(segment):
     """

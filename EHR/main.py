@@ -4,8 +4,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi.errors import RateLimitExceeded
-# from sqlalchemy.exc import SAWarning
-# import warnings
+from sqlalchemy.exc import SAWarning
+import warnings
  
 from database import engine
 import model
@@ -14,11 +14,12 @@ from api import (
     lab, 
     patient, 
     visit_note,
+    claim
     # engine_service
 )
 from rate_limiting import limiter, rate_limit_exceeded_handler
 
-# warnings.filterwarnings("ignore", category=SAWarning)
+warnings.filterwarnings("ignore", category=SAWarning)
 os.makedirs(r"logs", exist_ok=True)
 
 app = FastAPI(title="EHR System")
@@ -39,6 +40,7 @@ app.include_router(authentication.router)
 app.include_router(lab.router)
 app.include_router(patient.router)
 app.include_router(visit_note.router)
+app.include_router(claim.router)
 # app.include_router(engine_service.router)
 
 @app.get("/health")

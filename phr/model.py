@@ -49,7 +49,7 @@ class VisitingNotes(Base):
     diagnosis = Column(String(255), nullable=True)
     note_details = Column(Text, nullable=True)
     consultation_bill = Column(Float, default=0, nullable=True)
-    payment_status = Column(String(20), default="unpaid", nullable=True)
+    payment_status = Column(String(20), default="Unpaid", nullable=True)
 
     doctor = relationship("Doctor", back_populates="visiting_notes")
     patient = relationship("Patient", back_populates="visiting_notes")

@@ -9,7 +9,10 @@ from database import engine
 import model
 from api import auth, patient ,lab, engine_service, results
 from rate_limiting import limiter, rate_limit_exceeded_handler
+from sqlalchemy.exc import SAWarning
+import warnings
 
+warnings.filterwarnings("ignore", category=SAWarning)
 os.makedirs("logs", exist_ok=True)
 
 app = FastAPI(title="Laboratory Information System (LIS)")

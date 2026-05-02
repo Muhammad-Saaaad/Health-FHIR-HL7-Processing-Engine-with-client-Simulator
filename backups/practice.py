@@ -103,6 +103,13 @@ from datetime import datetime
 # formated_date = date_formate_to_chnage.strftime("%B %d, %Y")
 # print(formated_date)
 
-t1 = (4, 20)
-t2 = (4, 30)
-print(t1 < t2)
+# t1 = (4, 20)
+# t2 = (4, 30)
+# print(t1 < t2)
+
+dt_str = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+print(dt_str)  # 2026-05-02T10:30:00Z
+
+# Convert to second format
+dt_converted = datetime.strptime(dt_str, "%Y-%m-%dT%H:%M:%SZ").strftime("%Y%m%d%H%M%S")
+print(dt_converted)  # 20260502103000

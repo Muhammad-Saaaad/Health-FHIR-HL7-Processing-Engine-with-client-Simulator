@@ -393,6 +393,46 @@ if __name__ == "__main__":
         ]
     }
 
+    test = { 
+    "resourceType": "Claim",
+        "id": "claim-example-01",
+        "status": "active",
+        "type": {
+            "coding": [
+                {
+                    "display": "Service_LabTest"
+                }   
+            ]
+        },
+        "use": "claim",
+        "patient": {
+            "reference": "Patient/23"
+        },
+        "created": "2026-02-03T12:00:00Z",
+        "provider": {
+            "reference":  "Encounter/123"
+        },
+        "priority": {
+            "coding": [
+                {
+                    "code": "normal"
+                }
+            ]
+        },
+        "insurance": [
+            {
+                "sequence": 1,
+                "focal": True,
+                "coverage": {
+                    "display": "Payer Health Insurance"
+                }
+            }
+        ],
+        "total": {
+            "value": 150.00,
+        }
+    }
+
     # ---------------- build_fhir_message test sample ----------------
     # Flat route output -> rebuilt FHIR Bundle with repeated Patient resources
     sample_output_data = {
@@ -440,7 +480,7 @@ if __name__ == "__main__":
     # print("\n--- build_fhir_message sample output ---")
     # print(json.dumps(rebuilt, indent=2))
 
-    is_valid, message = validate_unknown_fhir_resource(patient_visit)
+    is_valid, message = validate_unknown_fhir_resource(test)
     print(is_valid, " --> \n" ,message)
 
     # import uuid
