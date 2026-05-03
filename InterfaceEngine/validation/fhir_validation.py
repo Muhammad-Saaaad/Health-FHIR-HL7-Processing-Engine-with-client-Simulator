@@ -1,5 +1,6 @@
 import json
 import re
+from uuid import uuid4
 
 from fhir.resources.R4B import get_fhir_model_class
 from pydantic import ValidationError
@@ -154,7 +155,7 @@ def _set_nested(obj: dict, keys: list, value) -> None:
         _set_nested(obj[key], keys[1:], value)
 
 
-def build_fhir_message(output_data: dict[str, str],
+async def build_fhir_message(output_data: dict[str, str],
                        dest_path_to_resource: dict[str, str]) -> dict:
     """
     Reconstruct a proper FHIR JSON object (or Bundle) from a flat
@@ -177,9 +178,9 @@ def build_fhir_message(output_data: dict[str, str],
     # Key shape: ("Patient", 1), ("Patient", 2), ("Coverage", 1), ...
     resources: dict[tuple[str, int], dict] = {}
     resource_order: list[tuple[str, int]] = []
-    print("output_data --> ", output_data)
 
     for path, value in output_data.items():
+
         if "-" in path:
             prefix, suffix = path.split("-", 1)
         else:
@@ -215,6 +216,7 @@ def build_fhir_message(output_data: dict[str, str],
     # Multiple resources — wrap in a Bundle
     return {
         "resourceType": "Bundle",
+        "id": str(uuid4()), 
         "type": "message",
         "entry": [
             {
@@ -224,17 +226,6 @@ def build_fhir_message(output_data: dict[str, str],
             for res in [resources[key]]
         ],
     }
-
-# async def build_fhir_json(output_data, dest_path_to_resource):
-#     resources = {}
-
-#     for path, value in output_data.items():
-#         resource = dest_path_to_resource[path]
-
-#         resources.setdefault(resource, {})
-#         resources[resource][path] = value
-    
-#     return resources
 
 if __name__ == "__main__":
     # Usage Example:
@@ -393,7 +384,7 @@ if __name__ == "__main__":
         ]
     }
 
-    test = { 
+    Submit_claim = { 
     "resourceType": "Claim",
         "id": "claim-example-01",
         "status": "active",
@@ -433,6 +424,24 @@ if __name__ == "__main__":
         }
     }
 
+    response_claim = {
+        "resourceType": "ClaimResponse",
+        "id": "res-123", 
+        "status": "active",
+        "type": { "coding": [{"code": "professional"}] },
+        "use": "claim",
+        "patient": {
+            "reference": "patient/1232" 
+        },
+        "request": {
+            "reference": "Encounter/123"
+        },
+        "created": "2026-05-02T13:23:15Z", 
+        "insurer": {
+            "display": "Jubilee Insurance"
+        },
+        "outcome": "complete"
+    }
     # ---------------- build_fhir_message test sample ----------------
     # Flat route output -> rebuilt FHIR Bundle with repeated Patient resources
     sample_output_data = {
@@ -462,10 +471,13 @@ if __name__ == "__main__":
         "Patient-identifier[0].value": "Patient",
         "Patient-name[0].text": "Patient",
         "Patient-gender": "Patient",
+        "Patient-phone": "Patient",
         "Patient-id": "Patient",
         "Patient-identifier[0].value": "Patient",
         "Patient-name[0].text": "Patient",
         "Patient-gender": "Patient",
+        "ServiceRequest-id": "ServiceRequest",
+        "ServiceRequest-name": "request_name",
         "Coverage-id": "Coverage",
         "Coverage-identifier[0].value": "Coverage",
         "Coverage-status": "Coverage",
@@ -475,12 +487,14 @@ if __name__ == "__main__":
         "Coverage-status": "Coverage",
         "Coverage-beneficiary.reference": "Coverage",
     }
+    import asyncio 
 
-    # rebuilt = build_fhir_message(sample_output_data, sample_dest_path_to_resource)
-    # print("\n--- build_fhir_message sample output ---")
-    # print(json.dumps(rebuilt, indent=2))
+    rebuilt = asyncio.run(build_fhir_message(sample_output_data, sample_dest_path_to_resource))
 
-    is_valid, message = validate_unknown_fhir_resource(test)
+    print("\n--- build_fhir_message sample output ---")
+    print(json.dumps(rebuilt, indent=2))
+
+    is_valid, message = validate_unknown_fhir_resource(response_claim)
     print(is_valid, " --> \n" ,message)
 
     # import uuid

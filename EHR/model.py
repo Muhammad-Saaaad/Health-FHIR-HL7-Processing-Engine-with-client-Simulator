@@ -45,7 +45,7 @@ class Bill(Base): # Total Bill
 
     consultation_amount = Column(Float, nullable=False, server_default='0.0') # service amount, lab amount(1000+2000 = 3000))
     lab_charges = Column(Float, nullable=True, server_default='0.0')
-    bill_status = Column(String(10), default="Unpaid") # "Paid" or "Unpaid" or "In Process"
+    bill_status = Column(String(10), default="Unpaid") # "Paid" or "Unpaid" or "In Process" or "Denied"
     bill_date = Column(DateTime, default=datetime.now())
 
     visiting_notes = relationship("VisitingNotes", back_populates="bill")

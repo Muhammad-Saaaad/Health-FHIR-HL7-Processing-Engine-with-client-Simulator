@@ -107,9 +107,19 @@ from datetime import datetime
 # t2 = (4, 30)
 # print(t1 < t2)
 
-dt_str = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
-print(dt_str)  # 2026-05-02T10:30:00Z
+# dt_str = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+# print(dt_str)  # 2026-05-02T10:30:00Z
 
-# Convert to second format
-dt_converted = datetime.strptime(dt_str, "%Y-%m-%dT%H:%M:%SZ").strftime("%Y%m%d%H%M%S")
-print(dt_converted)  # 20260502103000
+# # Convert to second format
+# dt_converted = datetime.strptime(dt_str, "%Y-%m-%dT%H:%M:%SZ").strftime("%Y%m%d%H%M%S")
+# print(dt_converted)  # 20260502103000
+
+import json
+
+data = {
+    "id": "123",
+    "name": "John Doe"
+}
+
+json_str = json.dumps(data)
+print(json_str)  # {"id": "123", "name": "John Doe"}

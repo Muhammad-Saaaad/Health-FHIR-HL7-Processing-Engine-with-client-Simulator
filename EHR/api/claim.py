@@ -7,7 +7,7 @@ from fastapi import APIRouter, status, Depends, HTTPException, Request, Response
 from sqlalchemy.orm import Session
 # from sqlalchemy.ext.asyncio import AsyncSession
 
-from .engine_service import send_claim_to_engine
+from .engine_service import send_to_engine
 from database import get_db
 import model
 from rate_limiting import limiter
@@ -91,7 +91,7 @@ async def submit_claim(claim_data: schema.ClaimSubmission, request: Request, res
                 "value": claim_data.total_fee
             }
         }
-        response = send_claim_to_engine(fhir_msg)
+        response = await send_to_engine(fhir_msg, url="http://127.0.0.1:9000/fhir/submit-claim")
         if response == "sucessfull":
             logger.info(f"Successfully submitted claim for MPI {claim_data.mpi} and VID {claim_data.vid}")
             bill.bill_status = "In Process"

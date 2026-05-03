@@ -7,6 +7,9 @@ from schemas import auth_schema as schema
 from rate_limiting import limiter
 
 router = APIRouter(tags=["Authentication"])
+from .logging_config import get_logger
+
+logger = get_logger('Payer.api.auth', logfile=r'logs\payer_api.log')
 
 @router.post("/signup", response_model=schema.SystemUserDisplay, status_code=status.HTTP_201_CREATED)
 @limiter.limit("10/minute")  # Limit to 10 requests per minute per IP
@@ -29,8 +32,10 @@ def signup_user(data: schema.SystemUserCreate, request: Request, response: Respo
     - 400 Bad Request: Email already registered
     - 422 Unprocessable Entity: Invalid email format or missing required fields
     """
+    logger.info(f"signup attempt: email={data.email} user_name={data.user_name}")
     existing_user = db.query(models.SystemUser).filter(models.SystemUser.email == data.email).first()
     if existing_user:
+        logger.warning(f"signup failed - email already registered: {data.email}")
         raise HTTPException(status_code=400, detail="Email already registered")
 
 
@@ -42,6 +47,7 @@ def signup_user(data: schema.SystemUserCreate, request: Request, response: Respo
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
+    logger.info(f"signup successful: user_id={new_user.user_id} email={new_user.email}")
     return new_user
 
 @router.post("/login", status_code=status.HTTP_200_OK)
@@ -65,13 +71,17 @@ def login_user(data: schema.LoginRequest,request: Request, response: Response,  
     - 404 Not Found: Invalid Password - Password does not match the registered email
     - 422 Unprocessable Entity: Invalid email format or missing fields
     """
+    logger.info(f"login attempt: email={data.email}")
     user = db.query(models.SystemUser).filter(models.SystemUser.email == data.email).first()
     if not user:
+        logger.warning(f"login failed - invalid email: {data.email}")
         raise HTTPException(status_code=404, detail="Invalid Email")
     
     if user.password != data.password:
+        logger.warning(f"login failed - invalid password for email: {data.email}")
         raise HTTPException(status_code=404, detail="Invalid Password")
 
+    logger.info(f"login successful: user_id={user.user_id} email={data.email}")
     return {
         "message": "Login Successful",
         "user_id": user.user_id,

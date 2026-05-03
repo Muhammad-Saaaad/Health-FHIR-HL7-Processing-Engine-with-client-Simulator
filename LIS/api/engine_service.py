@@ -126,11 +126,14 @@ async def take_lab_order(req: Request, db: Session = Depends(get_db)):
             if db.get(model.Patient, mpi) is None: # if the mpi does not exists in the database.
                 mpi_not_found = True
                 break
-
+            
+            test_name = path_to_values.get("OBR-4.2", None)
+            if not test_name:
+                continue
             lab_orders.append(model.LabTestRequest(
                 mpi = mpi,
                 vid = path_to_values.get("OBR-2"),
-                test_name= path_to_values.get("OBR-4.2", "Unknown Test"), # OBR-4.2 is the component of OBR-4 which contains the test name, if not found then set it as unknown test.
+                test_name= test_name # OBR-4.2 is the component of OBR-4 which contains the test name, if not found then set it as unknown test.
             ))
         
         if not mpi:

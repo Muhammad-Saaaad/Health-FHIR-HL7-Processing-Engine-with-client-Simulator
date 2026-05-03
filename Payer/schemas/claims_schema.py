@@ -38,7 +38,7 @@ class PatientClaimDisplay(BaseModel):
     # AliasPath take the objects from a specific path define when the object is in a relationship
 
     patient_name: str = Field(validation_alias=AliasPath("patient", "name"))
-    patient_phone_no: str = Field(validation_alias=AliasPath("patient", "phone_no"))
+    patient_phone_no: str | None = Field(validation_alias=AliasPath("patient", "phone_no"))
     gender: str = Field(validation_alias=AliasPath("patient", "gender"))
 
     bill_amount : float

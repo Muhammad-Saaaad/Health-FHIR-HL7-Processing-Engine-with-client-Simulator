@@ -20,7 +20,7 @@ from api import route, endpoint, server
 from database import engine, session_local
 import models
 from rate_limiting import limiter, rate_limit_exceeded_handler
-from validation.transformation import fill_duplicate_missing_values, regex_replace_with_template, increment_segment
+from validation.transformation import fill_duplicate_missing_values, regex_replace_with_template, increment_segment, set_null_if_not_available
 from validation.fhir_validation import validate_unknown_fhir_resource, get_fhir_value_by_path, fhir_extract_paths
 from validation.fhir_validation import build_fhir_message
 from validation.hl7_validation import get_hl7_value_by_path, hl7_extract_paths
@@ -276,7 +276,7 @@ async def route_worker(route):
 
                         for _ in range(simple_path_counts[src_path]): # if there is multiple same src paths then we have to do the transformation for that many times, and also have to take care of the counter in the segment name.
 
-                            src_path = increment_segment(segment_path=src_path, list_data=normal_src_paths_counter) # here PID-5.1 will become PID[1]-5.1, useful when multiple same segments.
+                            src_path = await increment_segment(segment_path=src_path, list_data=normal_src_paths_counter) # here PID-5.1 will become PID[1]-5.1, useful when multiple same segments.
                             normal_src_paths_counter.append(src_path) # just to keep the count of the src paths that we have, and to increment the segment if there is multiple same segments.
 
                             if src_path not in src_path_to_value:
@@ -308,7 +308,7 @@ async def route_worker(route):
                                 continue
                                 
                             dest_path = dest_id_to_path[rule.dest_field_id]
-                            dest_path = increment_segment(output_data=output_data, segment_path=dest_path) # here PID-5.1 will become PID[1]-5.1
+                            dest_path = await increment_segment(output_data=output_data, segment_path=dest_path) # here PID-5.1 will become PID[1]-5.1
                             output_data[dest_path] = value
                             logger_mapping.info(f"src_path: {src_path}, dest_path: {dest_path} value: {value}")
 
@@ -328,7 +328,7 @@ async def route_worker(route):
                         src_path = src_id_to_path[concat_rule.src_field_id]
                         for i in range(simple_path_counts[src_path]): # if there is multiple same src paths then we have to do the transformation for that many times, and also have to take care of the counter in the segment name.
                             
-                            current_src_path = increment_segment(segment_path=src_path, list_data=concat_src_paths_counter)
+                            current_src_path = await increment_segment(segment_path=src_path, list_data=concat_src_paths_counter)
                             concat_src_paths_counter.append(current_src_path)
 
                             if current_src_path in src_path_to_value:
@@ -345,7 +345,7 @@ async def route_worker(route):
                         concated_value = delimiter.join(multiple_src_paths_to_concat[idx])
 
                         dest_path = dest_id_to_path[dest_id]
-                        dest_path = increment_segment(output_data=output_data, segment_path=dest_path)
+                        dest_path = await increment_segment(output_data=output_data, segment_path=dest_path)
                         output_data[dest_path] = concated_value
                         logger.info(f"Concated value for dest_path {dest_path} is {concated_value}")
                 
@@ -355,7 +355,7 @@ async def route_worker(route):
 
                     for _ in range(simple_path_counts[src_id_to_path[src_id]]): # if there is multiple same src paths then we have to do the transformation for that many times, and also have to take care of the counter in the segment name.
                         src_path = src_id_to_path[src_id]
-                        src_path = increment_segment(segment_path=src_path, list_data=split_src_paths_counter)
+                        src_path = await increment_segment(segment_path=src_path, list_data=split_src_paths_counter)
                         split_src_paths_counter.append(src_path)
                         
                         if src_path not in src_path_to_value:
@@ -371,7 +371,7 @@ async def route_worker(route):
                             if i < len(parts):
 
                                 dest_path = dest_id_to_path[split_rule.dest_field_id]
-                                dest_path = increment_segment(output_data=output_data, segment_path=dest_path)
+                                dest_path = await increment_segment(output_data=output_data, segment_path=dest_path)
                                 output_data[dest_path] = parts[i]
                                 last_dest_path = dest_path
                         
@@ -382,7 +382,6 @@ async def route_worker(route):
                             logger.warning(f"while Splitting, last_dest_path is None: {last_dest_path}, means no split data is mapped to any destination")
 
                 output_data = fill_duplicate_missing_values(output_data)
-                logger.info(f"Output for route -> {route.name}: {output_data}")
             except Exception as exp:
                 logger.exception(f"{exp} -> This came when processing data for route -> '{route.name}'")
                 if not result_future.done():
@@ -391,13 +390,16 @@ async def route_worker(route):
 
             try:
                 # BUILD MESSAGE
+                output_data = await set_null_if_not_available(output_data, dest_path_to_resource) # set the data to null if data if not available.
+                logger.info(f"Output for route -> {route.name}: {output_data}")
+
                 if dest_server.protocol == "FHIR":
                     logger_mapping.info(f"Building FHIR message for route -> {route.name} with output_data: {output_data} and dest_path_to_resource: {dest_path_to_resource}")
-                    msg = build_fhir_message(output_data, dest_path_to_resource) # make a fhir message with the data
+                    msg = await build_fhir_message(output_data, dest_path_to_resource) # make a fhir message with the data
 
                 else:
                     logger_mapping.info(f"Building HL7 message for route -> {route.name} with output_data: {output_data}")
-                    msg = build_hl7_message(output_data=output_data, src=src_server.name,
+                    msg = await build_hl7_message(output_data=output_data, src=src_server.name,
                                                    dest=dest_server.name, msg_type=route.msg_type)
                 logger.info(f"Built message for route -> {route.name}:\n {msg}")
 
@@ -407,7 +409,7 @@ async def route_worker(route):
                 #     if dest_server.status == "Inactive": 
                         
                 async with httpx.AsyncClient() as client:
-                    if dest_server.protocol == "FHIR":                            
+                    if dest_server.protocol == "FHIR":    
                         response = await client.post(url=dest_endpoint_url, json=msg)
                     else:
                         # HL7 is plain text — do NOT json= encode it or it arrives as a
@@ -487,12 +489,10 @@ async def ingest(full_path: str, req: Request):
                 logger.exception(f"trace={trace_id} FHIR validation failed: {message}")
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(message))
         else:
-            # Try JSON first (EHR may wrap the HL7 string in JSON).
-            # Fall back to raw bytes if the body is already plain text.
+            # Try JSON first (EHR may wrap the HL7 string in JSON). If that fails, fall back to raw text.
             try:
                 payload = await req.json()
                 if not isinstance(payload, str):
-                    # Unexpected — treat whatever we got as a string
                     payload = str(payload)
             except Exception:
                 logger.info("trace=%s ingest_hl7_json_parse_failed_falling_back_to_text", trace_id)
@@ -501,15 +501,13 @@ async def ingest(full_path: str, req: Request):
             logger.info("trace=%s ingest_payload_preview=%s", trace_id, _payload_preview(payload))
         
         # Extract paths based on the protocol, mirroring how add_fhir/hl7_endpoint_fields
-        # parses paths during endpoint 
+        simple_paths = [] # contains paths without the counter in the segment name.
+        paths = []
         if server.protocol == "FHIR":
             resource_type = payload.get("resourceType", "Unknown")
             bundle_path_to_resource = {}
-            paths = []
-            simple_paths = [] # contains paths without the counter in the segment name.
             if resource_type == "Bundle":
                 # Bundle: extract paths per entry resource, prefixed with each resource type.
-                # e.g. "Patient-birthDate", "Coverage-identifier[0].value"
                 for entry in payload.get("entry", []):
                     resource = entry.get("resource", {})
                     res_type = resource.get("resourceType", "Unknown")
@@ -519,14 +517,14 @@ async def ingest(full_path: str, req: Request):
                         full_path = f"{res_type}-{p}"
                         simple_paths.append(full_path) # useful for checking how many times this paht is comming to create that many resources.
 
-                        full_path = increment_segment(segment_path=full_path, list_data=paths) # here if there is multiple same segments then it will increment the segment with [1], [2] etc.., useful when there is multiple same segments in the message.
+                        full_path = await increment_segment(segment_path=full_path, list_data=paths) # here if there is multiple same segments then it will increment the segment with [1], [2] etc.., useful when there is multiple same segments in the message.
                         paths.append(full_path)
                         bundle_path_to_resource[full_path] = resource
             else:
                 # Single resource: prefix with that resource's type.
                 raw_paths = fhir_extract_paths(payload)
                 simple_paths = [f"{resource_type}-{p}" for p in raw_paths]
-                paths = [f"{increment_segment(segment_path=f'{resource_type}-{p}', list_data=paths)}" for p in raw_paths]
+                paths = [f"{await increment_segment(segment_path=f'{resource_type}-{p}', list_data=paths)}" for p in raw_paths]
         else:
             # HL7: iterate each non-MSH segment and collect paths, just like
             # add_hl7_endpoint_fields does during endpoint registration.
@@ -536,14 +534,14 @@ async def ingest(full_path: str, req: Request):
                 _, seg_paths = hl7_extract_paths(segment)
                 simple_paths.extend(seg_paths)
                 for p in seg_paths:
-                    p = increment_segment(segment_path=p, list_data=paths) # here if there is multiple same segments then it will increment the segment with [1], [2] etc.., useful when there is multiple same segments in the message.
+                    p = await increment_segment(segment_path=p, list_data=paths) # here if there is multiple same segments then it will increment the segment with [1], [2] etc.., useful when there is multiple same segments in the message.
                     paths.append(p)
 
         # Data Validation --> here you can do any kind of step if data is not available
         # you can also return the msg back, if data is not valid. but right know we will just ignore it.
         logger.info("trace=%s extracted_paths=%s", trace_id, paths)
         for field in endpoint_fields:
-            if increment_segment(segment_path=field.path, list_data=[]) not in paths:
+            if await increment_segment(segment_path=field.path, list_data=[]) not in paths:
                 logger.warning("trace=%s missing_path=%s", trace_id, field.path)
         
         # Extract value based on the path

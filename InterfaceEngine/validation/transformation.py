@@ -44,7 +44,7 @@ def regex_replace_with_template(value: str, pattern_from: str, pattern_to: str) 
 
 # --------------------------------------------------------------------------------------------------
 
-def get_segment_name_and_counter(segment: str) -> tuple[str, int, str]:
+async def get_segment_name_and_counter(segment: str) -> tuple[str, int, str]:
         segment_name = segment.split("-", 1)[0] # PID[1]-5.1 -> PID[1]
         segment_core_path = segment.split("-", 1)[1] # PID-5.1 -> 5.1
         # PID[1] -> PID, 1 or Patient[1] -> Patient, 1
@@ -52,23 +52,67 @@ def get_segment_name_and_counter(segment: str) -> tuple[str, int, str]:
         segment_name, counter = (segment_name, 0) if "[" not in segment_name else (segment_name.split("[")[0], int(re.search(r"\[(\d+)\]", segment_name).group(1)))
         return segment_name, counter, segment_core_path
 
-def increment_segment(output_data: dict | None=None, segment_path: str="", list_data: list | None = None) -> str:
+async def increment_segment(output_data: dict | None=None, segment_path: str="", list_data: list | None = None) -> str:
     """
     this can work with both fhir and hl7 and data can be in list or dictionary.
     """
     if output_data is None and list_data is None:
         raise ValueError("Either output_data or list_data must be provided.")
 
-    input_segment_name, input_segment_counter, input_segment_core_path = get_segment_name_and_counter(segment_path)
+    input_segment_name, input_segment_counter, input_segment_core_path = await get_segment_name_and_counter(segment_path)
 
     for key in output_data.keys() if list_data is None else list_data: # the key also contain the path.
-        output_segment_name, output_segment_counter, output_segment_core_path = get_segment_name_and_counter(key)
+        output_segment_name, output_segment_counter, output_segment_core_path = await get_segment_name_and_counter(key)
 
         if (output_segment_name == input_segment_name) and (output_segment_core_path == input_segment_core_path):
            input_segment_counter = max(output_segment_counter , input_segment_counter)
     
     final_path = input_segment_name + f"[{input_segment_counter + 1}]" + "-" + input_segment_core_path
     return final_path
+
+async def set_null_if_not_available(output_data: dict, dest_path_to_resource: dict):
+
+    output_segment_names = list() # we use this to remove any segment, that is totally not available in the output data.
+
+    for output_path in output_data.keys():
+        segment_name, counter, segment_core_path = await get_segment_name_and_counter(output_path)
+        output_segment_names.append(segment_name)
+
+    for dest_path in dest_path_to_resource.keys():
+
+        segment_name, counter, segment_core_path = await get_segment_name_and_counter(dest_path)
+        if segment_name not in output_segment_names:
+            continue
+        
+        path = segment_name + f"[{counter + 1}]" + "-" + segment_core_path
+        if path not in output_data:
+            output_data[path] = None
+    
+    segment_count = dict()
+    for output_path, output_value in output_data.items():
+        segment_name, counter, segment_core_path = await get_segment_name_and_counter(output_path)
+
+        if segment_name not in segment_count:
+            segment_count[segment_name] = counter
+        else:
+            segment_count[segment_name] = max(segment_count[segment_name], counter)
+
+    print("segment_count --> ", segment_count)
+    print("output_data before filling missing values --> ", output_data)
+
+    null_paths_to_value = dict()
+    for output_path, output_value in output_data.items():
+        if output_value == None:
+            segment_name, counter, segment_core_path = await get_segment_name_and_counter(output_path)
+            
+            total_count = segment_count.get(segment_name, 1)
+            for i in range(1, total_count + 1):
+                null_paths_to_value[segment_name + f"[{i}]" + "-" + segment_core_path] = None
+    
+    output_data.update(null_paths_to_value)
+    return output_data
+
+
 
 # def increment_segment(segment : str) -> str:
 #     """

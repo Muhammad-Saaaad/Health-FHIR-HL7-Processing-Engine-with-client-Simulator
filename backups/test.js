@@ -71,18 +71,6 @@ add_patient ={ // phr -> endpoint => /add/patient
     }]
 }
 
-
-add_patient = // LIS -> endpoint => /get/new-patient
-MSH|^~\\&|EHR||LIS||20260203120000||ADT^A01|MSG00001|P|2.5
-PID|1||23||saad^Muhammad||20041006|M|||||+92-315-3726612
-
-add_patient = // Payer -> endpoint => /get/registed_patient
-MSH|^~\\&|EHR||payer||20260203120000||ADT^A01|MSG00001|P|2.5
-PID|1||23||saad^Muhammad||20041006|M|||||
-IN1|||||||||||||||Silver|||||||||||||||||||||9||||||||||||||||
-
-// -----------------------------------------------------------------------------------------------------------------------------------------
-
 add_visit_note = { // ehr -> endpoint => /fhir/add-visit-note
         "resourceType": "Bundle",
         "type": "message",
@@ -269,14 +257,6 @@ add_visit_note = { // phr -> endpoint => /get-visit-note
         ]
     }
 
-add_visit_note = // lis => endpoint -> /take_lab_order
-"MSH|^~\\&|EHR||LIS||20260203120000||ORM^O01|MSG00002|P|2.5"
-"PID|1||23|||||||||||"
-"OBR|01|VID-01||2093-3^Total cholesterol|||||||||||"
-
-
-// ---------------------------------------------------------------------------------------------------------------------------------------------
-
 submit_claim ={   // ehr => endpoint => /fhir/submit-claim
     "resourceType": "Claim",
         "id": "claim-example-01",
@@ -317,8 +297,91 @@ submit_claim ={   // ehr => endpoint => /fhir/submit-claim
         }
     }
 
+response_claim = { // ehr => endpoint => /fhir/claim-response
+        "resourceType": "ClaimResponse",
+        "id": "res-123", 
+        "status": "active",
+        "type": { "coding": [{"code": "professional"}] },
+        "use": "claim",
+        "patient": {
+            "reference": "patient/1232" 
+        },
+        "request": {
+            "reference": "Encounter/123"
+        },
+        "created": "2026-05-02T13:23:15Z",
+        "insurer": {
+            "display": "Jubilee Insurance"
+        },
+        "outcome": "complete"
+    }
+
+send_response_claim = { // ehr => endpoint => /fhir/send-response-claim
+    "resourceType": "ClaimResponse",
+    "id": "res-123", 
+    "status": "active",
+    "type": { "coding": [{"code": "professional"}] },
+    "use": "claim",
+    "patient": {
+        "reference": "patient/1232" 
+    },
+    "request": {
+        "reference": "Encounter/123"
+    },
+    "created": "2026-05-02T13:23:15Z",
+    "insurer": {
+        "display": "Jubilee Insurance"
+    },
+    "outcome": "complete"
+}
+
+recieve_response_claim = { // phr => endpoint => /receive-response-claim
+    "resourceType": "ClaimResponse",
+    "id": "res-123", 
+    "status": "active",
+    "type": { "coding": [{"code": "professional"}] },
+    "use": "claim",
+    "patient": {
+        "reference": "patient/1232" 
+    },
+    "request": {
+        "reference": "Encounter/123"
+    },
+    "created": "2026-05-02T13:23:15Z",
+    "insurer": {
+        "display": "Jubilee Insurance"
+    },
+    "outcome": "complete"
+}
+
+add_patient = // LIS -> endpoint => /get/new-patient
+MSH|^~\\&|EHR||LIS||20260203120000||ADT^A01|MSG00001|P|2.5
+PID|1||23||saad^Muhammad||20041006|M|||||+92-315-3726612
+
+add_patient = // Payer -> endpoint => /get/registed_patient
+MSH|^~\\&|EHR||payer||20260203120000||ADT^A01|MSG00001|P|2.5
+PID|1||23||saad^Muhammad||20041006|M|||||
+IN1|||||||||||||||Silver|||||||||||||||||||||9||||||||||||||||
+
+// -----------------------------------------------------------------------------------------------------------------------------------------
+
+
+add_visit_note = // lis => endpoint -> /take_lab_order
+MSH|^~\\&|EHR||LIS||20260203120000||ORM^O01|MSG00002|P|2.5
+PID|1||23|||||||||||
+OBR|01|VID-01||2093-3^Total cholesterol|||||||||||
+
+
+// ---------------------------------------------------------------------------------------------------------------------------------------------
+
 submit_claim = // Payer => endpoint => /submit-claim
 MSH|^~\\&|EHR||LIS||20260203120000||ADT^A01|MSG00001|P|2.5
 PID|1||123||
 PV1|1||||||||||||||||||1231
 FT1|1|||20260203120000|||Service_LabTest|150.00||||||||||||||||
+
+response_claim = // Payer => endpoint => /send/claim_response
+MSH|^~\\&|payer||EHR||20260502132315||ACK^P03|MSG00003|P|2.5
+PID|1||1232||
+PV1|1||||||||||||||||||1231
+MSA|AA|MSG00003|ClaimAccepted

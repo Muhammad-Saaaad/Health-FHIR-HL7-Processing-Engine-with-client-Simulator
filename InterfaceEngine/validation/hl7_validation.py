@@ -4,8 +4,6 @@ from logging.handlers import RotatingFileHandler
 import re
 from uuid import uuid4
 
-from .transformation import increment_segment
-
 logger = logging.getLogger("hl7_validation")
 logger.setLevel(logging.DEBUG)
 logger.propagate = False # means a logger only writes to its own handler, else it will write to its parent handler as well.
@@ -124,7 +122,7 @@ def get_hl7_value_by_path(hl7_message, paths):
 
 # this output_data contains all the data of the entire hl7 message of every segment,
 # with fields and values in a flat structure e.g. {"PID-5.1": "Smith", "PID-3": "12345", "PID-3.4.1": "X"}
-def build_hl7_message(output_data: dict[str, str], 
+async def build_hl7_message(output_data: dict[str, str], 
                       src: str,
                       dest: str,
                       msg_type: str) -> str:

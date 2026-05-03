@@ -110,7 +110,7 @@ async def get_visit_note(req: Request, db: Session = Depends(get_db)):
         
         doctor = {}
         visit_note = {}
-        for index,indiviual_entry in enumerate(json_data['entry']):
+        for index, indiviual_entry in enumerate(json_data['entry']):
             resource = indiviual_entry.get("resource", None)
             if not resource:
 
@@ -297,4 +297,62 @@ async def get_visit_note(req: Request, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid numeric identifier in payload")
     except Exception as e:
         logger.exception(f"Error processing FHIR data: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.post("/receive-response-claim")
+async def submit_claim_from_engine(req: Request, db: Session = Depends(get_db)):
+    """
+    Ingest patient FHIR payload from InterfaceEngine and store in PHR database.
+
+    **Response (200 OK):**
+    Returns JSON object:
+    - `message` (dict): extracted FHIR path-value map used for DB insertion.
+
+    **Error Responses:**
+    - `400 Bad Request`: Payload parsing, mapping, or database error.
+    """
+    try:
+        json_data = await req.json()
+
+        logger.info(f"Recieved FHIR Data: {json_data}")
+
+        resource_type = json_data['resourceType']
+        db_data = {}
+        if resource_type != "Bundle":
+
+            paths = fhir_extract_paths(json_data)
+            for path in paths:
+
+                value = get_fhir_value_by_path(json_data, path)
+                db_data[path] = value
+        else: # if resource is Bundle
+            for entry in json_data["entry"]:
+
+                resource_type = entry['resource']['resourceType']
+                paths = fhir_extract_paths(entry['resource'])
+                for path in paths:
+
+                    value = get_fhir_value_by_path(json_data, path)
+                    db_data[path] = value
+
+        mpi = str(db_data.get("patient.reference").split("/")[-1]).strip() # MPI
+        vid = str(db_data.get("request.reference").split("/")[-1]).strip() # vid
+        claim_status = str(db_data.get("status")).strip()
+        logger.info(f"Extracted data for DB: MPI={mpi}, VID={vid}, Status={claim_status}")
+
+        visit_note = db.query(model.VisitingNotes).filter(model.VisitingNotes.mpi == mpi, model.VisitingNotes.note_id == vid).first()
+        if visit_note:
+            visit_note.payment_status = str(claim_status).strip().capitalize()
+            db.add(visit_note)
+            db.commit()
+            logger.info(f"Updated payment status to {visit_note.payment_status} for MPI={mpi}, VID={vid}")
+            
+            return {"message": f"Payment status updated to {visit_note.payment_status} for MPI={mpi}, VID={vid}"}
+        else:
+            logger.error(f"No visit note found for MPI={mpi}, VID={vid}")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No visit note found for MPI={mpi}, VID={vid}")
+
+    except Exception as e:
+        logger.error(f"Error processing FHIR data: {str(e)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

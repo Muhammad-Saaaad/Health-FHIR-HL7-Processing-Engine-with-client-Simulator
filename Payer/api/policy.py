@@ -7,6 +7,9 @@ from schemas import policy_schema as schema
 from rate_limiting import limiter
 
 router = APIRouter(tags=["Insurance_Policies"])
+from .logging_config import get_logger
+
+logger = get_logger('Payer.api.policy', logfile=r'logs\payer_api.log')
 
 # this is already used with the patient registration endpoint, so we can skip it here
 # @router.post("/create_policy", status_code=status.HTTP_201_CREATED, tags=["Insurance_Policies"])
@@ -79,10 +82,13 @@ def get_policy(policy_id : int , request: Request, response: Response, db: Sessi
     **Error Responses:**
     - `404 Not Found`: No policy exists with the given `policy_id`
     """
+    logger.info(f"get_policy called for policy_id={policy_id}")
     policy =  db.query(models.InsurancePolicy).filter(models.InsurancePolicy.policy_id == policy_id).first()
         
-    if not policy:    
+    if not policy:
+        logger.error(f"get_policy: policy_id={policy_id} not found")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Insurance Policy ID not found")
+    logger.info(f"get_policy found policy_id={policy_id}")
     return policy
 
 @router.get("/all_patients_per_policy_category{policy_category}")
@@ -109,6 +115,7 @@ def patients_per_policy_cat(policy_category : str, request: Request, response: R
     - The response dict currently includes `"cnic": d.cnic`, but the Payer `Patient` model
       has no `cnic` column. This will raise an `AttributeError` at runtime and needs to be removed.
     """
+    logger.info(f"patients_per_policy_cat called for category={policy_category}")
     try:
         data = db.query(models.Patient).join(models.InsurancePolicy).filter(
             models.InsurancePolicy.category_name == policy_category).all()
@@ -121,6 +128,8 @@ def patients_per_policy_cat(policy_category : str, request: Request, response: R
                 "date_of_birth": d.date_of_birth,
                 "policy_category": policy_category
             })
+        logger.info(f"patients_per_policy_cat returning {len(output)} patients for category={policy_category}")
         return output
     except Exception as e:
+        logger.exception(f"patients_per_policy_cat failed for category={policy_category}: {str(e)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

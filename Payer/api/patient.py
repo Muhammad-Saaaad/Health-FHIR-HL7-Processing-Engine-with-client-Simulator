@@ -7,6 +7,9 @@ from schemas import patient_schema as schema
 from rate_limiting import limiter
 
 router = APIRouter(tags=["Patients"])
+from .logging_config import get_logger
+
+logger = get_logger('Payer.api.patient', logfile=r'logs\payer_api.log')
 
 @router.post("/reg_patient",  status_code=status.HTTP_201_CREATED)
 @limiter.limit("15/minute")  # Limit to 15 requests per minute per IP
@@ -43,6 +46,7 @@ def register_patient(data: schema.PatientCreate, request: Request, response: Res
     - `500 Internal Server Error`: Database or unexpected error during creation
     - `422 Unprocessable Entity`: Invalid data format or missing required fields
     """
+    logger.info(f"register_patient called: name={data.name} mpi={data.mpi} insurance_type={data.insurance_type}")
     # user_id 0 means that it is inserted by the engine. 
     if data.user_id != 0:
         is_user = db.query(models.SystemUser).filter(models.SystemUser.user_id == data.user_id).first()
@@ -68,6 +72,7 @@ def register_patient(data: schema.PatientCreate, request: Request, response: Res
             models.Patient.phone_no == data.phone_no,                            
             models.Patient.date_of_birth == data.date_of_birth,
             models.Patient.name == data.name).first():
+        logger.warning(f"register_patient: duplicate patient attempted: name={data.name} phone_no={data.phone_no}")
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="This Patient already exists")
 
     try:
@@ -91,7 +96,7 @@ def register_patient(data: schema.PatientCreate, request: Request, response: Res
         elif data.insurance_type in ("Bronze", "bronze"):
             total_coverage = 200000
 
-        print(f"Total coverage for {data.insurance_type} is {total_coverage}")
+        logger.info(f"Total coverage for {data.insurance_type} is {total_coverage}")
 
         new_policy = models.InsurancePolicy(
             pid=new_patient.pid,
@@ -105,11 +110,12 @@ def register_patient(data: schema.PatientCreate, request: Request, response: Res
         db.commit()
         db.refresh(new_policy)
 
-        print(f"New patient created with ID: {new_patient.pid} and policy ID: {new_policy.policy_id}")
+        logger.info(f"New patient created with ID: {new_patient.pid} and policy ID: {new_policy.policy_id}")
 
         return {"message": "Added Sucessfully"}
     except Exception as e:
         db.rollback()
+        logger.exception(f"register_patient failed: {str(e)}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 @router.get("/get_all_patients", response_model=list[schema.PatientDisplay], status_code=status.HTTP_200_OK)
@@ -137,6 +143,7 @@ def get_all_patients(request: Request, response: Response, db: Session = Depends
     **Error Responses:**
     - `400 Bad Request`: Unexpected database error
     """
+    logger.info("get_all_patients called")
     try:
         patients = [
             {
@@ -150,8 +157,10 @@ def get_all_patients(request: Request, response: Response, db: Session = Depends
             } for p in db.query(models.Patient).all()
         ]
 
+        logger.info(f"get_all_patients returning {len(patients)} patients")
         return patients
     except Exception as e:
+        logger.exception(f"get_all_patients failed: {str(e)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 @router.get("/get_patient/{p_id}", response_model=schema.PatientPolicyDetails, status_code=status.HTTP_200_OK)
@@ -193,8 +202,10 @@ def get_single_patient(p_id: int, request: Request, response: Response, db: Sess
     **Error Responses:**
     - `404 Not Found`: No patient exists with the given `p_id`
     """
+    logger.info(f"get_single_patient called for p_id={p_id}")
     patient = db.query(models.Patient).filter(models.Patient.pid == p_id).first()
     if not patient:
+        logger.error(f"get_single_patient: p_id={p_id} not found")
         raise HTTPException(status_code=404, detail="Patient not found")
     
     patient_policies = {}

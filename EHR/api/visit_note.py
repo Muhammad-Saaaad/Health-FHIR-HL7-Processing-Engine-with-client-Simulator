@@ -5,7 +5,7 @@ from logging.handlers import RotatingFileHandler
 from fastapi import APIRouter, status, Depends, HTTPException, Request, Response
 from sqlalchemy.orm import Session
 
-from .engine_service import send_visit_note_to_engine
+from .engine_service import send_to_engine
 from schemas import visit_note_schema as schema
 from schemas import lab_schema
 from database import get_db
@@ -23,7 +23,7 @@ logger.addHandler(handler)
 
 @router.post("/visit-note-add", status_code=status.HTTP_201_CREATED)
 @limiter.limit("10/minute")
-def add_visit_note(visit_note: schema.VisitNote ,request: Request, response: Response, db: Session = Depends(get_db)):
+async def add_visit_note(visit_note: schema.VisitNote ,request: Request, response: Response, db: Session = Depends(get_db)):
     """
     Create a new visit note for a patient, including billing and optional lab test orders.
 
@@ -209,7 +209,7 @@ def add_visit_note(visit_note: schema.VisitNote ,request: Request, response: Res
         logger.info(f"Final FHIR message for synchronization: {patient_visit}")
 
         # ----- Send the complete FHIR message to the engine for synchronization -----
-        sucess_message = send_visit_note_to_engine(patient_visit)
+        sucess_message = await send_to_engine(patient_visit, url="http://127.0.0.1:9000/fhir/add-visit-note")
 
         if sucess_message == "sucessfull":
             db.commit()

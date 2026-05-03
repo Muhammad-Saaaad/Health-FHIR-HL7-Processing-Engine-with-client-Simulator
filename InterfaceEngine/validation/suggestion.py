@@ -218,6 +218,7 @@ def get_field_type(canonical_name: str) -> str:
         "VID":                                "id_format",
         "practitioner_id":                    "id_format",
         "claim_patient_ref":                  "subject_reference_format",
+        "claim_response_patient_ref":         "subject_reference_format",
         "coverage_patient_ref":               "subject_reference_format",
         "invoice_patient_ref":                "subject_reference_format",
         "encounter_patient_ref":              "subject_reference_format",
@@ -226,6 +227,7 @@ def get_field_type(canonical_name: str) -> str:
         "practitioner_role_practitioner_ref": "practitioner_reference_format",
         "invoice_participant_ref_id":         "practitioner_reference_format",
 
+        "claim_response_encounter_ref":          "encounter_reference_format",
         "claim_encounter_ref":                   "encounter_reference_format",
 
         # "":  "encounter_reference_format",

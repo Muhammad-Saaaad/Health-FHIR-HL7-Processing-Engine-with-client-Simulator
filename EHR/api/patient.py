@@ -174,8 +174,8 @@ async def add_patient(patient: schema.post_patient, request: Request, response: 
                         "name": [{"text": new_patient.name}],
                         "gender": new_patient.gender,
                         "birthDate": str(new_patient.date_of_birth),
-                        "address": [{"text": new_patient.address}],
-                        "telecom": [{"value": new_patient.phone_no}]
+                        "address": [{"text": "" if new_patient.address is None else new_patient.address}],
+                        "telecom": [{"value": "" if new_patient.phone_no is None else new_patient.phone_no}]
                     }
                 },
                 {
@@ -204,7 +204,7 @@ async def add_patient(patient: schema.post_patient, request: Request, response: 
             ]
         }
         logger.info(f"Registering patient in FHIR with data: {fhir_patient}")
-        response = engine_service.register_patient(fhir_patient)
+        response = await engine_service.send_to_engine(fhir_patient, url="http://127.0.0.1:9000/fhir/add-patient")
         
         if response == "sucessfull":
             db.commit()

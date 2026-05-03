@@ -1,7 +1,18 @@
+import asyncio
+from datetime import datetime
 import logging
 from logging.handlers import RotatingFileHandler
+from uuid import uuid4
 
 import httpx
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from sqlalchemy.orm import Session
+
+from fhir_validation import get_fhir_value_by_path, fhir_extract_paths
+from database import get_db
+import model
+
+router = APIRouter(tags=["Engine"])
 
 logger = logging.getLogger("engine_service_logger")
 logger.setLevel(logging.INFO)
@@ -15,15 +26,9 @@ if not logger.handlers:
     rotating_file_handler.setFormatter(formater)
     logger.addHandler(rotating_file_handler)
 
-def register_patient(data: dict):
+async def send_to_engine(data: dict, url: str):
     """
-    Send a FHIR Bundle (Patient + Coverage) to the InterfaceEngine for routing to downstream services.
-
-    This is called by the EHR `POST /patients` endpoint after a new patient is inserted locally.
-    The engine route is responsible for forwarding the data (via HL7) to the LIS and Payer systems.
-
-    Args:
-        data (dict): A FHIR-compliant Bundle dict containing a Patient resource and a Coverage resource.
+    Send a FHIR data to the InterfaceEngine for routing to downstream services.
 
     Returns:
         str: "sucessfull" if the engine responds with HTTP 200.
@@ -33,63 +38,97 @@ def register_patient(data: dict):
                    raises an exception with the engine's error detail so the caller can rollback.
     """
     try:
-        logger.info(f"Registering patient with engine: {data}")
-        response = httpx.post("http://127.0.0.1:9000/fhir/add-patient", json=data, timeout=7)
-        if response.status_code == 200:
-            logger.info(f"Successfully registered patient with engine: {data['entry'][0]['resource']['id']}")
-            return "sucessfull"
-        # The engine returns 502 when a downstream delivery (Payer/LIS) fails.
-        # Raise so add_patient() rolls back the EHR insert.
-        raise Exception(response.json().get("detail", f"Engine returned {response.status_code}"))
+        logger.info(f"Sending data to engine: {data}")
+        async with httpx.AsyncClient() as client:
+            response = await client.post(url, json=data, timeout=7)
+            if response.status_code == 200:
+                logger.info(f"Successfully sent data to engine with url {url}")
+                return "sucessfull"
+            raise Exception(response.json().get("detail", f"Engine returned {response.status_code}"))
 
     except Exception as exp:
-        # Re-raise so the calling endpoint knows delivery failed
-        logger.error(f"Failed to register patient with engine: {str(exp)}")
+        logger.error(f"Failed to send data to engine: {str(exp)}")
         raise
 
-def send_visit_note_to_engine(data: dict):
+@router.post("/fhir/claim-response")
+async def submit_claim_from_engine(req: Request, db: Session = Depends(get_db)):
     """
-    Send a FHIR Bundle (ServiceRequest + encounter + Practitioner +  ) to the InterfaceEngine for routing to downstream services.
+    Ingest patient FHIR payload from InterfaceEngine and store in PHR database.
 
-    This is called by the EHR `POST /visit-notes` endpoint after a new visit note is inserted locally.
-    The engine route is responsible for forwarding the data (via HL7) to the LIS and Payer systems.
+    **Response (200 OK):**
+    Returns JSON object:
+    - `message` (dict): extracted FHIR path-value map used for DB insertion.
 
-    Args:
-        data (dict): A FHIR-compliant Bundle dict containing a ServiceRequest resource and one or more Observation resources.
-
-    Returns:
-        str: "sucessfull" if the engine responds with HTTP 200.
-
-    Raises:
-        Exception: If the engine returns a non-200 status (e.g., 502 on partial downstream failure),
-                   raises an exception with the engine's error detail so the caller can rollback.
+    **Error Responses:**
+    - `400 Bad Request`: Payload parsing, mapping, or database error.
     """
     try:
-        logger.info(f"Sending visit note to engine: {data}")
-        response = httpx.post("http://127.0.0.1:9000/fhir/add-visit-note", json=data, timeout=7)
-        
-        if response.status_code in (200, 201):
-            logger.info(f"Successfully sent visit note to engine: {data['entry'][0]['resource']['id']}")
-            return "sucessfull"
-    
-    except Exception as exp:
-        # Re-raise so the calling endpoint knows delivery failed
-        logger.error(f"Failed to send visit note to engine: {str(exp)}")
-        raise
+        json_data = await req.json()
 
-def send_claim_to_engine(data: dict):
-    try:
-        logger.info(f"Sending claim to engine: {data}")
-        response = httpx.post("http://127.0.0.1:9000/fhir/submit-claim", json=data, timeout=7)
-        
-        if response.status_code in (200, 201):
-            logger.info(f"Successfully sent claim to engine: {data['id']}")
-            return "sucessfull"
-        
-    except httpx.RequestError as req_err:
-        logger.error(f"HTTP request error while sending claim to engine: {str(req_err)}")
-        raise Exception(f"HTTP request error: {str(req_err)}") from req_err
-    except Exception as exp:
-        # Re-raise so the calling endpoint knows delivery failed
-        logger.error(f"Failed to send claim to engine: {str(exp)} with response: {response}")
-        raise
+        logger.info(f"Recieved FHIR Data: {json_data}")
+
+        resource_type = json_data['resourceType']
+        db_data = {}
+        if resource_type != "Bundle":
+
+            paths = fhir_extract_paths(json_data)
+            for path in paths:
+
+                value = get_fhir_value_by_path(json_data, path)
+                db_data[path] = value
+        else: # if resource is Bundle
+            for entry in json_data["entry"]:
+
+                resource_type = entry['resource']['resourceType']
+                paths = fhir_extract_paths(entry['resource'])
+                for path in paths:
+
+                    value = get_fhir_value_by_path(json_data, path)
+                    db_data[path] = value
+
+        mpi = str(db_data.get("patient.reference").split("/")[-1]).strip() # MPI
+        vid = str(db_data.get("request.reference").split("/")[-1]).strip() # vid
+        claim_status = str(db_data.get("status")).strip()
+        logger.info(f"Extracted data for DB: MPI={mpi}, VID={vid}, Status={claim_status}")
+
+        visit_note = db.query(model.VisitingNotes).filter(model.VisitingNotes.mpi == mpi, model.VisitingNotes.note_id == vid).first()
+        if visit_note:
+            bill = db.get(model.Bill, visit_note.bill_id)
+            bill.bill_status = "Paid" if str(claim_status).lower() == "approved" else "Denied"
+            bill.bill_date = datetime.now()
+            db.add(bill)
+            db.commit()
+            logger.info(f"Updated bill status to {bill.bill_status} for MPI={mpi}, VID={vid}")
+
+            fhir_msg = {
+                "resourceType": "ClaimResponse",
+                "id": str(uuid4()), 
+                "status": bill.bill_status,
+                "type": { "coding": [{"code": "professional"}] },
+                "use": "claim",
+                "patient": {
+                    "reference": "patient/"+str(mpi) 
+                },
+                "request": {
+                    "reference": "Encounter/"+str(vid)
+                },
+                "created": bill.bill_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "insurer": {
+                    "display": "Jubilee Insurance"
+                },
+                "outcome": "complete"
+            }
+            logger.info(f"Prepared FHIR ClaimResponse to send to engine: {fhir_msg}")
+
+            asyncio.create_task(send_to_engine(data=fhir_msg, url="http://127.0.0.1:9000/fhir/send-response-claim"))
+            logger.info(f"Successfully sent claim response to engine for MPI={mpi}, VID={vid}")       
+
+            return {"message": f"Bill status updated to {bill.bill_status} for MPI={mpi}, VID={vid}"}
+        else:
+            logger.error(f"No visit note found for MPI={mpi}, VID={vid}")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No visit note found for MPI={mpi}, VID={vid}")
+
+
+    except Exception as e:
+        logger.error(f"Error processing FHIR data: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

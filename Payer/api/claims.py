@@ -1,3 +1,4 @@
+from uuid import uuid4
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Response 
@@ -7,51 +8,12 @@ from database import get_db
 import models
 from schemas import claims_schema as schema
 from rate_limiting import limiter
+from .engine_service import claim_response_to_engine
+from .logging_config import get_logger
+
+logger = get_logger('Payer.api.claims', logfile=r'logs\payer_api.log')
 
 router = APIRouter(tags=["Claims"])
-
-# @router.post("/submit_claim", response_model=schema.PatientClaimDisplay, status_code=status.HTTP_201_CREATED, tags=["Claims"])
-# @limiter.limit("10/minute")  # Limit to 10 requests per minute per IP
-# def submit_claim(data: schema.PatientClaimCreate, request: Request, response: Response,  db: Session = Depends(get_db)):
-#     """
-#     Submit a new insurance claim for a patient.
-
-#     **Request Body:**
-#     - `policy_id` (int, required): Valid insurance policy ID. Must exist in the system.
-#     - `patient_id` (int, required): Valid patient ID. Must exist in the system.
-#     - `service_name` (str, required): Name of the service/treatment provided (e.g., "Surgery", "Consultation").
-#     - `bill_amount` (float, required): Total amount to be claimed. Must be greater than 0.
-#     - `provider_phone_no` (str, optional): Contact phone number of the service provider.
-
-#     **Response (201 Created):**
-#     Returns the newly created claim object including:
-#     - `claim_id`: Auto-generated unique claim identifier
-#     - `claim_status`: Defaults to "Pending" on creation
-#     - `created_at`: Timestamp of when the claim was submitted
-
-#     **Error Responses:**
-#     - `404 Not Found`: `policy_id` or `patient_id` does not exist in the system
-#     - `422 Unprocessable Entity`: Missing required fields or invalid data types
-#     """
-#     policy = db.query(models.InsurancePolicy).filter(models.InsurancePolicy.policy_id == data.policy_id).first()
-#     if not policy:
-#         raise HTTPException(status_code=404, detail="Policy ID not found")
-    
-#     patient = db.query(models.Patient).filter(models.Patient.p_id == data.patient_id).first()
-#     if not patient:
-#         raise HTTPException(status_code=404, detail="Patient ID not found")
-
-#     new_claim = models.PatientClaim(
-#         policy_id=data.policy_id,
-#         patient_id = data.patient_id,
-#         service_name=data.service_name,
-#         bill_amount=data.bill_amount,
-#         provider_phone_no=data.provider_phone_no
-#     )
-#     db.add(new_claim)
-#     db.commit()
-#     db.refresh(new_claim)
-#     return new_claim
 
 @router.get("/expnse_breakdown/patient_id/{pid}/policy_id/{policy_id}", response_model=list[schema.ExpenseBreakdown])
 @limiter.limit("30/minute")  # Limit to 30 requests per minute per IP
@@ -76,8 +38,10 @@ def expense_breakdown(pid: int, policy_id: int, request: Request, response: Resp
     - `404 Not Found`: Policy ID does not exist.
     - `404 Not Found`: No claims found for this patient-policy pair.
     """
+    logger.info(f"expense_breakdown called: pid={pid} policy_id={policy_id}")
     is_patient = db.get(models.Patient, pid)
     if not is_patient:
+        logger.error(f"expense_breakdown: patient id {pid} not found")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient ID not found")
 
     is_policy = db.get(models.InsurancePolicy, policy_id)
@@ -86,9 +50,6 @@ def expense_breakdown(pid: int, policy_id: int, request: Request, response: Resp
     
     claims = db.query(models.PatientClaim).filter(models.PatientClaim.policy_id == policy_id, models.PatientClaim.pid == pid).all()
 
-    if not claims:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No Claims founded")
-    
     claim_expense = []
     for claim in claims:
         claim_expense.append(
@@ -100,6 +61,7 @@ def expense_breakdown(pid: int, policy_id: int, request: Request, response: Resp
                 status=claim.claim_status
             )
         )
+    logger.info(f"expense_breakdown returning {len(claim_expense)} records for pid={pid} policy_id={policy_id}")
     return claim_expense
 
 @router.get("/get_all_claims", response_model=list[schema.AllClaims])
@@ -122,6 +84,7 @@ def get_all_pending_claims(request: Request, response: Response, db: Session = D
     - Only claims with `claim_status == "Pending"` are returned.
     - Returns an empty list if there are no pending claims.
     """
+    logger.info("get_all_pending_claims called")
     all_claims = db.query(models.PatientClaim).filter(models.PatientClaim.claim_status == 'Pending').all()
     claims =[ 
         {
@@ -134,42 +97,8 @@ def get_all_pending_claims(request: Request, response: Response, db: Session = D
         for claim in all_claims # called list comprehension. cleaner way
     ]
 
+    logger.info(f"get_all_pending_claims returning {len(claims)} claims")
     return claims
-
-# @router.get("/claims_per_patient{pid}", response_model=schema.ClaimsPerPatient)
-# @limiter.limit("30/minute") 
-# def claims_per_patient(pid : int, request: Request, response: Response,  db: Session = Depends(get_db)):
-#     """
-#     Get all claims associated with a specific patient.
-
-#     **Path Parameters:**
-#     - `pid` (int, required): The patient's unique ID.
-
-#     **Response (200 OK):**
-#         Returns `schema.ClaimsPerPatient` containing:
-#         - `patient_id` (int)
-#         - `all_claims` (list[`schema.AllClaims`]) where each item has
-#             `claim_id`, `mpi`, `policy_number`, `name`, `created_at`, `status`.
-
-#     **Note:**
-#     - Returns an object with an empty `all_claims` array if the patient has no claims.
-#     - Does not validate whether the patient ID exists; simply returns no data if not found.
-#     """
-#     data = db.query(models.PatientClaim).filter(models.PatientClaim.pid == pid).all()
-
-#     output = [
-#         {
-#             "claim_id" : claim.claim_id,
-#             "mpi": db.get(models.Patient, claim.pid).mpi,
-#             "policy_number": claim.policy_id,
-#             "name": claim.patient.name,
-#             "created_at": claim.created_at,
-#             "status": claim.claim_status
-#         }
-#         for claim in data 
-#     ]
-#     out_data = {"patient_id": pid, "all_claims": output}
-#     return out_data
 
 @router.get("/get_single_claim{claim_id}", response_model=schema.PatientClaimDisplay)
 @limiter.limit("30/minute")  # Limit to 30 requests per minute per IP
@@ -197,22 +126,26 @@ def get_single_claims(claim_id : int, request: Request, response: Response, db: 
     **Error Responses:**
     - `404 Not Found`: No claim exists with the given `claim_id`
     """
+    logger.info(f"get_single_claims called for claim_id={claim_id}")
     claim =  db.query(models.PatientClaim).filter(models.PatientClaim.claim_id == claim_id).first()
 
     if not claim:
+        logger.error(f"get_single_claims: claim_id={claim_id} not found")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Claim ID not found")
     
+    logger.info(f"get_single_claims found claim_id={claim_id}")
     return claim
 
-@router.put("/change_claim_status{claim_id}/{claim_status}", status_code=status.HTTP_202_ACCEPTED)
+@router.put("/change_claim_status{claim_id}/{claim_status}/user/{user_id}", status_code=status.HTTP_202_ACCEPTED)
 @limiter.limit("20/minute")  # Limit to 20 requests per minute per IP
-def claim_status(claim_id : int, claim_status: str, request: Request, response: Response, db: Session = Depends(get_db)):
+async def claim_status(user_id: int, claim_id : int, claim_status: str, request: Request, response: Response, db: Session = Depends(get_db)):
     """
     Update the status of a claim and automatically add the bill amount to the associated policy's usage.
 
     **Path Parameters:**
     - `claim_id` (int, required): The unique identifier of the claim to update.
-    - `claim_status` (str, required): The new status to set (e.g., "Pending", "Approved", "Rejected", "Paid").
+    - `claim_status` (str, required): The new status to set (e.g., "Pending", "Approved", "Rejected").
+    - `user_id` (int, required): The unique identifier of the user updating the claim status.
 
     **Response (202 Accepted):**
     Returns a confirmation message:
@@ -225,27 +158,56 @@ def claim_status(claim_id : int, claim_status: str, request: Request, response: 
     - `404 Not Found`: No claim exists with the given `claim_id`
     - `404 Not Found`: The policy linked to the claim was not found
     """
+    logger.info(f"claim_status update requested: claim_id={claim_id} status={claim_status}")
+    if not claim_status in ('Approved', 'Rejected'):
+        logger.error(f"claim_status invalid status provided: {claim_status}")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Status should be either Approved or Rejected")
+
     claim = db.query(models.PatientClaim).filter(models.PatientClaim.claim_id == claim_id).first()
 
     if not claim:
+        logger.error(f"claim_status: claim_id={claim_id} not found")
         raise HTTPException(status_code=404, detail="claim id not found")
+    
+    if claim.locked_by_user_id is None or claim.locked_by_user_id != user_id:
+        logger.warning(f"claim_status: claim_id={claim_id} is not locked by user_id={user_id}, cannot update status")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="claim is not locked for processing")
+
+    if claim.locked_by_user_id != user_id:
+        logger.warning(f"claim_status: claim_id={claim_id} is locked by another user, cannot update status")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="claim is locked by another user")
     
     claim.claim_status = claim_status
 
     test_req = db.query(models.InsurancePolicy).filter(models.InsurancePolicy.policy_id == claim.policy_id).first()
 
     if not test_req:
+        logger.error(f"claim_status: policy for claim_id={claim_id} not found")
         raise HTTPException(status_code=404, detail="claim has not test request id")
     
-    test_req.amount_used = test_req.amount_used + claim.bill_amount
+    user = db.get(models.Patient, test_req.pid)
+    
+    msg_id = str(uuid4())
+    hl7_msg = f"MSH|^~\&|PAYER||EHR||20260502153000|{msg_id}|ACK^P03||P|2.5\n"
+    hl7_msg += f"PID|1||{user.mpi}\n"
+    hl7_msg += f"PV1|1||||||||||||||||||{claim.vid}\n"
+    hl7_msg += f"MSA|1|AA|{claim_status}\n"
 
-    db.add(test_req)
-    db.add(claim)
+    logger.info(f"claim_status sending HL7 message for claim_id={claim_id}: {hl7_msg}")
+    response = await claim_response_to_engine(hl7_msg)
 
-    db.commit()
-    db.refresh(claim)
+    if response == 'successfull':
+        logger.info(f"claim_status: Successfully sent claim response to engine for claim_id={claim_id}")
+        test_req.amount_used = test_req.amount_used + claim.bill_amount
+        db.add(test_req)
+        db.add(claim)
 
-    return {"message": f"status set to {claim_status}"}
+        db.commit()
+        return {"message": f"status set to {claim_status}"}
+    else:
+        logger.error(f"claim_status: Failed to send claim response to engine for claim_id={claim_id}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to send claim response to engine")
+    
 
 @router.put("/lock_claim{claim_id}/by{user_id}", status_code=status.HTTP_202_ACCEPTED)
 @limiter.limit("20/minute")  # Limit to 20 requests per minute per IP
@@ -272,13 +234,16 @@ def claim_lock(claim_id : int, user_id: int, request: Request, response: Respons
     """
     claim = db.query(models.PatientClaim).filter(models.PatientClaim.claim_id == claim_id).first()
     if not claim:
+        logger.error(f"claim_lock: claim_id={claim_id} not found")
         raise HTTPException(status_code=404, detail="claim id not found")
     
     user = db.query(models.SystemUser).filter(models.SystemUser.user_id == user_id).first()
     if not user:
+        logger.error(f"claim_lock: user_id={user_id} not found")
         raise HTTPException(status_code=404, detail="user id not found")
     
     if claim.locked_by_user_id != None and claim.locked_by_user_id != user_id:
+        logger.warning(f"claim_lock: claim_id={claim_id} already locked by another user")
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="claim already locked")
 
     claim.locked_by_user_id = user_id
@@ -287,6 +252,7 @@ def claim_lock(claim_id : int, user_id: int, request: Request, response: Respons
     db.add(claim)
     db.commit()
 
+    logger.info(f"claim_lock: claim_id={claim_id} locked by user_id={user_id}")
     return {"message": f"claim locked by {user.user_name}"}
 
 @router.put("/unlock_claim{claim_id}/by{user_id}", status_code=status.HTTP_202_ACCEPTED)
@@ -314,10 +280,12 @@ def claim_unlock(claim_id : int, user_id: int, request: Request, response: Respo
     """
     claim = db.query(models.PatientClaim).filter(models.PatientClaim.claim_id == claim_id).first()
     if not claim:
+        logger.error(f"claim_unlock: claim_id={claim_id} not found")
         raise HTTPException(status_code=404, detail="claim id not found")
 
     user = db.query(models.SystemUser).filter(models.SystemUser.user_id == user_id).first()
     if not user:
+        logger.error(f"claim_unlock: user_id={user_id} not found")
         raise HTTPException(status_code=404, detail="user id not found")
     
     # If claim is locked by another user, reject the unlock
@@ -330,4 +298,5 @@ def claim_unlock(claim_id : int, user_id: int, request: Request, response: Respo
     db.add(claim)
     db.commit()
     db.refresh(claim)
+    logger.info(f"claim_unlock: claim_id={claim_id} unlocked by user_id={user_id}")
     return {"message": f"claim unlocked by {user.user_name}"}

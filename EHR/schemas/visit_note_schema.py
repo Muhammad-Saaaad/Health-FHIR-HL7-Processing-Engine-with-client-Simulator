@@ -1,5 +1,5 @@
 from datetime import datetime
-from pydantic import BaseModel, field_serializer
+from pydantic import BaseModel, field_serializer, field_validator
 
 from .lab_schema import LoincMaster
 
@@ -15,6 +15,13 @@ class VisitNote(BaseModel):
 
     lab_name: str | None
     test_names: list[LoincMaster] | None
+
+    @field_validator("note_details", mode="before")
+    def validate_note_details(cls, value):
+        if value is None or str(value).strip() == "":
+            raise ValueError("note_details cannot be empty or null")
+        return value
+
 
     model_config = {"from_attributes": True}
 

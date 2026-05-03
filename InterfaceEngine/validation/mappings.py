@@ -529,6 +529,30 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
     "Claim-total.value":                                      "total_amount",
     "Claim-total.currency":                                   "claim_total_currency",
 
+    # ── ClaimResponse (Claim Adjudication Response) ───────────────────────────
+    # "ClaimResponse-id":                                           "claim_response_fhir_id",
+    "ClaimResponse-identifier[0].value":                          "claim_response_identifier",
+    "ClaimResponse-identifier[0].type.coding[0].code":            "claim_response_identifier_type",
+    "ClaimResponse-status":                                       "claim_response_status",
+    "ClaimResponse-type.coding[0].code":                          "claim_response_type_code",
+    "ClaimResponse-use":                                          "claim_response_use",
+    "ClaimResponse-patient.reference":                            "claim_response_patient_ref",
+    "ClaimResponse-created":                                      "datetime",
+    "ClaimResponse-insurer.reference":                            "claim_response_insurer",
+    "ClaimResponse-request.reference":                            "claim_response_encounter_ref",
+    "ClaimResponse-outcome":                                      "claim_response_outcome",
+    "ClaimResponse-disposition":                                  "claim_response_disposition",
+    "ClaimResponse-item[0].itemSequence":                         "claim_response_item_seq",
+    "ClaimResponse-item[0].adjudication[0].category.coding[0].code":   "claim_response_adjudication_type",
+    "ClaimResponse-item[0].adjudication[0].amount.value":         "claim_response_adjudication_amount",
+    "ClaimResponse-total[0].category.coding[0].code":             "claim_response_total_type",
+    "ClaimResponse-total[0].amount.value":                        "claim_response_total_amount",
+    "ClaimResponse-total[0].amount.currency":                     "claim_response_total_currency",
+    "ClaimResponse-payment.type.coding[0].code":                   "claim_response_payment_type",
+    "ClaimResponse-payment.amount.value":                          "claim_response_payment_amount",
+    "ClaimResponse-payment.amount.currency":                       "claim_response_payment_currency",
+    "ClaimResponse-payment.date":                                  "claim_response_payment_date",
+
     # ── ExplanationOfBenefit (EOB — Remittance) ───────────────────────────────
     # "ExplanationOfBenefit-id":                                               "eob_fhir_id",
     "ExplanationOfBenefit-identifier[0].value":                              "eob_identifier",
@@ -1055,6 +1079,14 @@ HL7_EXACT_CANONICAL: dict[str, str] = {
     "MSH-12":  "hl7_version",
     "MSH-15":  "accept_ack_type",
     "MSH-16":  "app_ack_type",
+
+    # ── MSA — Message Acknowledgment ─────────────────────────────────────────
+    # "MSA-1":   "message_control_id", # inversed with the MSA-2
+    "MSA-2":   "acknowledgment_code",
+    "MSA-3":   "claim_response_status",
+    "MSA-4":   "expected_sequence_number",
+    "MSA-5":   "delayed_ack_type",
+    "MSA-6":   "error_condition",
 
     # ── PID — Patient Identification ──────────────────────────────────────────
     "PID-2":      "patient_alt_id",
