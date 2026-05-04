@@ -1,6 +1,7 @@
 import asyncio
 from collections import Counter
 from datetime import datetime
+import json
 import logging
 from logging.handlers import TimedRotatingFileHandler
 import os
@@ -16,7 +17,8 @@ from slowapi.errors import RateLimitExceeded
 from sqlalchemy.exc import SAWarning
 import warnings
 
-from api import route, endpoint, server
+from api import route, endpoint, server, logs
+import db_logger as db_logging
 from database import engine, session_local
 import models
 from rate_limiting import limiter, rate_limit_exceeded_handler
@@ -73,7 +75,7 @@ logger_mapping.handlers.clear()
 logger_mapping.propagate = False
 
 main_log_handler = MidnightSingleFileHandler(
-    filename="logs/main.log",
+    filename=r"logs/main.log",
     when="midnight",
     interval=1,
     backupCount=0,
@@ -83,7 +85,7 @@ main_log_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - [
 main_log_handler.addFilter(HealthRequestFilter(only_health=False))
 
 main_log_handler_mapping = MidnightSingleFileHandler(
-    filename="logs/main_mapping.log",
+    filename=r"logs/main_mapping.log",
     when="midnight",
     interval=1,
     backupCount=0,
@@ -93,7 +95,7 @@ main_log_handler_mapping.setFormatter(logging.Formatter("%(asctime)s - %(levelna
 main_log_handler_mapping.addFilter(HealthRequestFilter(only_health=False))
 
 health_log_handler = MidnightSingleFileHandler(
-    filename="logs/health_checks.log",
+    filename=r"logs/health_checks.log",
     when="midnight",
     interval=1,
     backupCount=0,
@@ -135,7 +137,13 @@ app.add_middleware(SlowAPIMiddleware)
 app.include_router(server.router, prefix="/server")
 app.include_router(route.router, prefix="/route")
 app.include_router(endpoint.router, prefix="/endpoint")
+app.include_router(logs.router, prefix="/logs")
 
+db_logger = logging.getLogger("interface_engine.db_logger")
+db_logger.setLevel(logging.INFO)
+db_logger.handlers.clear()
+db_logger.propagate = False
+db_logger.addHandler(db_logging.DBHandler())
 
 @app.get("/")
 def check_health():
@@ -208,7 +216,7 @@ async def route_worker(route):
         with a real success/failure status.
     """
     try:
-        db = session_local()
+        db = session_local();
         dest_endpoint= db.get(models.Endpoints, route.dest_endpoint_id)
         dest_server = db.get(models.Server, route.dest_server_id)
         src_server = db.get(models.Server, route.src_server_id)
@@ -242,7 +250,7 @@ async def route_worker(route):
         while True:
             # Each queue item is a (data, future) tuple.
             # The future lets ingest() know whether delivery succeeded or failed.
-            src_path_to_value, simple_paths, result_future = await route_queue[route.route_id].get()
+            src_path_to_value, simple_paths, result_future, src_msg = await route_queue[route.route_id].get()
             logger.info(f"route_worker for route -> {route.name} received data: {src_path_to_value}")
             normal_src_paths_counter = [] # this will contain data just the output_data dictionary, but with the src paths instead of dest paths, useful for multiple same segments/sources to extract data from.
             split_src_paths_counter = []
@@ -405,26 +413,51 @@ async def route_worker(route):
 
                 await data_queue[route.route_id].put(msg) # put the message in the data queue, after that we will send to the dest server.
                 # DELIVER — resolve the future so ingest() knows the result
-                # while True:
-                #     if dest_server.status == "Inactive": 
-                        
                 async with httpx.AsyncClient() as client:
-                    if dest_server.protocol == "FHIR":    
-                        response = await client.post(url=dest_endpoint_url, json=msg)
+                    data_msg = await data_queue[route.route_id].get()
+                    db = session_local()
+                    dest_server = db.get(models.Server, route.dest_server_id)
+                    db.close()
+
+                    while dest_server.status == "Inactive":
+                        err = f"Destination server {dest_server.name} is Inactive right before POST"
+                        logger.error(err)
+
+                        await asyncio.sleep(20)
+                        db = session_local()
+                        dest_server = db.get(models.Server, route.dest_server_id)
+                        db.close()
+
+                    if dest_server.protocol == "FHIR":
+                        response = await client.post(url=dest_endpoint_url, json=data_msg)
                     else:
                         # HL7 is plain text — do NOT json= encode it or it arrives as a
                         # JSON string "MSH|..." instead of the raw HL7 text
                         response = await client.post(
                             url=dest_endpoint_url,
-                            content=msg,
+                            content=data_msg,
                             headers={"Content-Type": "text/plain"}
                         )
                     if response.status_code in (200, 201, 202, 203, 204):
+                        db_logger.info(f"Data Sucessfully Send to : {dest_server.name}",
+                                    extra= {
+                                            "src_message": json.dumps(src_msg),
+                                            "dest_message": json.dumps(data_msg),
+                                            "op_heading": f"Channel: {route.name}"
+                                        }
+                        )
                         logger.info(f"Successfully sent to url: {dest_endpoint_url}")
                         result_future.set_result(True)
                     else:
                         err = f"Destination {dest_endpoint_url} returned {response.status_code}: {response.text}"
                         logger.error(err)
+                        db_logger.error(f"Data Failed to Send to : {dest_server.name}",
+                                    extra= {
+                                            "src_message": json.dumps(src_msg),
+                                            "dest_message": json.dumps(data_msg),
+                                            "op_heading": f"Channel: {route.name}"
+                                        }
+                        )
                         result_future.set_exception(Exception(err))
 
             except Exception as exp:
@@ -566,7 +599,7 @@ async def ingest(full_path: str, req: Request):
         for route in routes:
             if route.route_id in route_queue:
                 future = loop.create_future()
-                await route_queue[route.route_id].put((src_path_to_value, simple_paths, future))
+                await route_queue[route.route_id].put((src_path_to_value, simple_paths, future, payload))
                 delivery_futures.append((route.route_id, route.name, future))
             else:
                 logger.warning("trace=%s route_queue_missing route_id=%s", trace_id, route.name)

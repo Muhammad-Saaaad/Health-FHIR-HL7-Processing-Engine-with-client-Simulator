@@ -1,3 +1,4 @@
+import asyncio
 from uuid import uuid4
 import logging
 from logging.handlers import RotatingFileHandler
@@ -204,17 +205,18 @@ async def add_patient(patient: schema.post_patient, request: Request, response: 
             ]
         }
         logger.info(f"Registering patient in FHIR with data: {fhir_patient}")
-        response = await engine_service.send_to_engine(fhir_patient, url="http://127.0.0.1:9000/fhir/add-patient")
+        # response = await engine_service.send_to_engine(fhir_patient, url="http://127.0.0.1:9000/fhir/add-patient")
+        asyncio.create_task(engine_service.send_to_engine(fhir_patient, url="http://127.0.0.1:9000/fhir/add-patient"))
         
-        if response == "sucessfull":
-            db.commit()
-            # db.rollback()
-            logger.info(f"Patient registered successfully in FHIR: {new_patient.name} (NIC: {new_patient.mpi})")
-            return {"message": "data inserted sucessfully"}
+        # if response == "sucessfull":
+        db.commit()
+        # db.rollback()
+        logger.info(f"Patient registered successfully in FHIR: {new_patient.name} (NIC: {new_patient.mpi})")
+        return {"message": "data inserted sucessfully"}
         
-        db.rollback()
-        logger.error(f"Failed to register patient in FHIR: {new_patient.name} (NIC: {new_patient.mpi})")    
-        return JSONResponse({"message": f"Error {response}"}, status_code=status.HTTP_400_BAD_REQUEST)
+        # db.rollback()
+        # logger.error(f"Failed to register patient in FHIR: {new_patient.name} (NIC: {new_patient.mpi})")    
+        # return JSONResponse({"message": f"Error {response}"}, status_code=status.HTTP_400_BAD_REQUEST)
     except Exception as exp:
         db.rollback()
         logger.error(f"Exception during patient registration: {str(exp)}")

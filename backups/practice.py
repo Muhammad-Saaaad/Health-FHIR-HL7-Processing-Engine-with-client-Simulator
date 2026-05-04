@@ -98,10 +98,11 @@ def regex_replace_with_template(value: str, pattern_from: str, pattern_to: str) 
 
 from datetime import datetime
 
-# date = datetime.now().date()
-# date_formate_to_chnage = datetime.strptime(str(date), "%Y-%m-%d")
-# formated_date = date_formate_to_chnage.strftime("%B %d, %Y")
-# print(formated_date)
+date = datetime.now().date()
+date_formate_to_chnage = datetime.strptime(str(date), "%Y-%m-%d")
+print(date_formate_to_chnage)
+formated_date = date_formate_to_chnage.strftime("%B %d, %Y")
+print(formated_date)
 
 # t1 = (4, 20)
 # t2 = (4, 30)
@@ -114,12 +115,20 @@ from datetime import datetime
 # dt_converted = datetime.strptime(dt_str, "%Y-%m-%dT%H:%M:%SZ").strftime("%Y%m%d%H%M%S")
 # print(dt_converted)  # 20260502103000
 
-import json
+# import json
 
-data = {
-    "id": "123",
-    "name": "John Doe"
-}
+# data = {
+#     "id": "123",
+#     "name": "John Doe"
+# }
 
-json_str = json.dumps(data)
-print(json_str)  # {"id": "123", "name": "John Doe"}
+# json_str = json.dumps(data)
+# print(json_str)  # {"id": "123", "name": "John Doe"}
+# import json
+
+# response_claim ="""MSH|^~\\&|payer||EHR||20260502132315||ACK^P03|MSG00003|P|2.5
+# PID|1||1232||
+# PV1|1||||||||||||||||||1231
+# MSA|AA|MSG00003|ClaimAccepted
+# """
+# print(json.dumps(response_claim.splitlines(), indent=2))

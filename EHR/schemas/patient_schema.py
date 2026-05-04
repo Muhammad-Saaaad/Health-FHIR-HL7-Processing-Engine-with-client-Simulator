@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from pydantic import BaseModel, field_serializer
+from pydantic import BaseModel, field_serializer, field_validator
 
 class get_patient(BaseModel):
     mpi : int
@@ -30,6 +30,22 @@ class post_patient(BaseModel):
     insurance_company: str
     policy_number: int
     plan_type: str
+
+    @field_validator("date_of_birth", mode="before")
+    def validate_dob(cls, value):
+        if isinstance(value, str):
+            try:
+                value = datetime.strptime(value, "%Y-%m-%d").date()
+            except ValueError:
+                raise ValueError("date_of_birth must be in YYYY-MM-DD format")
+        
+        if not isinstance(value, date):
+            raise ValueError("date_of_birth must be a date object or a string in YYYY-MM-DD format")
+        
+        if value > datetime.now().date():
+            raise ValueError("date_of_birth cannot be in the future")
+        
+        return value
 
     @field_serializer("date_of_birth")
     def serialize_date_of_birth(self, value: str):

@@ -90,7 +90,7 @@ class Logs(Base):
     __tablename__ = "logs"
 
     log_id = Column(Integer, primary_key=True, index=True)
-    datetime = Column(DateTime, default=datetime.now(), nullable=False)
+    datetime = Column(DateTime, default=lambda: datetime.now(), nullable=False)
     status = Column(String(20), nullable=False)  # Success, Fail
     operation_heading = Column(String(255), nullable=False)
     operation_message = Column(Text, nullable=True)

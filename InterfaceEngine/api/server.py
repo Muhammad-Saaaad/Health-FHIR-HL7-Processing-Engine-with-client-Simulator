@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from schemas.server import AddUpdateServer, GetServer
 import models
+import db_logger as db_logging
 from database import get_db, session_local
 from rate_limiting import limiter
 
@@ -18,6 +19,12 @@ logger.setLevel(logging.INFO)
 logger.propagate = False
 
 formater = logging.Formatter("%(asctime)s- %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s")
+
+db_logger = logging.getLogger("db_logger")
+db_logger.setLevel(logging.INFO)
+db_logger.handlers.clear() # Remove any default handlers
+db_logger.propagate = False
+db_logger.addHandler(db_logging.DBHandler()) # Add our custom DB handler
 
 class ExcludeHealthCheckLogs(logging.Filter):
     """Keep recurring health-check noise out of server.log."""
@@ -310,6 +317,18 @@ async def server_health():
                         new_status = 'Active' if is_alive else 'Inactive'
                         if server.status != new_status:
                             server.status = new_status
+                            if new_status == 'Active':
+                                db_logger.info(f"{server.name} {"Connected Successfully"}",
+                                            extra={
+                                                    "op_heading": "Engine Service"
+                                            }
+                                )
+                            else:
+                                db_logger.error(f"{server.name} {"Connection Failed"}",
+                                            extra={
+                                                    "op_heading": "Engine Service"
+                                            }
+                                )
                             logger.info(f"Updated status for server {server.name} ({server.ip}:{server.port}) to {new_status}")
                 
                 db.commit()
