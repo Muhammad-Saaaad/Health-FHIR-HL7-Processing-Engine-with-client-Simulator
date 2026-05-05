@@ -14,6 +14,7 @@ async def show_logs(db: Session = Depends(get_db)):
 
     **Response (200 OK):**
     Returns a list of log entries, where each entry contains:
+    - `log_id` (int): Unique identifier for the log entry
     - `datetime` (datetime): Timestamp of the log entry
     - `Status` (str): (e.g., "Success", "Fail")
     - `level` (str): Level of the log entry (e.g., "INFO", "ERROR")
