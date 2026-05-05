@@ -154,6 +154,11 @@ async def get_visit_note(req: Request, db: Session = Depends(get_db)):
                     doctor["specialization"] = codings[0].get("display", None) if codings else None
                 else:
                     doctor["specialization"] = None
+                
+                hospital_name = resource.get("organization", {}).get("display", None)
+                if hospital_name == None:
+                    logger.warning(f"Hospital Name not Found in message: {indiviual_entry}")
+                    return {"message": f"Hospital Name not Found in message: \n {indiviual_entry}"}
 
             elif resource.get("resourceType") == "Encounter":
                 identifiers = resource.get("identifier", [])

@@ -133,7 +133,8 @@ async def add_visit_note(visit_note: schema.VisitNote ,request: Request, respons
                         "resourceType": "PractitionerRole",
                         "id": unique_id,
                         "specialty": [ { "coding": [{"display": str(is_doctor.specialization)}] } ],
-                        "practitioner": {"reference": f"Practitioner/{str(is_doctor.doctor_id)}"}
+                        "practitioner": {"reference": f"Practitioner/{str(is_doctor.doctor_id)}"},
+                        "organization": {"display": "Shifa International"}
                     }
                 },
                 {

@@ -93,7 +93,8 @@ add_visit_note = { // ehr -> endpoint => /fhir/add-visit-note
                     "resourceType": "PractitionerRole",
                     "id": "5e4d2222-11b8-4acc-9998-40a49e273c4e",
                     "specialty": [ { "coding": [{"display": "General Practitioner"}] } ],
-                    "practitioner": {"reference": "Practitioner/PRAC-001"}
+                    "practitioner": {"reference": "Practitioner/PRAC-001"},
+                    "organization": {"display": "Shifa International"}
                 }
             },
             {
@@ -186,7 +187,8 @@ add_visit_note = { // phr -> endpoint => /get-visit-note
                     "resourceType": "PractitionerRole",
                     "id": "5e4d2222-11b8-4acc-9998-40a49e273c4e",
                     "specialty": [ { "coding": [{"display": "General Practitioner"}] } ],
-                    "practitioner": {"reference": "Practitioner/PRAC-001"}
+                    "practitioner": {"reference": "Practitioner/PRAC-001"},
+                    "organization": {"display": "Shifa International"}
                 }
             },
             {

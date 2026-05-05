@@ -308,7 +308,8 @@ if __name__ == "__main__":
                     "resourceType": "PractitionerRole",
                     "id": "5e4d2222-11b8-4acc-9998-40a49e273c4e",
                     "specialty": [ { "coding": [{"display": "General Practitioner"}] } ],
-                    "practitioner": {"reference": f"Practitioner/PRAC-001"}
+                    "practitioner": {"reference": f"Practitioner/PRAC-001"},
+                    "organization": {"display": "Shifa International"}
                 }
             },
             {
@@ -487,14 +488,14 @@ if __name__ == "__main__":
         "Coverage-status": "Coverage",
         "Coverage-beneficiary.reference": "Coverage",
     }
-    import asyncio 
+    # import asyncio 
 
-    rebuilt = asyncio.run(build_fhir_message(sample_output_data, sample_dest_path_to_resource))
+    # rebuilt = asyncio.run(build_fhir_message(sample_output_data, sample_dest_path_to_resource))
 
-    print("\n--- build_fhir_message sample output ---")
-    print(json.dumps(rebuilt, indent=2))
+    # print("\n--- build_fhir_message sample output ---")
+    # print(json.dumps(rebuilt, indent=2))
 
-    is_valid, message = validate_unknown_fhir_resource(response_claim)
+    is_valid, message = validate_unknown_fhir_resource(patient_visit)
     print(is_valid, " --> \n" ,message)
 
     # import uuid

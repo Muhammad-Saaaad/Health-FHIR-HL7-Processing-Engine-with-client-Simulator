@@ -145,17 +145,22 @@ def get_all_patients(request: Request, response: Response, db: Session = Depends
     """
     logger.info("get_all_patients called")
     try:
-        patients = [
-            {
-                "p_id": p.pid,
-                "mpi": p.mpi,
-                "name": p.name,
-                "gender": p.gender,
-                "date_of_birth": p.date_of_birth,
-                "phone_no": p.phone_no,
-                "policy_number": [policy.policy_id for policy in p.policies if policy.status == "Active"][0]
-            } for p in db.query(models.Patient).all()
-        ]
+        all_patients = db.query(models.Patient).all()
+        patients = []
+        for p in all_patients:
+            pocliy_number = db.query(models.InsurancePolicy).filter(models.InsurancePolicy.pid == p.pid, models.InsurancePolicy.status == "Active").first()
+            if not pocliy_number:
+                continue
+            
+            patients.append(schema.PatientDisplay(
+                p_id=p.pid,
+                mpi=p.mpi,
+                name=p.name,
+                gender=p.gender,
+                date_of_birth=p.date_of_birth,
+                phone_no=p.phone_no,
+                policy_number=pocliy_number.policy_id
+            ))
 
         logger.info(f"get_all_patients returning {len(patients)} patients")
         return patients

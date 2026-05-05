@@ -143,6 +143,7 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
     "PractitionerRole-identifier[0].value":                   "practitioner_role_identifier",
     "PractitionerRole-practitioner.reference":                "practitioner_role_practitioner_ref",
     "PractitionerRole-organization.reference":                "practitioner_role_organization_ref",
+    "PractitionerRole-organization.display":                  "EHR_org_name",
     "PractitionerRole-code[0].coding[0].code":                "practitioner_role_code",
     "PractitionerRole-code[0].coding[0].display":             "practitioner_role_code_display",
     "PractitionerRole-specialty[0].coding[0].code":           "practitioner_role_specialization_code",
