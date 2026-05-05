@@ -18,7 +18,7 @@ class VisitNote(BaseModel):
 
     @field_validator("note_details", mode="before")
     def validate_note_details(cls, value):
-        if value is None or str(value).strip() == "":
+        if value is None or str(value).strip() in ["", "None", "null"]:
             raise ValueError("note_details cannot be empty or null")
         return value
 

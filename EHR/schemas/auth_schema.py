@@ -25,3 +25,8 @@ class DoctorResponse(BaseModel):
     phone_no: str | None = None
 
     model_config = {"from_attributes": True}
+
+class DoctorUpdate(BaseModel):
+    specialization: str
+    about: str
+    phone_no: str

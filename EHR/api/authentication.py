@@ -223,21 +223,25 @@ def get_doctor(doc_id: int, request: Request, response: Response, db: Session = 
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
         
 
-@router.put("/change-phone-no{p_no}/id{doc_id}", status_code=status.HTTP_202_ACCEPTED)
+@router.put("/change-doctor/{doc_id}", status_code=status.HTTP_202_ACCEPTED)
 @limiter.limit("20/minute")
-def alter_phone_no(p_no: str , doc_id: int, request: Request, response: Response, db :Session = Depends(get_db)):
+def alter_phone_no(doc_id: int, doctor: schema.DoctorUpdate, request: Request, response: Response, db :Session = Depends(get_db)):
     """
-    Update the phone number of a registered doctor.
+    Update doctor information (phone number, specialization, and about).
 
     **Path Parameters:**
-    - `p_no` (str, required): The new phone number to assign to the doctor.
-    - `doc_id` (int, required): The unique ID of the doctor whose phone number is being updated.
+    - `doc_id` (int, required): The unique ID of the doctor to update.
+
+    **Request Body:**
+    - `phone_no` (str, optional): Doctor's phone number.
+    - `specialization` (str, optional): Doctor's medical specialization.
+    - `about` (str, optional): Doctor's bio or description.
 
     **Response (202 Accepted):**
     Returns a JSON confirmation message:
     ```json
     {
-      "message": "phone no added"
+      "message": "Doctor updated successfully"
     }
     ```
 
@@ -253,14 +257,15 @@ def alter_phone_no(p_no: str , doc_id: int, request: Request, response: Response
             logger.warning(f"Doctor not found for phone number update with ID: {doc_id}")
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="doctor id not valid")
         
-        logger.info(f"Setting phone number {p_no} for doctor ID: {doc_id}")
-        doc.phone_no = p_no
+        doc.phone_no = doctor.phone_no
+        doc.about = doctor.about
+        doc.specialization = doctor.specialization
 
+        db.add(doc)
         db.commit()
-        db.refresh(doc)
-        logger.info(f"Phone number successfully updated for doctor ID: {doc_id}")
+        logger.info(f"Doctor successfully updated for doctor ID: {doc_id}")
 
-        return {'message': "phone no added"}
+        return {'message': "Doctor updated successfully"}
 
     except Exception as e:
         logger.error(f"Error updating phone number for doctor ID {doc_id}: {str(e)}")

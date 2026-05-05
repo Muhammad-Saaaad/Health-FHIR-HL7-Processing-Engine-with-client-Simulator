@@ -17,9 +17,9 @@ class LabReport(BaseModel):
     
     @field_serializer("test_status")
     def serialize_test_status(self, value: str) -> str:
-        if value is None or value is "Ordered":
+        if value is None or value == "Ordered":
             return "Pending"
-        if value is "Arrived":
+        if value == "Arrived":
             return "Completed"
         if value in ["Cancelled", "Rejected", "Declined", "Decline", "declined", "decline"]:
             return "Rejected"

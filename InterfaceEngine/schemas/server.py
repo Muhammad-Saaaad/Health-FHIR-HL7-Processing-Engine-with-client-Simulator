@@ -7,6 +7,7 @@ class AddUpdateServer(BaseModel):
     ip: str
     port: int
     protocol: Literal["FHIR", "HL7"]
+    category: Literal["EHR", "PHR", "LIS", "Payer"]
 
     @field_validator("name", "ip", mode="before")
     @classmethod
@@ -32,6 +33,7 @@ class GetServer(BaseModel):
     ip: str
     port: int
     protocol: str
+    category: str | None
     status: str
 
     model_config = {"from_attributes": True}

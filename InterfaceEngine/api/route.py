@@ -331,14 +331,6 @@ def mapping_suggestion(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="src or destination field id not found")
     
     try:
-        # check if the mapping your doing is not wrong mapping.
-        # is_src_type_collection, src_names = set_and_check_field(is_collection=False, fields=src_fields)
-        # is_dest_type_collection, dest_names = set_and_check_field(is_collection=False, fields=src_fields)
-
-        # if is_src_type_collection != is_dest_type_collection:
-        #     logging.warning(f"Cannot map type Scaler to Collection")
-        #     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot map type Scaler to Collection")
-
         src_names = [field.name for field in src_fields]
         dest_names = [field.name for field in dest_fields]
 
@@ -363,16 +355,6 @@ def mapping_suggestion(
     except Exception as exp:
         logger.error(f"Error retrieving mapping suggestion: {str(exp)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
-
-# def set_and_check_field(is_collection, fields):
-#     field_names = []
-#     for field in fields:
-
-#         if field.mapping_type == "Collection":
-#             is_collection = True
-#         field_names.append(field.name)``
-    
-#     return (is_collection, field_names)
 
 @router.post("/add-route", status_code=status.HTTP_201_CREATED)
 @limiter.limit("10/minute")  # Limit to 10 requests per minute per IP
@@ -537,6 +519,205 @@ def add_route(data: AddRoute,request: Request, response: Response, db: Session =
         f"Add route completed successfully: route_id={route.route_id}, total_mapping_rules={len(data.rules['mappings'])}"
     )
     return {"message": "Sucessfully done"}
+
+@router.put("/edit-route/{route_id}", status_code=status.HTTP_200_OK)
+@limiter.limit("20/minute")  # Limit to 20 requests per minute per IP
+def edit_route(route_id: int, data: AddRoute, request: Request, response: Response, db: Session = Depends(get_db)):
+    """
+    Update an existing message routing rule with new configuration and mapping rules.
+
+    Allows editing all aspects of a route including name, servers, endpoints, message type,
+    and field-level mapping rules. All mapping rules are replaced with the new ones provided.
+
+    **Path Parameters:**
+    - `route_id` (int, required): The unique identifier of the route to update.
+
+    **Request Body:**
+    - `name` (str, required): Unique descriptive name for this route (e.g., "ehr-to-lis").
+    - `src_server_id` (int, required): ID of the source server. Must exist.
+    - `src_endpoint_id` (int, required): ID of the source endpoint. Must exist.
+    - `dest_server_id` (int, required): ID of the destination server. Must exist.
+    - `dest_endpoint_id` (int, required): ID of the destination endpoint. Must exist.
+    - `msg_type` (str, required): Message/event type this route handles (e.g., "ADT", "ORU").
+    - `rules` (object, required): Mapping rules object with the following structure:
+      ```json
+      {
+        "mappings": [
+          {
+            "src_paths": [<endpoint_field_id>],
+            "dest_paths": [<endpoint_field_id>],
+            "transform": "copy | map | format | split | concat",
+            "config": {}
+          }
+        ]
+      }
+      ```
+
+    **Response (200 OK):**
+    Returns the updated route object with all current configuration:
+    - `route_id` (int): Route identifier
+    - `name` (str): Route name
+    - `src_server_id` (int): Source server ID
+    - `src_endpoint_id` (int): Source endpoint ID
+    - `dest_server_id` (int): Destination server ID
+    - `dest_endpoint_id` (int): Destination endpoint ID
+    - `msg_type` (str): Message type
+    - `rules` (object): Current mapping rules
+
+    **Error Responses:**
+    - `404 Not Found`: Route with given `route_id` does not exist
+    - `409 Conflict`: New route name already exists (for a different route)
+    - `409 Conflict`: A route with the same src/dest endpoint pair already exists (for a different route)
+    - `404 Not Found`: src or dest server/endpoint ID not found
+    - `403 Forbidden`: A single rule has both multiple src_paths and multiple dest_paths
+    - `400 Bad Request`: Invalid transform type or unexpected database error
+    """
+    logger.info(f"Edit route request received: route_id={route_id}, name={data.name}")
+
+    # Check if route exists
+    route = db.get(models.Route, route_id)
+    if not route:
+        logger.warning(f"Edit route rejected: route id {route_id} does not exist")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Route id {route_id} does not exist")
+
+    # Check if new name already exists for a different route
+    existing_name_route = db.query(models.Route).filter(
+        models.Route.name == data.name,
+        models.Route.route_id != route_id
+    ).first()
+    if existing_name_route:
+        logger.warning(f"Edit route rejected: duplicate route name '{data.name}'")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Route name already exists")
+
+    # Check if src/dest endpoint pair already exists for a different route
+    existing_endpoint_route = db.query(models.Route).filter(
+        models.Route.src_endpoint_id == data.src_endpoint_id,
+        models.Route.dest_endpoint_id == data.dest_endpoint_id,
+        models.Route.route_id != route_id
+    ).first()
+    if existing_endpoint_route:
+        logger.warning(
+            f"Edit route rejected: duplicate src/dest endpoint pair "
+            f"src_endpoint_id={data.src_endpoint_id}, dest_endpoint_id={data.dest_endpoint_id}"
+        )
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="A route with this src/dest endpoint pair already exists")
+
+    # Validate all servers and endpoints exist
+    if not db.get(models.Server, data.src_server_id):
+        logger.warning(f"Edit route rejected: src server id {data.src_server_id} not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="src server id not found")
+
+    if not db.get(models.Server, data.dest_server_id):
+        logger.warning(f"Edit route rejected: dest server id {data.dest_server_id} not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="dest server id not found")
+
+    if not db.get(models.Endpoints, data.src_endpoint_id):
+        logger.warning(f"Edit route rejected: src endpoint id {data.src_endpoint_id} not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="src endpoint id not found")
+
+    if not db.get(models.Endpoints, data.dest_endpoint_id):
+        logger.warning(f"Edit route rejected: dest endpoint id {data.dest_endpoint_id} not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="dest endpoint id not found")
+
+    try:
+        # Update route header fields
+        route.name = data.name
+        route.src_server_id = data.src_server_id
+        route.src_endpoint_id = data.src_endpoint_id
+        route.dest_server_id = data.dest_server_id
+        route.dest_endpoint_id = data.dest_endpoint_id
+        route.msg_type = data.msg_type
+
+        # Delete existing mapping rules
+        db.query(models.MappingRule).filter(models.MappingRule.route_id == route_id).delete()
+        logger.info(f"Deleted existing mapping rules for route_id={route_id}")
+
+        # Add new mapping rules
+        for rule in data.rules['mappings']:
+            if len(rule['src_paths']) > 1 and len(rule['dest_paths']) > 1:
+                db.rollback()
+                logger.warning(
+                    f"Edit route rejected: invalid mapping rule has multiple source and destination fields "
+                    f"for route_id={route_id}"
+                )
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="cannot give 2 src and destination in a single rule")
+
+            rules = []
+            if rule['transform'] == 'concat':
+                for src_path in rule['src_paths']:
+                    rules.append(models.MappingRule(
+                        route_id=route_id,
+                        src_field_id=src_path,
+                        dest_field_id=rule['dest_paths'][0],
+                        transform_type=rule['transform'],
+                        config=rule['config']
+                    ))
+
+            elif rule['transform'] == 'split':
+                for dest_path in rule['dest_paths']:
+                    rules.append(models.MappingRule(
+                        route_id=route_id,
+                        src_field_id=rule['src_paths'][0],
+                        dest_field_id=dest_path,
+                        transform_type=rule['transform'],
+                        config=rule['config']
+                    ))
+
+            elif rule['transform'] in ['copy', 'map', 'format', 'regex']:
+                rules.append(models.MappingRule(
+                    route_id=route_id,
+                    src_field_id=rule['src_paths'][0],
+                    dest_field_id=rule['dest_paths'][0],
+                    transform_type=rule['transform'],
+                    config=rule['config']
+                ))
+
+            else:
+                db.rollback()
+                logger.warning(
+                    f"Edit route rejected: invalid transform type '{rule['transform']}' for route_id={route_id}"
+                )
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='transform type not valid')
+
+            db.add_all(rules)
+
+        db.commit()
+        db.refresh(route)
+
+        # Fetch updated mapping rules for response
+        mapping_rules = db.query(models.MappingRule).filter(models.MappingRule.route_id == route_id).all()
+
+        # Build response object
+        response_data = {
+            "route_id": route.route_id,
+            "name": route.name,
+            "src_server_id": route.src_server_id,
+            "src_endpoint_id": route.src_endpoint_id,
+            "dest_server_id": route.dest_server_id,
+            "dest_endpoint_id": route.dest_endpoint_id,
+            "msg_type": route.msg_type,
+            "rules": {
+                "mappings": [
+                    {
+                        "src_paths": [rule.src_field_id],
+                        "dest_paths": [rule.dest_field_id],
+                        "transform": rule.transform_type,
+                        "config": rule.config
+                    } for rule in mapping_rules
+                ]
+            }
+        }
+
+        logger.info(f"Edit route completed successfully: route_id={route_id}, total_mapping_rules={len(mapping_rules)}")
+        return response_data
+
+    except HTTPException:
+        raise
+    except Exception as exp:
+        db.rollback()
+        logger.error(f"Edit route failed for route_id={route_id}: {str(exp)}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
+
 
 @router.delete("/delete-route/{route_id}", status_code=status.HTTP_204_NO_CONTENT)
 @limiter.limit("15/minute")  # Limit to 15 requests per minute per IP

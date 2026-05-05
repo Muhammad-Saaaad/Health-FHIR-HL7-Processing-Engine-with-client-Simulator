@@ -63,6 +63,7 @@ async def add_server(server: AddUpdateServer, request: Request, response: Respon
     - `ip` (str, required): IP address or hostname of the server (e.g., "192.168.1.10" or "localhost").
     - `port` (int, required): Port number on which the server is running (e.g., 8001).
     - `protocol` (str, required): Messaging protocol this server uses — `"FHIR"` or `"HL7"`.
+    - `category`: Server category (`"EHR"` or `"PHR"` or `"LIS"` or `"Payer"`)
 
     **Response (201 Created):**
     Returns a confirmation message:
@@ -82,7 +83,6 @@ async def add_server(server: AddUpdateServer, request: Request, response: Respon
     - `400 Bad Request`: Server is unreachable or health check failed
     - `400 Bad Request`: Unexpected database error
     """
-    print("start adding server")
     if db.query(models.Server).filter(models.Server.name == server.name).first():
         logger.warning(f"Attempt to add server with duplicate name: {server.name}")
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Server with this name already exists")
@@ -143,7 +143,8 @@ async def add_server(server: AddUpdateServer, request: Request, response: Respon
             port=server.port,
             protocol=server.protocol,
             status ="Active",
-            profile=config
+            profile=config,
+            category=server.category
         )
         db.add(new_server)
         db.commit()
@@ -168,6 +169,7 @@ def all_servers(db: Session = Depends(get_db)):
     - `ip`: Server IP address or hostname
     - `port`: Server port number
     - `protocol`: Messaging protocol (`"FHIR"` or `"HL7"`)
+    - `category`: Server category (`"EHR"` or `"PHR"` or `"LIS"` or `"Payer"`)
     - `status`: Current health status (`"Active"` or `"Inactive"`)
 
     **Note:**
@@ -195,7 +197,7 @@ def specific_server(server_id: int, db: Session = Depends(get_db)):
 
     **Response (200 OK):**
     Returns the server record including:
-    - `server_id`, `name`, `ip`, `port`, `protocol`, `status`
+    - `server_id`, `name`, `ip`, `port`, `protocol`, `category`, `status`
 
     **Error Responses:**
     - `404 Not Found`: No server exists with the given `server_id`
@@ -221,6 +223,7 @@ def update_server(server_id: int, server: AddUpdateServer, request: Request, res
     - `ip` (str, required): Updated IP address or hostname.
     - `port` (int, required): Updated port number.
     - `protocol` (str, required): Updated messaging protocol (`"FHIR"` or `"HL7"`).
+    - `category`: Server category (`"EHR"` or `"PHR"` or `"LIS"` or `"Payer"`)
 
     **Response (200 OK):**
     Returns a confirmation message:
@@ -249,6 +252,7 @@ def update_server(server_id: int, server: AddUpdateServer, request: Request, res
         existing_server.ip = server.ip
         existing_server.port = server.port
         existing_server.protocol = server.protocol
+        existing_server.category = server.category
         db.commit()
         logger.info(f"Updated server {existing_server.name} successfully")
         return {"message": "Server updated successfully"}
@@ -283,11 +287,27 @@ def delete_server(server_id: int, request: Request, response: Response, db: Sess
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Server not found")
         
     try:
+        existing_routes = db.query(models.Route).filter(
+                (models.Route.src_server_id == server_id) | 
+                (models.Route.dest_server_id == server_id)
+        ).all()
+        
+        for route in existing_routes:
+            rules_deleted = db.query(models.MappingRule).filter(models.MappingRule.route_id == route.route_id).delete()
+            db.delete(route)
+        logger.info(f"All Routes and dmapping rules are deleted for server id {server_id} due to server deletion")
+        
+        endpoints = db.query(models.Endpoints).filter(models.Endpoints.server_id == server_id).all()
+        for endpoint in endpoints:
+            db.query(models.EndpointFields).filter(models.EndpointFields.endpoint_id == endpoint.endpoint_id).delete()
+            db.delete(endpoint)
+        
+        logger.info(f"All endpoints and fields are deleted for server id {server_id} due to server deletion")
         db.delete(existing_server)
         db.commit()
         logger.info(f"Deleted server with id {server_id} successfully")
         return {"message": "Server deleted successfully"}
-
+    
     except Exception as e:
         logger.exception(f"Error deleting server with id {server_id}: {str(e)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")

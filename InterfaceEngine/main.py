@@ -462,6 +462,14 @@ async def route_worker(route):
 
             except Exception as exp:
                 logger.exception(f"{exp} -> This came when sending data for route -> '{route.name}'")
+                db_logger.error(f"Data Failed to Send to : {dest_server.name}",
+                                extra= {
+                                        "src_message": json.dumps(src_msg),
+                                        "dest_message": json.dumps(data_msg) if 'data_msg' in locals() else
+                                        "data_msg not defined due to error in message building",
+                                        "op_heading": f"Channel: {route.name}"
+                                    }
+                )
                 if not result_future.done():
                     result_future.set_exception(exp)
 

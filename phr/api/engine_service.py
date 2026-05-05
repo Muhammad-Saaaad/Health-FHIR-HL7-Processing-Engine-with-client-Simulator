@@ -63,6 +63,15 @@ async def add_patient(req: Request, db: Session = Depends(get_db)):
 
                     value = get_fhir_value_by_path(json_data, path)
                     db_data[path] = value
+        
+        nic = db_data.get("identifier[1].value", None)
+        mpi = db_data.get("identifier[0].value", None)
+        if mpi is None:
+            logger.warning(f"Missing MPI in FHIR data: {json_data}")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Missing MPI in FHIR data: {json_data}")
+        if nic is None:
+            logger.warning(f"Missing NIC in FHIR data: {json_data}")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Missing NIC in FHIR data: {json_data}")
                     
         patient = model.Patient(
             nic = db_data["identifier[1].value"], # NIC
@@ -76,7 +85,7 @@ async def add_patient(req: Request, db: Session = Depends(get_db)):
         db.add(patient)
         db.commit()
 
-        logger.info("Patient added to DB with MPI: {patient.mpi}")
+        logger.info(f"Patient added to DB with MPI: {patient.mpi}")
         return {"message": db_data}
 
     except Exception as e:
@@ -119,30 +128,40 @@ async def get_visit_note(req: Request, db: Session = Depends(get_db)):
 
             if resource.get("resourceType") == "Practitioner":
 
-                doctor_id = resource.get("identifier", [{"value": None}])[0].get("value", None)
+                identifiers = resource.get("identifier", [])
+                doctor_id = identifiers[0].get("value", None) if identifiers else None
                 if not doctor_id:
                     logger.warning(f"No doctor id found in entry index : {index} \n {indiviual_entry}")
                     return {"message": f"No Practitioner id found \n {indiviual_entry}"}
                 doctor["doctor_id"] = doctor_id
 
-                doctor_name = resource.get("name", [{"text": None}])[0].get("text", None)
+                names = resource.get("name", [])
+                doctor_name = names[0].get("text", None) if names else None
                 if not doctor_name:
                     logger.warning(f"No doctor name found in entry index : {index} \n {indiviual_entry}")
                 doctor["name"] = doctor_name
 
-                doctor['phone_no'] = resource.get("telecom", [{"value": None}])[0].get("value", None)
-                doctor['about'] = resource.get("extension", [{"valueString": None}])[0].get("valueString", None)
+                telecoms = resource.get("telecom", [])
+                doctor['phone_no'] = telecoms[0].get("value", None) if telecoms else None
+                
+                extensions = resource.get("extension", [])
+                doctor['about'] = extensions[0].get("valueString", None) if extensions else None
 
             elif resource.get("resourceType") == "PractitionerRole":
-                doctor["specialization"] = resource.get("specialty", [{"coding": [{ "display": None }]}])[0].get("coding", [{ "display": None }])[0].get("display", None)
+                specialties = resource.get("specialty", [])
+                if specialties:
+                    codings = specialties[0].get("coding", [])
+                    doctor["specialization"] = codings[0].get("display", None) if codings else None
+                else:
+                    doctor["specialization"] = None
 
             elif resource.get("resourceType") == "Encounter":
-                visit_note['note_id'] = resource.get("identifier", [ {"value": None} ])[0].get("value", None)
+                identifiers = resource.get("identifier", [])
+                visit_note['note_id'] = identifiers[0].get("value", None) if identifiers else None
 
                 if not visit_note['note_id']:
                     logger.warning(f"No visit note id found: \n {indiviual_entry}")
                     return {"message": f"No visit note id found: \n {indiviual_entry}"}
-                visit_note['note_id'] = resource.get("identifier", [ {"value": None} ])[0].get("value", None)
 
                 mpi = resource.get("subject", {"reference": None}).get("reference", None)
                 if not mpi:
@@ -150,22 +169,27 @@ async def get_visit_note(req: Request, db: Session = Depends(get_db)):
                     return {"message": f"No patient reference found \n {indiviual_entry}"}
                 visit_note['mpi'] = mpi.split("/")[-1] # extract the mpi from the reference
 
-                note_title = resource.get("type", [{"text": None}])[0].get("text", None)
-                if not note_title:
+                types = resource.get("type", [])
+                visit_note['note_title'] = types[0].get("text", None) if types else None
+                if not visit_note['note_title']:
                     logger.warning(f"No note title found in: \n {indiviual_entry}")
-                visit_note['note_title'] = note_title
 
-                patient_complaint = resource.get("reasonCode", [{"text": None}])[0].get("text", None)
-                if not patient_complaint:
+                reason_codes = resource.get("reasonCode", [])
+                visit_note['patient_complaint'] = reason_codes[0].get("text", None) if reason_codes else None
+                if not visit_note['patient_complaint']:
                     logger.warning(f"No patient complaint found in: \n {indiviual_entry}")
-                visit_note['patient_complaint'] = patient_complaint
 
-                diagnosis = resource.get("diagnosis", [{"condition": {"display": None}}])[0].get("condition", {"display": None}).get("display", None)
-                if not diagnosis:
+                diagnoses = resource.get("diagnosis", [])
+                if diagnoses:
+                    condition = diagnoses[0].get("condition", {})
+                    visit_note['diagnosis'] = condition.get("display", None) if condition else None
+                else:
+                    visit_note['diagnosis'] = None
+                if not visit_note['diagnosis']:
                     logger.warning(f"No diagnosis found in: \n {indiviual_entry}")
-                visit_note['diagnosis'] = diagnosis
 
-                visit_note['note_details'] = resource.get("extension", [{"valueString": None}])[0].get("valueString", None)
+                extensions = resource.get("extension", [])
+                visit_note['note_details'] = extensions[0].get("valueString", None) if extensions else None
 
                 
         if not visit_note.get("note_id", None):
@@ -187,7 +211,8 @@ async def get_visit_note(req: Request, db: Session = Depends(get_db)):
 
             if resource and resource.get("resourceType") == "Invoice":
                 mpi = resource.get("subject", {"reference": None}).get("reference", None)
-                participant = resource.get("participant", [{"actor": {"reference": None}}])[0].get("actor", {"reference": None}).get("reference", None)
+                participants = resource.get("participant", [])
+                participant = participants[0].get("actor", {"reference": None}).get("reference", None) if participants else None
                 
                 if not mpi:
                     logger.warning(f"No patient reference found in invoice resource: \n {lab_test}")
@@ -207,19 +232,25 @@ async def get_visit_note(req: Request, db: Session = Depends(get_db)):
 
             if resource and resource.get("resourceType") == "ServiceRequest":
                 # skipping the status, intent, lab name, and lab bill of the service request.
-                test_code = resource.get("code", {"coding": [{"code": None}]}).get("coding", [{"code": None}])[0].get("code", None)
-                test_name = resource.get("code", {"coding": [{"display": None}]}).get("coding", [{"display": None}])[0].get("display", None)
+                code = resource.get("code", {})
+                codings = code.get("coding", []) if code else []
+                test_code = codings[0].get("code", None) if codings else None
+                test_name = codings[0].get("display", None) if codings else None
                 
                 if not test_code or not test_name:
                     logger.warning(f"No test code or name found in: \n {lab_test}")
                     continue
 
                 lab_mpi = resource.get("subject", {"reference": None}).get("reference", None)
-                if lab_mpi.split("/")[-1] != visit_note['mpi']:
+                if lab_mpi and lab_mpi.split("/")[-1] != visit_note['mpi']:
                     logger.warning(f"Patient reference in lab test does not match with the patient reference in visit note: \n {lab_test}")
                     continue
-                lab_id = resource.get("performer", [{"identifier": {"value": None}}])[0].get("identifier", {"value": None}).get("value", None)
-                lab_name = resource.get("performer", [{"display": None}])[0].get("display", None)
+                performers = resource.get("performer", [])
+                lab_id = None
+                lab_name = None
+                if performers:
+                    lab_id = performers[0].get("identifier", {"value": None}).get("value", None)
+                    lab_name = performers[0].get("display", None)
 
                 test_payload = {
                     "lab_id": lab_id,
@@ -290,12 +321,15 @@ async def get_visit_note(req: Request, db: Session = Depends(get_db)):
         return {"message": "Visit note and lab tests added to DB successfully"}
 
     except HTTPException as exp:
+        db.rollback()
         logger.exception(f"HTTP Exception: {str(exp)}")
         raise exp
     except ValueError as exp:
+        db.rollback()
         logger.exception(f"Invalid numeric identifier in payload: {str(exp)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid numeric identifier in payload")
     except Exception as e:
+        db.rollback()
         logger.exception(f"Error processing FHIR data: {str(e)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -336,9 +370,23 @@ async def submit_claim_from_engine(req: Request, db: Session = Depends(get_db)):
                     value = get_fhir_value_by_path(json_data, path)
                     db_data[path] = value
 
-        mpi = str(db_data.get("patient.reference").split("/")[-1]).strip() # MPI
-        vid = str(db_data.get("request.reference").split("/")[-1]).strip() # vid
-        claim_status = str(db_data.get("status")).strip()
+        patient_ref = db_data.get("patient.reference")
+        if not patient_ref:
+            logger.warning(f"Missing patient.reference in FHIR data: {json_data}")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing patient.reference in FHIR data")
+        mpi = str(patient_ref.split("/")[-1]).strip()
+        
+        request_ref = db_data.get("request.reference")
+        if not request_ref:
+            logger.warning(f"Missing request.reference in FHIR data: {json_data}")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing request.reference in FHIR data")
+        vid = str(request_ref.split("/")[-1]).strip()
+        
+        claim_status = db_data.get("status")
+        if not claim_status:
+            logger.warning(f"Missing status in FHIR data: {json_data}")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing status in FHIR data")
+        claim_status = str(claim_status).strip()
         logger.info(f"Extracted data for DB: MPI={mpi}, VID={vid}, Status={claim_status}")
 
         visit_note = db.query(model.VisitingNotes).filter(model.VisitingNotes.mpi == mpi, model.VisitingNotes.note_id == vid).first()
