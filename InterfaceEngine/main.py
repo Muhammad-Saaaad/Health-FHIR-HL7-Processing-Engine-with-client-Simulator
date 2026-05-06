@@ -17,7 +17,7 @@ from slowapi.errors import RateLimitExceeded
 from sqlalchemy.exc import SAWarning
 import warnings
 
-from api import route, endpoint, server, logs
+from api import route, endpoint, server, logs, user
 import db_logger as db_logging
 from database import engine, session_local
 import models
@@ -138,6 +138,7 @@ app.include_router(server.router, prefix="/server")
 app.include_router(route.router, prefix="/route")
 app.include_router(endpoint.router, prefix="/endpoint")
 app.include_router(logs.router, prefix="/logs")
+app.include_router(user.router, prefix="/user")
 
 db_logger = logging.getLogger("interface_engine.db_logger")
 db_logger.setLevel(logging.INFO)

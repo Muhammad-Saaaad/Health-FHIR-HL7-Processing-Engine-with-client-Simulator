@@ -9,7 +9,7 @@ Endpoints:
     - POST /login: Authenticate a user and return user ID
 """
 
-from fastapi import APIRouter, status, HTTPException, Depends
+from fastapi import APIRouter, Response, status, HTTPException, Depends, Request, Response
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 
@@ -33,7 +33,7 @@ class User(BaseModel):
 
 @router.post("/sign-up", status_code=status.HTTP_201_CREATED)
 @limiter.limit("20/minute")  # Example: Limit to 5 requests per minute
-def add_user(user: User, db: Session = Depends(get_db)):
+def add_user(user: User, request: Request, response: Response, db: Session = Depends(get_db)):
     """
     Create a new user account with email and password.
     
@@ -70,7 +70,7 @@ def add_user(user: User, db: Session = Depends(get_db)):
 
 @router.post("/login", status_code=status.HTTP_201_CREATED)
 @limiter.limit("20/minute")  # Example: Limit to 5 requests per minute
-def login_user(user: User, db: Session = Depends(get_db)):
+def login_user(user: User,  request: Request, response: Response, db: Session = Depends(get_db)):
     """
     Authenticate a user and return their user ID.
     
