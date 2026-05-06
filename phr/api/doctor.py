@@ -23,6 +23,34 @@ handler = RotatingFileHandler(
 handler.setFormatter = logging.Formatter('%(asctime)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s')
 logger.addHandler(handler)
 
+# @router.get("/all_hospitals")
+# @limiter.limit("30/minute")
+# def get_doctors(request: Request, response: Response, db: Session = Depends(get_db)):
+#     """
+#         Retrieve all doctors available in the PHR system.
+
+#         Input:
+#         - No request body.
+#         - Uses request context and database session.
+
+#         Returns:
+#         - `200 OK` with list[`DoctorBase`].
+#         - Each item includes:
+#             - `doctor_id` (int)
+#             - `name` (str)
+#             - `phone_no` (str | null)
+#             - `specialization` (str | null)
+#             - `last_visit` (str, formatted date)
+
+#         Potential errors:
+#         - `400 Bad Request`: Any unexpected database/server exception.
+#     """
+#     try:
+#         all_doctors= db.query(model.Doctor).all()
+        
+#     except Exception as exp:
+#         logger.error(f"Error fetching doctors: {str(exp)}")
+#         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
 
 @router.get("/all_doctors",response_model=list[DoctorBase])
 @limiter.limit("30/minute")

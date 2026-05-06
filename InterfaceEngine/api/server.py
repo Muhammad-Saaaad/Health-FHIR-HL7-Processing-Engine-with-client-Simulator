@@ -405,3 +405,27 @@ async def add_server_reachability_check(client: httpx.AsyncClient, ip: str, port
         return False, f"request error: {exp}"
     except Exception as exp:
         return False, f"unexpected error: {exp}"
+
+async def get_lis_payer():
+    try:
+        db = session_local()
+        all_EHRs = db.query(models.Server).filter(models.Server.category == "EHR").all()
+        all_LISs = db.query(models.Server).filter(models.Server.category == "LIS").all()
+        all_Payers = db.query(models.Server).filter(models.Server.category == "Payer").all()
+        
+        data = list()
+        for ehr in all_EHRs:
+            return_ehr = {
+                "id": ehr.server_id,
+                "name": ehr.name,
+                "systems": {
+                    "LIS": [{"id": lis.id, "name": lis.name } for lis in all_LISs],
+                    "Payer": [{ "id": payer.id, "name": payer.name } for payer in all_Payers]
+                }
+            }
+            data.append(return_ehr)
+        
+        return data
+
+    except Exception as exp:
+        logger.exception(str(exp))

@@ -50,8 +50,6 @@ class VisitingNotes(Base):
     note_details = Column(Text, nullable=True)
     consultation_bill = Column(Float, default=0, nullable=True)
     payment_status = Column(String(20), default="Unpaid", nullable=True)
-    # hospital_name = Column(String(100), nullable=True)
-    # last_hospital_visit = Column(DateTime, nullable=True)
 
     doctor = relationship("Doctor", back_populates="visiting_notes")
     patient = relationship("Patient", back_populates="visiting_notes")

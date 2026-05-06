@@ -276,6 +276,7 @@ async def get_visit_note(req: Request, db: Session = Depends(get_db)):
             return {"message": f"No patient found with MPI in database: {visit_note['mpi']}"}
         
         is_doctor = db.query(model.Doctor).filter(model.Doctor.doctor_id == doctor['doctor_id']).first()
+        # if doctor is not avaiable then add the doctor else update the doctor information.
         if not is_doctor:
             doctor_obj = model.Doctor(
                 doctor_id = doctor['doctor_id'],
@@ -285,7 +286,13 @@ async def get_visit_note(req: Request, db: Session = Depends(get_db)):
                 about = doctor['about'],
             )
             db.add(doctor_obj)
-            db.flush()
+        else:
+            is_doctor.name = doctor['name']
+            is_doctor.specialization = doctor['specialization']
+            is_doctor.phone_no = doctor['phone_no']
+            is_doctor.about = doctor['about']
+            db.add(is_doctor)
+        
         
         is_visit_note = db.query(model.VisitingNotes).filter(model.VisitingNotes.note_id == visit_note['note_id']).first()
         if is_visit_note:

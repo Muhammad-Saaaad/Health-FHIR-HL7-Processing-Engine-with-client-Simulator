@@ -153,7 +153,7 @@ def get_all_patients(request: Request, response: Response, db: Session = Depends
                 continue
             
             patients.append(schema.PatientDisplay(
-                p_id=p.pid,
+                p_id=p.pid, 
                 mpi=p.mpi,
                 name=p.name,
                 gender=p.gender,

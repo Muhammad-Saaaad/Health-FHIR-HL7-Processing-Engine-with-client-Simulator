@@ -3,6 +3,14 @@ from sqlalchemy.orm import relationship
 from database import Base # Ensure your engine uses a shared or local Base
 from datetime import datetime
 
+class User(Base):
+    __tablename__ = "user"
+
+    user_id = Column(Integer, primary_key=True, index=True)
+    email = Column(String(100), unique=True, index=True)
+    password = Column(String(255), nullable=False)
+    created_at = Column(DateTime, default=datetime.now(), nullable=False)
+
 class Server(Base):
     __tablename__ = "server"
 
