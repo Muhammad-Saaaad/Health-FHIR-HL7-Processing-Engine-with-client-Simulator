@@ -20,6 +20,100 @@ handler = RotatingFileHandler(r"logs/authentication.log", maxBytes=1000000, back
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
+@router.post("/signup-admin", status_code=status.HTTP_201_CREATED)
+@limiter.limit("10/minute")
+def create_admin(admin: schema.Admin, request: Request, response: Response, db :Session = Depends(get_db)):
+    """
+    Register a new admin in the EHR system.
+
+    **Request Body:**
+    - `email` (EmailStr, required): Admin's email address.
+    - `password` (str, required): Secure password for authentication.
+
+    **Response (201 Created):**
+    Returns a JSON confirmation message:
+    ```json
+    {
+      "message": "Admin account created successfully"
+    }
+    ```
+
+    **Request Schema (`schema.Admin`):**
+    - `email` (EmailStr)
+    - `password` (str)
+
+    **Constraints:**
+    - Role is automatically set to 2 (Admin).
+    - Admin is created without a hospital_id (hospital_id = NULL).
+
+    **Error Responses:**
+    - `400 Bad Request`: Database error or validation error
+    """
+    try:
+        logger.info(f"Admin signup request received for email: {admin.email}")
+        new_admin = model.Users(
+            email = admin.email,
+            password = admin.password,
+            roll=2
+        )
+        db.add(new_admin)
+        db.commit()
+        logger.info(f"Admin account created successfully with ID: {new_admin.users_id}, email: {admin.email}")
+        return JSONResponse(content={"message": "Admin account created successfully"})
+    except Exception as e:
+        logger.error(f"Error creating admin account for email {admin.email}: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
+
+@router.post("/login-admin", status_code=status.HTTP_200_OK)
+@limiter.limit("10/minute")
+def login_admin(admin: schema.Admin, request: Request, response: Response, db :Session = Depends(get_db)):
+    """
+    Authenticate an admin and log in to the EHR system.
+
+    **Request Body:**
+    - `email` (EmailStr, required): Admin's registered email address.
+    - `password` (str, required): Admin's password.
+
+    **Response (200 OK):**
+    Returns the authenticated admin user object with the following fields:
+    - `users_id` (int): Unique identifier for the admin
+    - `email` (str): Admin's registered email address
+    - `password` (str): Admin's password
+    - `name` (str, nullable): Admin's full name
+    - `hospital_id` (int, nullable): Associated hospital ID (typically NULL for admins)
+    - `specialization` (str, nullable): Admin's specialization
+    - `roll` (int): Role identifier (2 for Admin)
+    - `date_join` (datetime): Timestamp when admin was registered
+    - `about` (str, nullable): Admin's bio or description
+    - `phone_no` (str, nullable): Admin's phone number
+
+    **Request Schema (`schema.Admin`):**
+    - `email` (EmailStr)
+    - `password` (str)
+
+    **Error Responses:**
+    - `404 Not Found`: Email is not registered in the system
+    - `404 Not Found`: Password does not match the registered email
+    - `400 Bad Request`: Unexpected database or server error
+    """
+    
+    try:
+        is_valid_user = db.query(model.Users).filter(model.Users.email == admin.email).first()
+    except Exception as e:
+        logger.error(f"Database error during login for email {admin.email}: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
+        
+    if not is_valid_user:
+        logger.warning(f"Login failed - email not found: {admin.email}")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="email not valid")
+    
+    if is_valid_user.password != admin.password:
+        logger.warning(f"Login failed - invalid password for email: {admin.email}")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="password not valid")
+
+    logger.info(f"Successful login for user ID: {is_valid_user.users_id}, email: {admin.email}")
+    return is_valid_user
+
 @router.post("/signup", status_code=status.HTTP_201_CREATED)
 @limiter.limit("20/minute")
 def create_doctor(doctor: schema.SignUp, request: Request, response: Response, db :Session = Depends(get_db)):
@@ -28,8 +122,10 @@ def create_doctor(doctor: schema.SignUp, request: Request, response: Response, d
 
     **Request Body:**
     - `name` (str, required): Doctor's full name.
-    - `email` (str, required): Doctor's email address. Must be unique across all doctors.
+    - `email` (EmailStr, required): Doctor's email address.
     - `password` (str, required): Secure password for authentication.
+    - `hospital_id` (int, required): The ID of the hospital where the doctor will work.
+    - `roll` (int, optional): Role identifier. Defaults to 1 (Doctor). Set to 2 for Admin.
 
     **Response (201 Created):**
     Returns a JSON confirmation message:
@@ -43,29 +139,38 @@ def create_doctor(doctor: schema.SignUp, request: Request, response: Response, d
     - `name` (str)
     - `email` (EmailStr)
     - `password` (str)
+    - `hospital_id` (int)
+    - `roll` (int, default=1)
 
     **Constraints:**
-    - Email must be unique. Attempting to register with a duplicate email will raise an error.
+    - The combination of email and hospital_id must be unique. Same email can exist in different hospitals.
+    - The specified hospital_id must exist in the system.
 
     **Error Responses:**
-    - `400 Bad Request`: Database error or duplicate email detected
+    - `404 Not Found`: Hospital ID does not exist in the system
+    - `400 Bad Request`: Database error or validation error
     """
     try:
         logger.info(f"Signup request received for email: {doctor.email}")
-        new_doctor = model.Doctor(
+        if db.get(model.Hospital, doctor.hospital_id) is None:
+            logger.warning(f"Signup failed - hospital not found with ID: {doctor.hospital_id}")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="hospital id not valid")
+        
+        new_user = model.Users(
             name = doctor.name,
             email = doctor.email,
-            password = doctor.password
+            password = doctor.password,
+            hospital_id = doctor.hospital_id,
+            roll = doctor.roll
         )
-        db.add(new_doctor)
-        # db.flush()
+        db.add(new_user)
 
         db.commit()
-        db.refresh(new_doctor)
-        logger.info(f"Doctor created successfully with ID: {new_doctor.doctor_id}, email: {doctor.email}")
+        db.refresh(new_user)
+        logger.info(f"User created successfully with ID: {new_user.users_id}, email: {doctor.email}")
         return JSONResponse(content={"message": "data inserted successfully"})
     except Exception as e:
-        logger.error(f"Error creating doctor account for email {doctor.email}: {str(e)}")
+        logger.error(f"Error creating user account for email {doctor.email}: {str(e)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
 
 @router.post("/login", status_code=status.HTTP_200_OK, response_model=schema.DoctorResponse)
@@ -75,12 +180,13 @@ def login_doctor(doctor: schema.Login, request: Request, response: Response, db 
     Authenticate a doctor and log in to the EHR system.
 
     **Request Body:**
-    - `email` (str, required): The doctor's registered email address.
+    - `email` (EmailStr, required): The doctor's registered email address.
     - `password` (str, required): The doctor's password.
+    - `hospital_id` (int, required): The hospital ID associated with the doctor.
 
     **Response (200 OK):**
     Returns the authenticated doctor object with the following fields:
-    - `doctor_id` (int): Unique identifier for the doctor
+    - `users_id` (int): Unique identifier for the doctor
     - `name` (str): Doctor's full name
     - `email` (str): Doctor's registered email address
     - `password` (str): Doctor's password
@@ -92,26 +198,36 @@ def login_doctor(doctor: schema.Login, request: Request, response: Response, db 
     **Example Response:**
     ```json
     {
+      "users_id": 2,
       "name": "saim",
+      "email": "saim0067@gmail.com",
       "password": "1234",
+      "specialization": null,
       "date_join": "2026-03-05T23:27:55.547000",
       "about": null,
-      "doctor_id": 2,
-      "email": "saim0067@gmail.com",
-      "specialization": null,
       "phone_no": null
     }
     ```
 
+    **Request Schema (`schema.Login`):**
+    - `email` (EmailStr)
+    - `password` (str)
+    - `hospital_id` (int)
+
     **Error Responses:**
     - `404 Not Found`: Email is not registered in the system
+    - `404 Not Found`: Hospital ID does not exist in the system
     - `404 Not Found`: Password does not match the registered email
     - `400 Bad Request`: Unexpected database or server error
     """
     try:
         logger.info(f"Login attempt for email: {doctor.email}")
-        is_valid_doc = db.query(model.Doctor).filter(
-            model.Doctor.email == doctor.email).first()
+
+        if db.get(model.Hospital, doctor.hospital_id) is None:
+            logger.warning(f"Signup failed - hospital not found with ID: {doctor.hospital_id}")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="hospital id not valid")
+
+        is_valid_doc = db.query(model.Users).filter(model.Users.email == doctor.email).first()
     except Exception as e:
         logger.error(f"Database error during login for email {doctor.email}: {str(e)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
@@ -124,36 +240,36 @@ def login_doctor(doctor: schema.Login, request: Request, response: Response, db 
         logger.warning(f"Login failed - invalid password for email: {doctor.email}")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="password not valid")
     
-    logger.info(f"Successful login for doctor ID: {is_valid_doc.doctor_id}, email: {doctor.email}")
+    logger.info(f"Successful login for user ID: {is_valid_doc.users_id}, email: {doctor.email}")
     return is_valid_doc
 
 @router.get("/get-all-doctors/", status_code=status.HTTP_200_OK, response_model=list[schema.DoctorResponse])
 def get_all_doctors(request: Request, response: Response, db: Session = Depends(get_db)):
     """
-    Retrieve all registered doctors.
+    Retrieve all registered users (doctors and admins).
 
     **Response (200 OK):**
-    Returns a JSON array of doctor records from the database. Each item contains:
-    - `doctor_id` (int): Unique identifier for the doctor
-    - `name` (str): Doctor's full name
-    - `email` (str): Doctor's registered email address
-    - `password` (str): Doctor's password
-    - `specialization` (str, nullable): Medical specialization of the doctor
-    - `date_join` (datetime): Timestamp when doctor registered in system
-    - `about` (str, nullable): Brief bio or description about the doctor
-    - `phone_no` (str, nullable): Doctor's phone number
+    Returns a JSON array of all user records from the database. Each item contains:
+    - `users_id` (int): Unique identifier for the user
+    - `name` (str, nullable): User's full name
+    - `email` (str): User's registered email address
+    - `password` (str): User's password
+    - `specialization` (str, nullable): Medical specialization or role description
+    - `date_join` (datetime): Timestamp when user registered in system
+    - `about` (str, nullable): Brief bio or description about the user
+    - `phone_no` (str, nullable): User's phone number
 
     **Example Response:**
     ```json
     [
       {
+        "users_id": 2,
         "name": "saim",
+        "email": "saim0067@gmail.com",
         "password": "1234",
+        "specialization": null,
         "date_join": "2026-03-05T23:27:55.547000",
         "about": null,
-        "doctor_id": 2,
-        "email": "saim0067@gmail.com",
-        "specialization": null,
         "phone_no": null
       }
     ]
@@ -163,12 +279,12 @@ def get_all_doctors(request: Request, response: Response, db: Session = Depends(
     - `400 Bad Request`: Unexpected database or server error.
     """
     try:
-        logger.info("Fetching all doctors from database")
-        doctors = db.query(model.Doctor).all()
-        logger.info(f"Retrieved {len(doctors)} doctors from database")
-        return doctors
+        logger.info("Fetching all users from database")
+        users = db.query(model.Users).all()
+        logger.info(f"Retrieved {len(users)} users from database")
+        return users
     except Exception as e:
-        logger.error(f"Error retrieving all doctors: {str(e)}")
+        logger.error(f"Error retrieving all users: {str(e)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
     
 
@@ -176,43 +292,43 @@ def get_all_doctors(request: Request, response: Response, db: Session = Depends(
 @limiter.limit("40/minute")
 def get_doctor(doc_id: int, request: Request, response: Response, db: Session = Depends(get_db)):
     """
-    Retrieve a doctor's record by their ID.
+    Retrieve a user's record by their ID.
 
     **Path Parameters:**
-    - `doc_id` (int, required): The unique database ID of the doctor.
+    - `doc_id` (int, required): The unique database ID of the user (users_id).
 
     **Response (200 OK):**
-    Returns the full doctor object with the following fields:
-    - `doctor_id` (int): Unique identifier for the doctor
-    - `name` (str): Doctor's full name
-    - `email` (str): Doctor's registered email address
-    - `password` (str): Doctor's password
-    - `specialization` (str, nullable): Medical specialization of the doctor
-    - `date_join` (datetime): Timestamp when doctor registered in system
-    - `about` (str, nullable): Brief bio or description about the doctor
-    - `phone_no` (str, nullable): Doctor's phone number
+    Returns the full user object with the following fields:
+    - `users_id` (int): Unique identifier for the user
+    - `name` (str, nullable): User's full name
+    - `email` (str): User's registered email address
+    - `password` (str): User's password
+    - `specialization` (str, nullable): Medical specialization or role description
+    - `date_join` (datetime): Timestamp when user registered in system
+    - `about` (str, nullable): Brief bio or description about the user
+    - `phone_no` (str, nullable): User's phone number
 
     **Example Response:**
     ```json
     {
+      "users_id": 2,
       "name": "saim",
+      "email": "saim0067@gmail.com",
       "password": "1234",
+      "specialization": null,
       "date_join": "2026-03-05T23:27:55.547000",
       "about": null,
-      "doctor_id": 2,
-      "email": "saim0067@gmail.com",
-      "specialization": null,
       "phone_no": null
     }
     ```
 
     **Error Responses:**
-    - `404 Not Found`: No doctor exists with the given `doc_id`
+    - `404 Not Found`: No user exists with the given `doc_id` (returns None)
     - `400 Bad Request`: Unexpected database or server error
     """
     try:
         logger.info(f"Fetching doctor with ID: {doc_id}")
-        doctor = db.get(model.Doctor, doc_id)
+        doctor = db.get(model.Users, doc_id)
         if doctor is None:
             logger.warning(f"Doctor not found with ID: {doc_id}")
         else:
@@ -222,20 +338,51 @@ def get_doctor(doc_id: int, request: Request, response: Response, db: Session = 
         logger.error(f"Error retrieving doctor with ID {doc_id}: {str(e)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
         
+@router.post("/add-hospital", status_code=status.HTTP_201_CREATED)
+def add_hospital(name: str, request: Request, response: Response, db :Session = Depends(get_db)):
+    """
+    Create a new hospital in the system.
+
+    **Query Parameters:**
+    - `name` (str, required): The name of the hospital to be created.
+
+    **Response (201 Created):**
+    Returns a JSON confirmation message with the newly created hospital ID:
+    ```json
+    {
+      "message": "Hospital added successfully",
+      "hospital_id": 1
+    }
+    ```
+
+    **Error Responses:**
+    - `400 Bad Request`: Database error or validation error
+    """
+    try:
+        logger.info(f"Adding new hospital with name: {name}")
+        new_hospital = model.Hospital(name=name)
+        db.add(new_hospital)
+        db.commit()
+        db.refresh(new_hospital)
+        logger.info(f"Hospital added successfully with ID: {new_hospital.hospital_id}, name: {name}")
+        return JSONResponse(content={"message": "Hospital added successfully", "hospital_id": new_hospital.hospital_id})
+    except Exception as e:
+        logger.error(f"Error adding hospital with name {name}: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
 
 @router.put("/change-doctor/{doc_id}", status_code=status.HTTP_202_ACCEPTED)
 @limiter.limit("20/minute")
-def alter_phone_no(doc_id: int, doctor: schema.DoctorUpdate, request: Request, response: Response, db :Session = Depends(get_db)):
+def alter_doctor_info(doc_id: int, doctor: schema.DoctorUpdate, request: Request, response: Response, db :Session = Depends(get_db)):
     """
-    Update doctor information (phone number, specialization, and about).
+    Update user information (phone number, specialization, and about).
 
     **Path Parameters:**
-    - `doc_id` (int, required): The unique ID of the doctor to update.
+    - `doc_id` (int, required): The unique ID of the user to update (users_id).
 
     **Request Body:**
-    - `phone_no` (str, optional): Doctor's phone number.
-    - `specialization` (str, optional): Doctor's medical specialization.
-    - `about` (str, optional): Doctor's bio or description.
+    - `phone_no` (str, required): User's phone number.
+    - `specialization` (str, required): User's medical specialization or role description.
+    - `about` (str, required): User's bio or description.
 
     **Response (202 Accepted):**
     Returns a JSON confirmation message:
@@ -245,16 +392,21 @@ def alter_phone_no(doc_id: int, doctor: schema.DoctorUpdate, request: Request, r
     }
     ```
 
+    **Request Schema (`schema.DoctorUpdate`):**
+    - `phone_no` (str)
+    - `specialization` (str)
+    - `about` (str)
+
     **Error Responses:**
-    - `404 Not Found`: No doctor exists with the given `doc_id`
+    - `404 Not Found`: No user exists with the given `doc_id`
     - `400 Bad Request`: Unexpected database or server error
     """
     try:
-        logger.info(f"Updating phone number for doctor ID: {doc_id}")
-        doc = db.query(model.Doctor).filter(model.Doctor.doctor_id == doc_id).first()
+        logger.info(f"Updating information for doctor ID: {doc_id}")
+        doc = db.query(model.Users).filter(model.Users.users_id == doc_id).first()
 
         if not doc:
-            logger.warning(f"Doctor not found for phone number update with ID: {doc_id}")
+            logger.warning(f"Doctor not found for update with ID: {doc_id}")
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="doctor id not valid")
         
         doc.phone_no = doctor.phone_no
@@ -268,5 +420,5 @@ def alter_phone_no(doc_id: int, doctor: schema.DoctorUpdate, request: Request, r
         return {'message': "Doctor updated successfully"}
 
     except Exception as e:
-        logger.error(f"Error updating phone number for doctor ID {doc_id}: {str(e)}")
+        logger.error(f"Error updating doctor with ID {doc_id}: {str(e)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")

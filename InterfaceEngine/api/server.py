@@ -8,7 +8,6 @@ from sqlalchemy.orm import Session
 
 from schemas.server import AddUpdateServer, GetServer
 import models
-import db_logger as db_logging
 from database import get_db, session_local
 from rate_limiting import limiter
 
@@ -20,12 +19,7 @@ logger.propagate = False
 
 formater = logging.Formatter("%(asctime)s- %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s")
 
-db_logger = logging.getLogger("db_logger")
-db_logger.setLevel(logging.INFO)
-db_logger.handlers.clear() # Remove any default handlers
-db_logger.propagate = False
-db_logger.addHandler(db_logging.DBHandler()) # Add our custom DB handler
-
+# Logging filter — silences repetitive /health endpoint entries from server.log
 class ExcludeHealthCheckLogs(logging.Filter):
     """Keep recurring health-check noise out of server.log."""
 
@@ -138,6 +132,7 @@ async def add_server(server: AddUpdateServer, request: Request, response: Respon
 
     try:
         new_server = models.Server(
+            system_id=server.system_id,
             name=server.name,
             ip=server.ip,
             port=server.port,
@@ -293,7 +288,7 @@ def delete_server(server_id: int, request: Request, response: Response, db: Sess
         ).all()
         
         for route in existing_routes:
-            rules_deleted = db.query(models.MappingRule).filter(models.MappingRule.route_id == route.route_id).delete()
+            db.query(models.MappingRule).filter(models.MappingRule.route_id == route.route_id).delete()
             db.delete(route)
         logger.info(f"All Routes and dmapping rules are deleted for server id {server_id} due to server deletion")
         
@@ -333,22 +328,10 @@ async def server_health():
 
                 async with httpx.AsyncClient() as client:
                     for server in servers:
-                        is_alive= await server_health_check(client, server.ip, server.port)
+                        is_alive= await server_health_check(client, server.ip, server.port, server.system_id)
                         new_status = 'Active' if is_alive else 'Inactive'
                         if server.status != new_status:
                             server.status = new_status
-                            if new_status == 'Active':
-                                db_logger.info(f"{server.name} {"Connected Successfully"}",
-                                            extra={
-                                                    "op_heading": "Engine Service"
-                                            }
-                                )
-                            else:
-                                db_logger.error(f"{server.name} {"Connection Failed"}",
-                                            extra={
-                                                    "op_heading": "Engine Service"
-                                            }
-                                )
                             logger.info(f"Updated status for server {server.name} ({server.ip}:{server.port}) to {new_status}")
                 
                 db.commit()
@@ -363,7 +346,7 @@ async def server_health():
         await asyncio.sleep(30) # check status after every 30 seconds
 
 
-async def server_health_check(client, ip: str, port: int):
+async def server_health_check(client, ip: str, port: int, system_id: str):
     """
     Perform a single health check against a server's `/health` endpoint.
 
@@ -378,7 +361,7 @@ async def server_health_check(client, ip: str, port: int):
         bool: `True` if the server responds with HTTP 200, `False` for any error or non-200 response.
     """
     try:
-        response = await client.get(f"http://{ip}:{port}/health", timeout=10)
+        response = await client.get(f"http://{ip}:{port}/health/{system_id}", timeout=10)
         if response.status_code != 200:
             logger.warning(f"Health check failed for {ip}:{port} with status code {response.status_code}")  
         return response.status_code == 200
@@ -424,8 +407,9 @@ async def get_lis_payer():
                 }
             }
             data.append(return_ehr)
-        
         return data
 
     except Exception as exp:
         logger.exception(str(exp))
+    finally:
+        db.close()

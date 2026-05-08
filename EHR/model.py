@@ -1,31 +1,57 @@
 from datetime import datetime
 
-from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, DateTime, Date, Float, Text
+from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, DateTime, Date, Float, Text, JSON, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
 
-class Doctor(Base):
-    __tablename__ = 'doctor'
+class Hospital(Base):
+    __tablename__ = 'hospital'
 
-    doctor_id = Column(Integer, primary_key=True, index=True)
-
+    hospital_id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False)
-    email = Column(String(100), nullable=False, unique=True)
+
+    users = relationship("Users", back_populates="hospital")
+    patient = relationship("Patient", back_populates="hospital")
+
+class Config(Base):          # we can extract the operation heading, url, hospital name via endpooint, where we can define that which hospital belong to which endpoint. 
+    __tablename__ = "config" #  [ {endpoint1: {data1, data2}, endpoint2: {data1}}]
+
+    config_id = Column(Integer, primary_key=True, index=True)
+    data = Column(JSON, nullable=False)
+    hold_flag = Column(Boolean, default=False)
+
+class Users(Base):
+    __tablename__ = 'users'
+
+    users_id = Column(Integer, primary_key=True, index=True)
+    hospital_id = Column(Integer, ForeignKey('hospital.hospital_id'), nullable=True) # hospital(fk of hospital)
+
+    name = Column(String(100), nullable=True)
+    email = Column(String(100), nullable=False)  # Removed unique=True - see __table_args__ for composite constraint
     password = Column(String(200), nullable=False)
     specialization = Column(String(50), nullable=True)
+    roll = Column(Integer, default=1, nullable=False) # 1=Doctor or 2=Admin
 
     date_join = Column(DateTime, default=datetime.now())
     about = Column(String(255), nullable=True)
     phone_no = Column(String(20), nullable=True)
 
-    visiting_notes = relationship("VisitingNotes", back_populates="doctor")
+    visiting_notes = relationship("VisitingNotes", back_populates="user")
+    hospital = relationship("Hospital", back_populates="users")
+    
+    # Constraint: Same email cannot exist with same hospital_id
+    # But same email can exist in different hospitals, and hospital_id can be NULL
+    __table_args__ = (
+        UniqueConstraint('email', 'hospital_id', name='uq_email_hospital'),
+    )
     
 class Patient(Base):
     __tablename__ = 'patient'
 
     mpi = Column(Integer, primary_key= True, index= True)
+    hospital_id = Column(Integer, ForeignKey('hospital.hospital_id'), nullable=False) # hospital(fk of hospital)
 
     nic = Column(String(15), unique=True, nullable= False)
     name = Column(String(100), nullable= False)
@@ -33,10 +59,9 @@ class Patient(Base):
     gender = Column(String(10), nullable= False)
     date_of_birth = Column(Date, nullable= False)
     address = Column(String(255), nullable= True)
-    # if we are dealing with multiple insurance providers, 
-    # we can add insurance provider name and insurance number as well
 
     visiting_notes = relationship("VisitingNotes", back_populates="patient")
+    hospital = relationship("Hospital", back_populates="patient")
 
 class Bill(Base): # Total Bill
     __tablename__ = 'bill'
@@ -56,7 +81,7 @@ class VisitingNotes(Base):
     note_id = Column(Integer, primary_key=True, index=True)
 
     mpi = Column(Integer,ForeignKey('patient.mpi'), nullable=False)
-    doctor_id = Column(Integer, ForeignKey('doctor.doctor_id'), nullable=False)
+    users_id = Column(Integer, ForeignKey('users.users_id'), nullable=False)
     bill_id = Column(Integer, ForeignKey('bill.bill_id'), nullable=True)
 
     visit_date = Column(DateTime, default=datetime.now())
@@ -65,7 +90,7 @@ class VisitingNotes(Base):
     dignosis = Column(String(255), nullable=True)
     note_details = Column(String(1000), nullable=True)
 
-    doctor = relationship("Doctor", back_populates="visiting_notes")
+    user = relationship("Users", back_populates="visiting_notes")
     patient = relationship("Patient", back_populates="visiting_notes")
     bill = relationship("Bill", back_populates="visiting_notes")
     report = relationship("LabReport", back_populates="visiting_notes")

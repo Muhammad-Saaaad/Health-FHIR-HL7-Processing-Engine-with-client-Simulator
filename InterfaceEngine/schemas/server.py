@@ -3,6 +3,7 @@ from typing import Literal
 
 class AddUpdateServer(BaseModel):
 
+    system_id: str
     name: str
     ip: str
     port: int
@@ -29,6 +30,7 @@ class AddUpdateServer(BaseModel):
 class GetServer(BaseModel):
     
     server_id: int
+    system_id: str
     name: str
     ip: str
     port: int

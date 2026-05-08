@@ -1,3 +1,5 @@
+import json
+
 from fastapi import APIRouter, status, HTTPException, Depends, Response, Request
 from sqlalchemy.orm import Session
 
@@ -40,14 +42,20 @@ async def show_log_msg(log_id: int, db: Session = Depends(get_db)):
     - `datetime` (datetime): Timestamp of the log entry
     - `level` (str): Level of the log entry (e.g., "INFO", "ERROR")
     - `operation_heading` (str): Heading or title of the operation
-    - `src_message` (str | None): Original message before processing
-    - `dest_message` (str | None): Final message after processing
+    - `src_message` (str | dict | None): Original message before processing
+    - `dest_message` (str | dict | None): Final message after processing
 
     **Error Responses:**
     - 409 Conflict: Database retrieval error
     """
     try:
         log = db.query(models.Logs).filter(models.Logs.log_id == log_id).first()
+        try:
+            log.src_message = json.loads(log.src_message) if log.src_message else None
+            log.dest_message = json.loads(log.dest_message) if log.dest_message else None
+        except:
+            pass
+
         return log
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))

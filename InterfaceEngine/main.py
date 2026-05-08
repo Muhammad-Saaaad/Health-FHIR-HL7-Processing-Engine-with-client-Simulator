@@ -529,6 +529,13 @@ async def ingest(full_path: str, req: Request):
             is_valid, message = validate_unknown_fhir_resource(fhir_data=payload) # validating fhir message
             if not is_valid:
                 logger.exception(f"trace={trace_id} FHIR validation failed: {message}")
+                db_logger.error(f"FHIR validation failed for endpoint /{full_path}",
+                                extra= {
+                                        "src_message": json.dumps(payload),
+                                        "dest_message": "FHIR validation failed, so no dest message",
+                                        "op_heading": f"Endpoint: /{full_path}"
+                                    }
+                )
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(message))
         else:
             # Try JSON first (EHR may wrap the HL7 string in JSON). If that fails, fall back to raw text.

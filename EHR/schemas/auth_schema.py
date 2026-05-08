@@ -5,17 +5,20 @@ class SignUp(BaseModel):
     name: str
     email: EmailStr
     password: str
+    roll: int = 1  # Default to 1 for Doctor
+    hospital_id: int
 
     model_config = {"from_attributes": True}
 
 class Login(BaseModel):
     email: EmailStr
     password: str
+    hospital_id: int
 
     model_config = {"from_attributes": True}
 
 class DoctorResponse(BaseModel):
-    doctor_id: int
+    users_id: int
     name: str
     email: str
     password: str
@@ -30,3 +33,9 @@ class DoctorUpdate(BaseModel):
     specialization: str
     about: str
     phone_no: str
+
+class Admin(BaseModel):
+    email: EmailStr
+    password: str
+
+    model_config = {"from_attributes": True}

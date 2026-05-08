@@ -15,13 +15,15 @@ class Server(Base):
     __tablename__ = "server"
 
     server_id = Column(Integer, primary_key=True, index=True)
+    system_id = Column(String(50), nullable=False, index=True) # e.g. Hospital A, Lab B
+
     ip = Column(String(15), nullable=False)
     port = Column(Integer, nullable=False)
     name = Column(String(100), unique=True, nullable=False) # name(always unique)
     protocol = Column(String(5)) # e.g. FHIR, HL7
     status = Column(String(20)) # e.g. Active, Inactive
     profile = Column(JSON, nullable=False) # e.g. contians JSON that tells what kind of data does that server expect to send and recieve.
-    category = Column(String(20)) # e.g. EHR, LIS, PHR, Payer
+    category = Column(String(20)) # e.g. EHR, LIS, PHR, Payer]
 
     endpoints = relationship("Endpoints", back_populates="server")
 

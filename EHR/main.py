@@ -7,7 +7,7 @@ from slowapi.errors import RateLimitExceeded
 from sqlalchemy.exc import SAWarning
 import warnings
  
-from database import engine
+from database import engine, session_local
 import model
 from api import (
     authentication, 
@@ -43,15 +43,22 @@ app.include_router(visit_note.router)
 app.include_router(claim.router)
 app.include_router(engine_service.router)
 
-@app.get("/health")
-def check_health():
+@app.get("/health/{system_id}")
+def check_health(system_id: str):
     """
     Health-check endpoint for EHR service.
 
     **Response (200 OK):**
     - JSON object: `{ "message": "✔ EHR running" }`
     """
-    return {"message": "✔ EHR running"}
+    db = session_local()
+    try:
+        server = db.query(model.Hospital).filter(model.Hospital.hospital_id == system_id).first()
+        if not server:
+            return {"message": f"Server with system_id '{system_id}' not found."}
+        return {"message": f"✔ EHR running for system_id '{system_id}'"}
+    finally:
+        db.close()
 
 if __name__ == "__main__":
     import uvicorn
