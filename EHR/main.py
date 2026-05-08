@@ -15,7 +15,8 @@ from api import (
     patient, 
     visit_note,
     claim,
-    engine_service
+    engine_service,
+    config
 )
 from rate_limiting import limiter, rate_limit_exceeded_handler
 
@@ -42,6 +43,7 @@ app.include_router(patient.router)
 app.include_router(visit_note.router)
 app.include_router(claim.router)
 app.include_router(engine_service.router)
+app.include_router(config.router)
 
 @app.get("/health/{system_id}")
 def check_health(system_id: str):

@@ -32,8 +32,10 @@ def upgrade() -> None:
     op.create_index(op.f('ix_bill_bill_id'), 'bill', ['bill_id'], unique=False)
     op.create_table('config',
     sa.Column('config_id', sa.Integer(), nullable=False),
-    sa.Column('data', sa.JSON(), nullable=False),
+    sa.Column('data', sa.JSON(), nullable=False, default=[]),
+    sa.Column('history', sa.JSON(), nullable=False, default={}),
     sa.Column('hold_flag', sa.Boolean(), nullable=True),
+    sa.Column('sent_to_engine', sa.Boolean(), nullable=True),
     sa.PrimaryKeyConstraint('config_id')
     )
     op.create_index(op.f('ix_config_config_id'), 'config', ['config_id'], unique=False)

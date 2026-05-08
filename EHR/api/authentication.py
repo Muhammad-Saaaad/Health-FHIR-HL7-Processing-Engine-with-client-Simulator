@@ -369,6 +369,32 @@ def add_hospital(name: str, request: Request, response: Response, db :Session = 
     except Exception as e:
         logger.error(f"Error adding hospital with name {name}: {str(e)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
+        
+@router.get("/all-hospitals", status_code=status.HTTP_200_OK)
+def get_all_hospitals(request: Request, response: Response, db :Session = Depends(get_db)):
+    """
+    Retrieve a list of all hospitals in the system.
+
+    **Query Parameters:**
+    - `name` (str, required): The name of the hospital to be created.
+
+    **Response (201 Created):**
+    Returns a JSON confirmation message with the newly created hospital ID:
+    ```json
+    {
+      "message": "Hospital added successfully",
+      "hospital_id": 1
+    }
+    ```
+
+    **Error Responses:**
+    - `400 Bad Request`: Database error or validation error
+    """
+    try:
+       return db.query(model.Hospital).all()
+    except Exception as e:
+        logger.error(f"Error while retriving all hospitals: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
 
 @router.put("/change-doctor/{doc_id}", status_code=status.HTTP_202_ACCEPTED)
 @limiter.limit("20/minute")

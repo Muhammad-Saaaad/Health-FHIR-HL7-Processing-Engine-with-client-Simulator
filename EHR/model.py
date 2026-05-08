@@ -16,11 +16,13 @@ class Hospital(Base):
     patient = relationship("Patient", back_populates="hospital")
 
 class Config(Base):          # we can extract the operation heading, url, hospital name via endpooint, where we can define that which hospital belong to which endpoint. 
-    __tablename__ = "config" #  [ {endpoint1: {data1, data2}, endpoint2: {data1}}]
+    __tablename__ = "config"
 
     config_id = Column(Integer, primary_key=True, index=True)
-    data = Column(JSON, nullable=False)
+    data = Column(JSON, nullable=False, default=[]) # e.g.: [{"endpoint1": [{data1}, {data2}]} , {"endpoint2": [{data1}, {data2}]} ]
+    history = Column(JSON, nullable=False, default={}) # e.g: {"Hospital A": {"add-patient": 10, "add-visit": 20}, "Hospital B": {"add-patient": 5, "submit-claim": 15}}
     hold_flag = Column(Boolean, default=False)
+    sent_to_engine = Column(Boolean, default=False) # this is for the engine to know that this config is already sent to engine or not. if sent then it will not send again to engine.
 
 class Users(Base):
     __tablename__ = 'users'
