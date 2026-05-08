@@ -21,6 +21,7 @@ class SpecificPatient(get_patient):
         return age
 
 class post_patient(BaseModel):
+    hospital_id: int
     nic : str
     name : str
     phone_no : str | None

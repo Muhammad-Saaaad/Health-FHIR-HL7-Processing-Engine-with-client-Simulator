@@ -24,14 +24,15 @@ handler.setFormatter(formatter)
 logger.addHandler(handler)
 
 
-@router.get("/patients", response_model=list[schema.get_patient], status_code=status.HTTP_200_OK)
+@router.get("/patients/{hospital_id}", response_model=list[schema.get_patient], status_code=status.HTTP_200_OK)
 @limiter.limit("20/minute")
-def get_patient(request: Request, response: Response, db: Session = Depends(get_db)):
+def get_patient(hospital_id: int, request: Request, response: Response, db: Session = Depends(get_db)):
     """
-    Retrieve all patients from the EHR system.
+    Retrieve all patients from the EHR system for a specific hospital.
     
-    **Query Parameters:** None
-    
+    **Path Parameters:**
+    - `hospital_id` (int, required): The unique identifier of the hospital to retrieve patients for.
+
     **Response (200 OK):**
     Returns `list[schema.get_patient]`.
 
@@ -45,7 +46,7 @@ def get_patient(request: Request, response: Response, db: Session = Depends(get_
     - 409 Conflict: Database or data consistency error
     """
     try:
-        all_patients = db.query(model.Patient).all()
+        all_patients = db.query(model.Patient).filter(model.Patient.hospital_id == hospital_id).all()
         return all_patients
     except Exception as e:
         logger.error(f"Error retrieving patients: {str(e)}")
@@ -118,6 +119,7 @@ async def add_patient(patient: schema.post_patient, request: Request, response: 
     - `message` (str): "data inserted sucessfully"
 
     **Request Schema (`schema.post_patient`):**
+    - `hospital_id` (int)
     - `nic` (str)
     - `name` (str)
     - `phone_no` (str | null)
@@ -138,13 +140,17 @@ async def add_patient(patient: schema.post_patient, request: Request, response: 
     **Note:** Registration is rolled back if FHIR registration fails to maintain data consistency
     """
     try:
-        
+        if db.get(model.Hospital, patient.hospital_id) is None:
+            logger.warning(f"Attempt to register patient with non-existent hospital_id: {patient.hospital_id}")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"message":"hospital_id does not exist"})
+
         # select top 1 from patient where nic = patient.nic
         if db.query(model.Patient).filter(model.Patient.nic == patient.nic).first():
             logger.warning(f"Attempt to register patient with existing NIC: {patient.nic}")
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"message":"nic already exists"})
 
         new_patient = model.Patient(
+            hospital_id = patient.hospital_id,
             nic = patient.nic,
             name = patient.name,
             phone_no = patient.phone_no,
