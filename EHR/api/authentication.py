@@ -125,7 +125,6 @@ def create_doctor(doctor: schema.SignUp, request: Request, response: Response, d
     - `email` (EmailStr, required): Doctor's email address.
     - `password` (str, required): Secure password for authentication.
     - `hospital_id` (int, required): The ID of the hospital where the doctor will work.
-    - `roll` (int, optional): Role identifier. Defaults to 1 (Doctor). Set to 2 for Admin.
 
     **Response (201 Created):**
     Returns a JSON confirmation message:
@@ -140,7 +139,6 @@ def create_doctor(doctor: schema.SignUp, request: Request, response: Response, d
     - `email` (EmailStr)
     - `password` (str)
     - `hospital_id` (int)
-    - `roll` (int, default=1)
 
     **Constraints:**
     - The combination of email and hospital_id must be unique. Same email can exist in different hospitals.
@@ -161,7 +159,7 @@ def create_doctor(doctor: schema.SignUp, request: Request, response: Response, d
             email = doctor.email,
             password = doctor.password,
             hospital_id = doctor.hospital_id,
-            roll = doctor.roll
+            roll = 1
         )
         db.add(new_user)
 
@@ -187,6 +185,7 @@ def login_doctor(doctor: schema.Login, request: Request, response: Response, db 
     **Response (200 OK):**
     Returns the authenticated doctor object with the following fields:
     - `users_id` (int): Unique identifier for the doctor
+    - `hospital_id` (int): The hospital ID associated with the doctor
     - `name` (str): Doctor's full name
     - `email` (str): Doctor's registered email address
     - `password` (str): Doctor's password
@@ -199,6 +198,7 @@ def login_doctor(doctor: schema.Login, request: Request, response: Response, db 
     ```json
     {
       "users_id": 2,
+      "hospital_id": 1,
       "name": "saim",
       "email": "saim0067@gmail.com",
       "password": "1234",
@@ -239,6 +239,8 @@ def login_doctor(doctor: schema.Login, request: Request, response: Response, db 
     if is_valid_doc.password != doctor.password:
         logger.warning(f"Login failed - invalid password for email: {doctor.email}")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="password not valid")
+    
+    is_valid_doc.hospital_id = doctor.hospital_id  # Ensure hospital_id is set in the response
     
     logger.info(f"Successful login for user ID: {is_valid_doc.users_id}, email: {doctor.email}")
     return is_valid_doc
@@ -343,8 +345,9 @@ def add_hospital(name: str, request: Request, response: Response, db :Session = 
     """
     Create a new hospital in the system.
 
-    **Query Parameters:**
-    - `name` (str, required): The name of the hospital to be created.
+    **Input:**
+
+    - `name` (str)
 
     **Response (201 Created):**
     Returns a JSON confirmation message with the newly created hospital ID:
@@ -375,15 +378,12 @@ def get_all_hospitals(request: Request, response: Response, db :Session = Depend
     """
     Retrieve a list of all hospitals in the system.
 
-    **Query Parameters:**
-    - `name` (str, required): The name of the hospital to be created.
-
     **Response (201 Created):**
-    Returns a JSON confirmation message with the newly created hospital ID:
+    Returns a **List** with json like this:
     ```json
     {
-      "message": "Hospital added successfully",
-      "hospital_id": 1
+      "hospital_id": 1,
+      "name": "Shifa International"
     }
     ```
 

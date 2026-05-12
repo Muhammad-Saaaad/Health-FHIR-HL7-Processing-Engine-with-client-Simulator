@@ -72,7 +72,11 @@ async def add_patient(req: Request, db: Session = Depends(get_db)):
         if nic is None:
             logger.warning(f"Missing NIC in FHIR data: {json_data}")
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Missing NIC in FHIR data: {json_data}")
-                    
+            
+        if db.query(model.Patient).filter(model.Patient.nic == nic).first(): # if patient already exists in the db, then don't add into the phr.
+            logger.warning(f"Patient with NIC {nic} already exists in DB")
+            return {"message": f"Patient with NIC {nic} already exists in DB"}
+
         patient = model.Patient(
             nic = db_data["identifier[1].value"], # NIC
             mpi = db_data["identifier[0].value"], # MPI

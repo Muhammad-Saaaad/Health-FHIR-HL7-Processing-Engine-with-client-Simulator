@@ -5,7 +5,9 @@ from logging.handlers import RotatingFileHandler
 
 from fastapi import APIRouter, Response, status, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
+from sqlalchemy import desc
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.attributes import flag_modified
 
 from api import engine_service
 from schemas import patient_schema as schema
@@ -140,7 +142,8 @@ async def add_patient(patient: schema.post_patient, request: Request, response: 
     **Note:** Registration is rolled back if FHIR registration fails to maintain data consistency
     """
     try:
-        if db.get(model.Hospital, patient.hospital_id) is None:
+        hospital = db.get(model.Hospital, patient.hospital_id)
+        if hospital is None:
             logger.warning(f"Attempt to register patient with non-existent hospital_id: {patient.hospital_id}")
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"message":"hospital_id does not exist"})
 
@@ -153,10 +156,10 @@ async def add_patient(patient: schema.post_patient, request: Request, response: 
             hospital_id = patient.hospital_id,
             nic = patient.nic,
             name = patient.name,
-            phone_no = patient.phone_no,
+            phone_no = "Not available" if patient.phone_no is None else patient.phone_no,
             gender = patient.gender.capitalize(),
             date_of_birth = patient.date_of_birth,
-            address = patient.address
+            address = "Not available" if patient.address is None else patient.address
         )
         db.add(new_patient)
         db.flush()
@@ -181,8 +184,8 @@ async def add_patient(patient: schema.post_patient, request: Request, response: 
                         "name": [{"text": new_patient.name}],
                         "gender": new_patient.gender,
                         "birthDate": str(new_patient.date_of_birth),
-                        "address": [{"text": "" if new_patient.address is None else new_patient.address}],
-                        "telecom": [{"value": "" if new_patient.phone_no is None else new_patient.phone_no}]
+                        "address": [{"text": new_patient.address }],
+                        "telecom": [{"value": new_patient.phone_no }]
                     }
                 },
                 {
@@ -211,18 +214,40 @@ async def add_patient(patient: schema.post_patient, request: Request, response: 
             ]
         }
         logger.info(f"Registering patient in FHIR with data: {fhir_patient}")
-        # response = await engine_service.send_to_engine(fhir_patient, url="http://127.0.0.1:9000/fhir/add-patient")
+        
+        config_data= db.query(model.Config).filter(model.Config.sent_to_engine == False) \
+            .order_by(desc(model.Config.config_id)).first()
+        
+        if config_data and config_data.hold_flag: # if we have to hold the data
+            history_hospital = config_data.history.get(hospital.name, {})
+
+            if history_hospital:
+                history_hospital["add-patient"] = history_hospital.get("add-patient", 0) + 1
+            else:
+                config_data.history[hospital.name] = history_hospital
+                config_data.history[hospital.name]["add-patient"] = 1
+            
+            endpoint_already_added = False
+            for endpoint in config_data.data:
+                if endpoint.get("/fhir/add-patient", False): # if endpoint exists in config.
+                    endpoint["/fhir/add-patient"].append(fhir_patient)
+                    endpoint_already_added = True
+                    break
+            
+            if not endpoint_already_added:
+                config_data.data.append({"/fhir/add-patient": [fhir_patient]})
+
+            flag_modified(config_data, "history")
+            flag_modified(config_data, "data")
+            db.commit()
+            logger.info(f"Data added to config for hospital {hospital.name} due to hold flag. Current history: {config_data.history}")
+            return {"message": "data added to config due to hold flag"}
+        
         asyncio.create_task(engine_service.send_to_engine(fhir_patient, url="http://127.0.0.1:9000/fhir/add-patient"))
         
-        # if response == "sucessfull":
         db.commit()
-        # db.rollback()
         logger.info(f"Patient registered successfully in FHIR: {new_patient.name} (NIC: {new_patient.mpi})")
         return {"message": "data inserted sucessfully"}
-        
-        # db.rollback()
-        # logger.error(f"Failed to register patient in FHIR: {new_patient.name} (NIC: {new_patient.mpi})")    
-        # return JSONResponse({"message": f"Error {response}"}, status_code=status.HTTP_400_BAD_REQUEST)
     except Exception as exp:
         db.rollback()
         logger.error(f"Exception during patient registration: {str(exp)}")

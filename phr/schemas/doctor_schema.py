@@ -30,3 +30,9 @@ class DoctorBase(BaseModel):
         return value.strftime("%B %d, %Y")
 
     model_config = {"from_attributes": True}
+
+class DoctorGet(BaseModel):
+    doctor_id: int
+    name: str
+
+    model_config = {"from_attributes": True}

@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session, joinedload
 from database import get_db
 import model
 from rate_limiting import limiter
-from schemas.doctor_schema import DoctorBase
+from schemas.doctor_schema import DoctorBase, DoctorGet
 
 router = APIRouter(tags=["Doctors"])
 
@@ -23,34 +23,58 @@ handler = RotatingFileHandler(
 handler.setFormatter = logging.Formatter('%(asctime)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s')
 logger.addHandler(handler)
 
-# @router.get("/all_hospitals")
-# @limiter.limit("30/minute")
-# def get_doctors(request: Request, response: Response, db: Session = Depends(get_db)):
-#     """
-#         Retrieve all doctors available in the PHR system.
+@router.get("/all_hospitals")
+@limiter.limit("30/minute")
+def get_hospitals(request: Request, response: Response, db: Session = Depends(get_db)):
+    """
+        Retrieve all hospitals available in the PHR system.
 
-#         Input:
-#         - No request body.
-#         - Uses request context and database session.
+        Input:
+        - No request body.
+        - Uses request context and database session.
 
-#         Returns:
-#         - `200 OK` with list[`DoctorBase`].
-#         - Each item includes:
-#             - `doctor_id` (int)
-#             - `name` (str)
-#             - `phone_no` (str | null)
-#             - `specialization` (str | null)
-#             - `last_visit` (str, formatted date)
+        Returns:
+        - `200 OK` with list of hospitals.
+        - Each item includes:
+            - `hospital_id` (int)
+            - `name` (str)
 
-#         Potential errors:
-#         - `400 Bad Request`: Any unexpected database/server exception.
-#     """
-#     try:
-#         all_doctors= db.query(model.Doctor).all()
+        Potential errors:
+        - `400 Bad Request`: Any unexpected database/server exception.
+    """
+    try:
+        all_hospitals= db.query(model.Hospital).all()
+        return all_hospitals
+    except Exception as exp:
+        logger.error(f"Error fetching hospitals: {str(exp)}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
+
+@router.get("/get-doctors/hosptial/{hospital_id}", response_model=list[DoctorGet])
+def get_doctors_by_hospital(hospital_id: str, request: Request, response: Response,  db: Session = Depends(get_db)):
+    """
+        Retrieve all doctors available in the the specific hospital.
+
+        Input:
+        - No request body.
+        - Uses request context and database session.
+
+        Returns:
+        - `200 OK` with list of doctors.
+        - Each item includes:
+            - `doctor_id` (int)
+            - `name` (str)
+
+        Potential errors:
+        - `400 Bad Request`: Any unexpected database/server exception.
+    """
+    try:
+        all_doctors_for_hospital= db.query(model.Doctor).filter(model.Doctor.hospital_id == hospital_id).all()
         
-#     except Exception as exp:
-#         logger.error(f"Error fetching doctors: {str(exp)}")
-#         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
+        return all_doctors_for_hospital
+    except Exception as exp:
+        logger.error(f"Error fetching doctors: {str(exp)}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
+
 
 @router.get("/all_doctors",response_model=list[DoctorBase])
 @limiter.limit("30/minute")

@@ -10,7 +10,7 @@ class Hospital(Base):
     __tablename__ = 'hospital'
 
     hospital_id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(100), nullable=False)
+    name = Column(String(100) ,nullable=False) # add unique here.
 
     users = relationship("Users", back_populates="hospital")
     patient = relationship("Patient", back_populates="hospital")

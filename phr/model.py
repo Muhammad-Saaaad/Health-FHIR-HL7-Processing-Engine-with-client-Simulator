@@ -6,10 +6,19 @@ from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
 
+class Hospital(Base):
+    __tablename__ = 'hospital'
+
+    hospital_id = Column(String(50), primary_key=True, index=True)
+    name = Column(String(100), nullable=False)
+
+    patient = relationship("Patient", back_populates="hospital")
+
 class Doctor(Base):
     __tablename__ = 'doctor'
 
     doctor_id = Column(String(20), primary_key=True, index=True)
+    hospital_id = Column(String(50), ForeignKey('hospital.hospital_id'), nullable=False)
 
     name = Column(String(100), nullable=False)
     specialization = Column(String(50), nullable=True)
@@ -23,9 +32,10 @@ class Doctor(Base):
 class Patient(Base):
     __tablename__ = 'patient'
 
-    mpi = Column(String(20), primary_key= True, index= True)
+    nic = Column(String(20), primary_key=True, nullable= False)
+    mpi = Column(String(20), index= True, nullable=True) # i believe we should remove this.
+    hospital_id = Column(String(50), ForeignKey('hospital.hospital_id'), nullable=True)
 
-    nic = Column(String(15), unique=True, nullable= False)
     password = Column(String(50), nullable= False, default="")
     name = Column(String(100), nullable= False)
     phone_no = Column(String(100), nullable= True)
@@ -34,13 +44,31 @@ class Patient(Base):
     address = Column(String(255), nullable= True)
 
     visiting_notes = relationship("VisitingNotes", back_populates="patient")
+    hospital = relationship("Hospital", back_populates="patient")
+    profile = relationship("Profile", back_populates="patient")
 
+class Profile(Base):
+    __tablename__ = 'profile'
+
+    profile_id = Column(Integer, primary_key=True, index=True)
+    patient_nic = Column(String(20), ForeignKey('patient.nic'), nullable=False)
+
+    nic = Column(String(20), nullable=False)
+    name = Column(String(100), nullable=False)
+    gender = Column(String(10), nullable=False)
+    date_of_birth = Column(Date, nullable=True)
+    address = Column(String(255), nullable=True)
+    phone_no = Column(String(20), nullable=True)
+    relation = Column(String(50), nullable=True) # mother, father, sibling, spouse, child
+
+    patient = relationship("Patient", back_populates="profile")
+    
 class VisitingNotes(Base):
     __tablename__ = 'visiting_notes'
 
     note_id = Column(String(20), primary_key=True, index=True)
 
-    mpi = Column(String(20),ForeignKey('patient.mpi'), nullable=False)
+    nic = Column(String(20),ForeignKey('patient.nic'), nullable=False)
     doctor_id = Column(String(20), ForeignKey('doctor.doctor_id'), nullable=False)
 
     visit_date = Column(DateTime, default=datetime.now())

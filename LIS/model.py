@@ -94,15 +94,30 @@ class MiniLabResult(base):
 
     test_result = relationship("LabResult", back_populates="mini_test")
 
-class LoincMaster(base):
-    __tablename__ = "loinc_master"
+# class LoincMaster(base):
+#     __tablename__ = "loinc_master"
 
-    loinc_code       = Column(String(10),  primary_key=True, index=True)
-    long_common_name = Column(Text, nullable=False)
-    short_name       = Column(String(150), nullable=True) # short name is not always available so it will be just for frontend.
-    component        = Column(String(200), nullable=True)  # what is being measured ("WBC, RBC, Glucose")
-    system           = Column(String(500), nullable=True)  # The specimen from which the measurement is taken (Blood, Urine, etc.)
+#     loinc_code       = Column(String(10),  primary_key=True, index=True)
+#     long_common_name = Column(Text, nullable=False)
+#     short_name       = Column(String(150), nullable=True) # short name is not always available so it will be just for frontend.
+#     component        = Column(String(200), nullable=True)  # what is being measured ("WBC, RBC, Glucose")
+#     system           = Column(String(500), nullable=True)  # The specimen from which the measurement is taken (Blood, Urine, etc.)
+
+class LabTest(base):
+
+    __tablename__ = "lab_test"
+
+    test_id = Column(Integer, primary_key=True, index=True)
+    test_code = Column(String(30), nullable=False) # the code for the test from the lab
     
+    test_name = Column(String(150), nullable=False) # the short name of the Loinc test
+    parameter = Column(String(255), nullable=True) # the parameters for that test, which will be used to map with the loinc master table.
+    unit = Column(String(30), nullable=True)
+    gender = Column(String(10), nullable=True)
+    adult_range = Column(String(20), nullable=True) # >= to 18 years
+    child_range = Column(String(20), nullable=True) # < 18 years
+
+
 # create a table for the lab tests, where the laboutry have their own test codes,
 # on that table. i will map the lab tests with the loinc master table's test names.
 # this way, when the lab test orders comes, i will first check which lab test it is refering to
