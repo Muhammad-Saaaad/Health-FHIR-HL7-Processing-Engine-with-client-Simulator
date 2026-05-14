@@ -6,6 +6,7 @@ from .lab_schema import LoincMaster
 class VisitNote(BaseModel):
     mpi : int
     doctor_id : int
+    hospital_id : int
 
     note_title : str
     patient_complaint : str
@@ -29,7 +30,7 @@ class ViewBaseNote(BaseModel):
     note_id : int
     mpi : int
     doctor_id : int
-
+    hospital_id : int
     visit_date : datetime | str
     note_title : str | None
 

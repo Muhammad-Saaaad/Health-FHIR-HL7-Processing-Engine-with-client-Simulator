@@ -10,10 +10,11 @@ class Hospital(Base):
     __tablename__ = 'hospital'
 
     hospital_id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(100) ,nullable=False) # add unique here.
+    name = Column(String(100), unique=True, nullable=False) # add unique here.
 
     users = relationship("Users", back_populates="hospital")
     patient = relationship("Patient", back_populates="hospital")
+    visiting_notes = relationship("VisitingNotes", back_populates="hospital")
 
 class Config(Base):          # we can extract the operation heading, url, hospital name via endpooint, where we can define that which hospital belong to which endpoint. 
     __tablename__ = "config"
@@ -53,14 +54,21 @@ class Patient(Base):
     __tablename__ = 'patient'
 
     mpi = Column(Integer, primary_key= True, index= True)
-    hospital_id = Column(Integer, ForeignKey('hospital.hospital_id'), nullable=False) # hospital(fk of hospital)
+    hospital_id = Column(Integer, ForeignKey('hospital.hospital_id', name="FK__patient__hospita__5E8A0973"),  nullable=False) # hospital(fk of hospital)
 
-    nic = Column(String(15), unique=True, nullable= False)
+    nic = Column(String(15), nullable= False)
     name = Column(String(100), nullable= False)
     phone_no = Column(String(100), nullable= True)
     gender = Column(String(10), nullable= False)
     date_of_birth = Column(Date, nullable= False)
     address = Column(String(255), nullable= True)
+
+    __table_args__ = (
+        # Named Primary Key Constraint
+        # PrimaryKeyConstraint('mpi', name='pk_hospital_staff_id'), # we id do this then we have to remove the primary_key=True woord from the mpi above.
+
+        UniqueConstraint('hospital_id', 'nic', name='uq_hospital_nic'),
+    )
 
     visiting_notes = relationship("VisitingNotes", back_populates="patient")
     hospital = relationship("Hospital", back_populates="patient")
@@ -91,11 +99,14 @@ class VisitingNotes(Base):
     patient_complaint = Column(String(255), nullable=True)
     dignosis = Column(String(255), nullable=True)
     note_details = Column(String(1000), nullable=True)
+    
+    hospital_id = Column(Integer, ForeignKey('hospital.hospital_id'), nullable=False)
 
     user = relationship("Users", back_populates="visiting_notes")
     patient = relationship("Patient", back_populates="visiting_notes")
     bill = relationship("Bill", back_populates="visiting_notes")
     report = relationship("LabReport", back_populates="visiting_notes")
+    hospital = relationship("Hospital", back_populates="visiting_notes")
 
 class LoincMaster(Base):
     __tablename__ = "loinc_master"

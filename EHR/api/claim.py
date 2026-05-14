@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime
 import logging
 from logging.handlers import RotatingFileHandler
@@ -5,6 +6,8 @@ from uuid import uuid4
 
 from fastapi import APIRouter, status, Depends, HTTPException, Request, Response
 from sqlalchemy.orm import Session
+from sqlalchemy import desc
+from sqlalchemy.orm.attributes import flag_modified
 # from sqlalchemy.ext.asyncio import AsyncSession
 
 from .engine_service import send_to_engine
@@ -91,16 +94,51 @@ async def submit_claim(claim_data: schema.ClaimSubmission, request: Request, res
                 "value": claim_data.total_fee
             }
         }
-        response = await send_to_engine(fhir_msg, url="http://127.0.0.1:9000/fhir/submit-claim")
-        if response == "sucessfull":
-            logger.info(f"Successfully submitted claim for MPI {claim_data.mpi} and VID {claim_data.vid}")
+
+        hospital = db.query(model.Hospital).filter(model.Hospital.hospital_id == visit_note.hospital_id).first()
+        
+        config_data= db.query(model.Config).filter(model.Config.sent_to_engine == False) \
+            .order_by(desc(model.Config.config_id)).first()
+        
+        if config_data and config_data.hold_flag: # if we have to hold the data
+            history_hospital = config_data.history.get(hospital.name, {})
+
+            if history_hospital:
+                history_hospital["submit-claim"] = history_hospital.get("submit-claim", 0) + 1
+            else:
+                config_data.history[hospital.name] = history_hospital
+                config_data.history[hospital.name]["submit-claim"] = 1
+            
+            endpoint_already_added = False
+            for endpoint in config_data.data:
+                if endpoint.get("system_id") == hospital.hospital_id and endpoint.get("/fhir/submit-claim"): # if endpoint exists in config.
+                    endpoint["/fhir/submit-claim"].append(fhir_msg)
+                    endpoint_already_added = True
+                    break
+            
+            if not endpoint_already_added:
+                config_data.data.append(
+                    {   
+                        "system_id": hospital.hospital_id,
+                        "/fhir/submit-claim": [fhir_msg]
+                    }
+                )
+
+            flag_modified(config_data, "history")
+            flag_modified(config_data, "data")
             bill.bill_status = "In Process"
             db.add(bill)
             db.commit()
-            return {"detail": "Claim submitted successfully."}
-        else:
-            logger.error(f"Failed to submit claim for MPI {claim_data.mpi} and VID {claim_data.vid}: Engine responded with {response}")
-            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Failed to submit claim to engine.")
+            logger.info(f"Data added to config for hospital {hospital.name} due to hold flag. Current history: {config_data.history}")
+            return {"message": "data added to config due to hold flag"}
+        
+
+        asyncio.create_task(send_to_engine(fhir_msg, url="http://127.0.0.1:9000/fhir/submit-claim", system_id=str(hospital.hospital_id)))
+        bill.bill_status = "In Process"
+        db.add(bill)
+        db.commit()
+        return {"detail": "Claim submitted successfully."}
+        
     except Exception as e:
         logger.error(f"Error submitting claim: {str(e)}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An error occurred while submitting the claim.")

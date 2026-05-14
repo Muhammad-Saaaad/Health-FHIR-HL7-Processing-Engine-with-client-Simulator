@@ -1,6 +1,6 @@
 import json
 import re
-from uuid import uuid4
+from uuid import uuid4  
 
 from fhir.resources.R4B import get_fhir_model_class
 from pydantic import ValidationError
@@ -19,7 +19,7 @@ def validate_unknown_fhir_resource(fhir_data: dict): # validation of any fhir me
         # 3. Instantiate to trigger validation
         # If the data doesn't match the FHIR spec, a ValidationError is raised
         resource_class(**fhir_data)
-        print(resource_type)
+        # print(resource_type)
         
         return True, f"Success: {resource_type} is valid."
 
@@ -106,10 +106,17 @@ def get_fhir_value_by_path(obj, path): # give the entire fhir msg and it will ex
         # checks if the key is a digit if yes, then it's means that the current is a list
         #    and we take the index of it, that is the key in this case
         if key.isdigit():  # Array index
-            current = current[int(key)]
+            if not isinstance(current, list):
+                return None
+            idx = int(key)
+            if idx >= len(current):
+                return None
+            current = current[idx]
         else:  # Object key
-            current = current.get(key) if isinstance(current, dict) else None
-            
+            if not isinstance(current, dict):
+                return None
+            current = current.get(key)
+
         if current is None:
             return None
             
@@ -232,7 +239,7 @@ if __name__ == "__main__":
 
     from uuid import uuid4
     unique_id = str(uuid4())
-    print("unique_id --> ", unique_id)
+    # print("unique_id --> ", unique_id)
 
     patient_registration = {
         "resourceType": "Bundle",

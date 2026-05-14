@@ -1,9 +1,12 @@
+import asyncio
 from uuid import uuid4
 import logging
 from logging.handlers import RotatingFileHandler
 
 from fastapi import APIRouter, status, Depends, HTTPException, Request, Response
 from sqlalchemy.orm import Session
+from sqlalchemy import desc
+from sqlalchemy.orm.attributes import flag_modified
 
 from .engine_service import send_to_engine
 from schemas import visit_note_schema as schema
@@ -75,6 +78,11 @@ async def add_visit_note(visit_note: schema.VisitNote ,request: Request, respons
     """
     try:
         logger.info(f"Received request to add visit note for patient MPI: {visit_note.mpi} by doctor ID: {visit_note.doctor_id}")
+        hospital = db.get(model.Hospital, visit_note.hospital_id)
+        if not hospital:
+            logger.error(f"Invalid hospital ID provided: {visit_note.hospital_id}")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid hospital ID")
+        
         new_bill = model.Bill(
             consultation_amount = visit_note.bill_amount,
             bill_status = "Unpaid",
@@ -90,15 +98,16 @@ async def add_visit_note(visit_note: schema.VisitNote ,request: Request, respons
             logger.error(f"Invalid patient MPI provided: {visit_note.mpi}")
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid patient MPI")
 
-        is_doctor = db.query(model.Doctor).filter(model.Doctor.doctor_id == visit_note.doctor_id).first()
+        is_doctor = db.query(model.Users).filter(model.Users.users_id == visit_note.doctor_id).first()
         if not is_doctor:
             logger.error(f"Invalid doctor ID provided: {visit_note.doctor_id}")
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid doctor ID")
 
         new_visit_note = model.VisitingNotes(
             mpi = visit_note.mpi,
-            doctor_id = visit_note.doctor_id,
+            users_id = visit_note.doctor_id,
             bill_id = bill_id,
+            hospital_id = visit_note.hospital_id,
 
             note_title = visit_note.note_title,
             patient_complaint = visit_note.patient_complaint,
@@ -120,7 +129,7 @@ async def add_visit_note(visit_note: schema.VisitNote ,request: Request, respons
                     "resource": {
                         "resourceType": "Practitioner",
                         "id": unique_id,
-                        "identifier" :[ {"value": str(is_doctor.doctor_id)} ],
+                        "identifier" :[ {"value": str(is_doctor.users_id)} ],
                         "name": [{"text": is_doctor.name}],
                         "telecom": [{"value": str(is_doctor.phone_no)}],
                         "extension": [{
@@ -133,7 +142,7 @@ async def add_visit_note(visit_note: schema.VisitNote ,request: Request, respons
                         "resourceType": "PractitionerRole",
                         "id": unique_id,
                         "specialty": [ { "coding": [{"display": str(is_doctor.specialization)}] } ],
-                        "practitioner": {"reference": f"Practitioner/{str(is_doctor.doctor_id)}"},
+                        "practitioner": {"reference": f"Practitioner/{str(is_doctor.users_id)}"},
                         "organization": {"display": "Shifa International"}
                     }
                 },
@@ -184,7 +193,7 @@ async def add_visit_note(visit_note: schema.VisitNote ,request: Request, respons
                         "id": "5e4d2222-11b8-4acc-9998-40a49e273c4e",
                         "status": "issued",
                         "subject": {"reference": f"patient/{str(visit_note.mpi)}"},
-                        "participant": [{"actor": {"reference": f"Practitioner/{str(is_doctor.doctor_id)}" } }],
+                        "participant": [{"actor": {"reference": f"Practitioner/{str(is_doctor.users_id)}" } }],
                         "totalNet": {"value": str(visit_note.bill_amount)} # "currency": "USD", this can also be added.
                     }
                 }
@@ -209,17 +218,46 @@ async def add_visit_note(visit_note: schema.VisitNote ,request: Request, respons
         
         logger.info(f"Final FHIR message for synchronization: {patient_visit}")
 
-        # ----- Send the complete FHIR message to the engine for synchronization -----
-        sucess_message = await send_to_engine(patient_visit, url="http://127.0.0.1:9000/fhir/add-visit-note")
+        config_data= db.query(model.Config).filter(model.Config.sent_to_engine == False) \
+            .order_by(desc(model.Config.config_id)).first()
+        
+        if config_data and config_data.hold_flag: # if we have to hold the data
+            history_hospital = config_data.history.get(hospital.name, {})
 
-        if sucess_message == "sucessfull":
+            if history_hospital:
+                history_hospital["add-visit-note"] = history_hospital.get("add-visit-note", 0) + 1
+            else:
+                config_data.history[hospital.name] = history_hospital
+                config_data.history[hospital.name]["add-visit-note"] = 1
+            
+            endpoint_already_added = False
+            for endpoint in config_data.data:
+                if endpoint.get("system_id") == hospital.hospital_id and endpoint.get("/fhir/add-visit-note"): # if endpoint exists in config.
+                    endpoint["/fhir/add-visit-note"].append(patient_visit)
+                    endpoint_already_added = True
+                    break
+            
+            if not endpoint_already_added:
+                config_data.data.append(
+                    {   
+                        "system_id": hospital.hospital_id,
+                        "/fhir/add-visit-note": [patient_visit]
+                    }
+                )
+
+            flag_modified(config_data, "history")
+            flag_modified(config_data, "data")
             db.commit()
-            db.refresh(new_visit_note)
-            logger.info(f"Visit note with ID {new_visit_note.note_id} committed to database and synchronized with engine successfully")
-        else:
-            logger.error(f"Failed to synchronize visit note with engine: {sucess_message}")
-            db.rollback()
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Failed to synchronize with engine: {sucess_message}")
+            logger.info(f"Data added to config for hospital {hospital.name} due to hold flag. Current history: {config_data.history}")
+            return {"message": "data added to config due to hold flag"}
+        
+
+        # ----- Send the complete FHIR message to the engine for synchronization -----
+        asyncio.create_task(send_to_engine(patient_visit, url="http://127.0.0.1:9000/fhir/add-visit-note", system_id=str(hospital.hospital_id)))
+        
+        db.commit()
+        db.refresh(new_visit_note)
+        logger.info(f"Visit note with ID {new_visit_note.note_id} committed to database and synchronized with engine successfully")
         return {"message": "data inserted sucessfully"}
         
     except Exception as exp:
@@ -314,14 +352,25 @@ def visit_note(doc_id: int, pid: int, request: Request, response: Response, db: 
     if not is_patient:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="patient does not exists")
     
-    is_doc = db.query(model.Doctor).filter(model.Doctor.doctor_id == doc_id).first()
+    is_doc = db.query(model.Users).filter(model.Users.users_id == doc_id).first()
     if not is_doc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Doctor does not exists")
 
     try:
         notes = db.query(model.VisitingNotes) \
-            .filter(model.VisitingNotes.doctor_id ==doc_id, model.VisitingNotes.mpi == pid).all()
-        return notes
+            .filter(model.VisitingNotes.users_id ==doc_id, model.VisitingNotes.mpi == pid).all()
+        
+        data = []
+        for note in notes:
+            data.append(schema.ViewBaseNote(
+                note_id = note.note_id,
+                mpi = note.mpi,
+                doctor_id = note.users_id,
+                hospital_id = note.hospital_id,
+                visit_date = note.visit_date,
+                note_title = note.note_title
+            ))
+        return data
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f'{str(e)}')
 
@@ -366,7 +415,7 @@ def visit_note(note_id: int, request: Request, response: Response, db: Session =
         output_data = schema.ViewNote(
             note_id = note.note_id,
             mpi = note.mpi,
-            doctor_id = note.doctor_id,
+            doctor_id = note.users_id,
             bill_id = note.bill_id,
 
             consultation_bill = note.bill.consultation_amount if note.bill else 0,

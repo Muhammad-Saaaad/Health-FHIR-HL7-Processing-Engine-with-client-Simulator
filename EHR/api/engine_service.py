@@ -26,7 +26,7 @@ if not logger.handlers:
     rotating_file_handler.setFormatter(formater)
     logger.addHandler(rotating_file_handler)
 
-async def send_to_engine(data: dict, url: str):
+async def send_to_engine(data: dict, url: str, system_id: str):
     """
     Send a FHIR data to the InterfaceEngine for routing to downstream services.
 
@@ -40,7 +40,8 @@ async def send_to_engine(data: dict, url: str):
     try:
         logger.info(f"Sending data to engine: {data}")
         async with httpx.AsyncClient() as client:
-            response = await client.post(url, json=data, timeout=7)
+            headers = {"Content-Type": "application/json", "System-Id": system_id}
+            response = await client.post(url, json=data, headers=headers, timeout=7)
             if response.status_code == 200:
                 logger.info(f"Successfully sent data to engine with url {url}")
                 return "sucessfull"
@@ -64,6 +65,10 @@ async def submit_claim_from_engine(req: Request, db: Session = Depends(get_db)):
     """
     try:
         json_data = await req.json()
+        system_id = req.headers.get("System-Id", "Unknown-System")
+        if db.get(model.Hospital, system_id) is None:
+            logger.warning(f"Received claim response with unknown system_id: {system_id}")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unknown system_id: {system_id}")
 
         logger.info(f"Recieved FHIR Data: {json_data}")
 
@@ -120,7 +125,7 @@ async def submit_claim_from_engine(req: Request, db: Session = Depends(get_db)):
             }
             logger.info(f"Prepared FHIR ClaimResponse to send to engine: {fhir_msg}")
 
-            asyncio.create_task(send_to_engine(data=fhir_msg, url="http://127.0.0.1:9000/fhir/send-response-claim"))
+            asyncio.create_task(send_to_engine(data=fhir_msg, url="http://127.0.0.1:9000/fhir/send-response-claim", system_id=str(system_id)))
             logger.info(f"Successfully sent claim response to engine for MPI={mpi}, VID={vid}")       
 
             return {"message": f"Bill status updated to {bill.bill_status} for MPI={mpi}, VID={vid}"}

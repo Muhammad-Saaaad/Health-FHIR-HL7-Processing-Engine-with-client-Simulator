@@ -133,7 +133,7 @@ def sent_config_to_engine(request: Request, response: Response, db: Session = De
         logger.error(f"Error sending config to engine: {str(e)}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
     
-@router.get("/config-history", status_code=status.HTTP_200_OK)
+@router.get("/config-history", response_model=list[schema.ConfigHistory])
 @limiter.limit("20/minute")
 def config_history(request: Request, response: Response, db: Session = Depends(get_db)):
     """
@@ -143,16 +143,18 @@ def config_history(request: Request, response: Response, db: Session = Depends(g
     Returns a JSON array of records showing hospital-level operational counts:
     ```json
     [
-      {
-        "hospital": "Hospital A",
-        "operation": "add-patient",
-        "count": 10
-      },
-      {
-        "hospital": "Hospital A",
-        "operation": "add-visit",
-        "count": 20
-      }
+        {
+            "hospital_name": "Shifa International",
+            "add_patient_count": 2,
+            "add_visit_count": 0,
+            "add_claim_count": 0
+        },
+        {
+            "hospital_name": "Holly Family",
+            "add_patient_count": 1,
+            "add_visit_count": 1,
+            "add_claim_count": 0
+        }
     ]
     ```
 
@@ -166,12 +168,6 @@ def config_history(request: Request, response: Response, db: Session = Depends(g
     - Retrieves the most recent unsent configuration (sent_to_engine == False)
     - Calls parse_config() to transform the nested history structure into flat records
     - Each record represents a hospital's operation count
-
-    **History Data Format:**
-    Input history is expected in the format:
-    ```
-    {"Hospital A": {"add-patient": 10, "add-visit": 20}, "Hospital B": {"add-patient": 5, "submit-claim": 15}}
-    ```
 
     **Error Responses:**
     - `500 Internal Server Error`: Unexpected database or server error
@@ -204,12 +200,12 @@ def parse_config(data):
     try:
         records = []
         for hospital_name, operations in data.items():
-            for operation, count in operations.items():
-                records.append({
-                    "hospital": hospital_name,
-                    "operation": operation,
-                    "count": count
-                })
+            records.append({
+                "hospital_name": hospital_name,
+                "add_patient_count": operations.get("add-patient", 0),
+                "add_visit_count": operations.get("add-visit-note", 0),
+                "add_claim_count": operations.get("submit-claim", 0),
+            })
         return records
     except Exception as e:
         logger.error(f"Error parsing config history: {str(e)}")

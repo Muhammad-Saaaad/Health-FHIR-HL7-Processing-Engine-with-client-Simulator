@@ -160,6 +160,8 @@ active_route_listners = {} # consist of all the running routes|Channels lisning 
 route_queue = {} # consist of each route key with that route value that it gets from source endpoint
 data_queue = {}
 
+_BATCH_CONCURRENCY = 8
+
 def _payload_preview(data, max_len: int = 400) -> str:
     text = str(data)
     compact = " ".join(text.split())
@@ -477,6 +479,133 @@ async def route_worker(route):
     except Exception as exp:
         return str(exp)
 
+# Shared processing for single or batch items.
+async def _process_message(full_path: str, payload, trace_id: str, system_id: str):
+    db = session_local()
+    normalized_path = full_path if full_path.startswith("/") else "/" + full_path
+    endpoint = db.query(models.Endpoints).filter(models.Endpoints.url == normalized_path).first()
+    if not endpoint:
+        db.close()
+        logger.warning("trace=%s invalid_endpoint_url=%s", trace_id, normalized_path)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'The endpoint url: {normalized_path} is not valid')
+
+    endpoint_fields = db.query(models.EndpointFields).filter(models.EndpointFields.endpoint_id == endpoint.endpoint_id).all()
+    routes = db.query(models.Route).filter(models.Route.src_endpoint_id == endpoint.endpoint_id).all()
+    server = db.query(models.Server).filter(models.Server.server_id == endpoint.server_id, models.Server.system_id == system_id).first()
+    if not server:
+        db.close()
+        logger.warning("trace=%s invalid_system_id=%s for endpoint_url=%s", trace_id, system_id, normalized_path)
+    db.close()
+
+    logger.info(
+        "trace=%s ingest_received path=%s protocol=%s routes_length=%s",
+        trace_id,
+        normalized_path,
+        server.protocol,
+        len(routes),
+    )
+    
+    if server.protocol == "FHIR":
+        if not isinstance(payload, dict):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="FHIR payload must be a JSON object")
+
+        # logger.info("trace=%s ingest_payload_preview=%s", trace_id, _payload_preview(payload))
+        logger.info("trace=%s ingest_payload_preview=%s", trace_id, payload)
+        # validating fhir message
+        is_valid, message = await asyncio.to_thread(
+            validate_unknown_fhir_resource,
+            fhir_data=payload,
+        )
+        if not is_valid:
+            logger.exception("trace=%s FHIR validation failed: %s", trace_id, message)
+            db_logger.error(
+                f"FHIR validation failed for endpoint /{full_path}",
+                extra={
+                    "src_message": json.dumps(payload),
+                    "dest_message": "FHIR validation failed, so no dest message",
+                    "op_heading": f"Endpoint: /{full_path}",
+                },
+            )
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(message))
+    else:
+        if not isinstance(payload, str):
+            payload = str(payload)
+        logger.info("trace=%s ingest_payload_preview=%s", trace_id, _payload_preview(payload))
+
+    # Extract paths based on the protocol, mirroring how add_fhir/hl7_endpoint_fields
+    simple_paths = []
+    paths = []
+    if server.protocol == "FHIR":
+        resource_type = payload.get("resourceType", "Unknown")
+        bundle_path_to_resource = {}
+        if resource_type == "Bundle":
+            for entry in payload.get("entry", []):
+                resource = entry.get("resource", {})
+                res_type = resource.get("resourceType", "Unknown")
+
+                raw_paths = fhir_extract_paths(resource)
+                for p in raw_paths:
+                    full_path = f"{res_type}-{p}"
+                    simple_paths.append(full_path)
+
+                    full_path = await increment_segment(segment_path=full_path, list_data=paths)
+                    paths.append(full_path)
+                    bundle_path_to_resource[full_path] = resource
+        else:
+            raw_paths = fhir_extract_paths(payload)
+            simple_paths = [f"{resource_type}-{p}" for p in raw_paths]
+            paths = [f"{await increment_segment(segment_path=f'{resource_type}-{p}', list_data=paths)}" for p in raw_paths]
+    else:
+        for segment in payload.split('\n')[1:]:
+            if not segment.strip():
+                continue
+            _, seg_paths = hl7_extract_paths(segment)
+            simple_paths.extend(seg_paths)
+            for p in seg_paths:
+                p = await increment_segment(segment_path=p, list_data=paths)
+                paths.append(p)
+
+    logger.info("trace=%s extracted_paths=%s", trace_id, paths)
+    for field in endpoint_fields:
+        if await increment_segment(segment_path=field.path, list_data=[]) not in paths:
+            logger.warning("trace=%s missing_path=%s", trace_id, field.path)
+
+    src_path_to_value = {}
+    if server.protocol == "FHIR":
+        for path in paths:
+            resource = bundle_path_to_resource.get(path, payload) if resource_type == "Bundle" else payload
+            value = get_fhir_value_by_path(obj=resource, path=path)
+            src_path_to_value[path] = value
+    else:
+        src_path_to_value = get_hl7_value_by_path(hl7_message=payload, paths=paths)
+
+    loop = asyncio.get_event_loop()
+    delivery_futures = []
+    for route in routes:
+        if route.route_id in route_queue:
+            future = loop.create_future()
+            await route_queue[route.route_id].put((src_path_to_value, simple_paths, future, payload))
+            delivery_futures.append((route.route_id, route.name, future))
+        else:
+            logger.warning("trace=%s route_queue_missing route_id=%s", trace_id, route.name)
+
+    errors = []
+    for _, route_name, future in delivery_futures:
+        try:
+            await future
+        except Exception as exp:
+            errors.append(f"Route -> {route_name}: {str(exp)}")
+
+    if errors:
+        logger.error("trace=%s delivery_failed errors=%s", trace_id, errors)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"One or more downstream deliveries failed: {'; '.join(errors)}",
+        )
+
+    logger.info("trace=%s ingest_delivery_succeeded destination_count=%s", trace_id, len(delivery_futures))
+    return True
+
 @app.post("/{full_path:path}", status_code=status.HTTP_200_OK)
 async def ingest(full_path: str, req: Request):
     """
@@ -496,152 +625,79 @@ async def ingest(full_path: str, req: Request):
     trace_id = req.headers.get("X-Trace-Id") or uuid4().hex[:12]
     try:
         db = session_local()
-        # check url if it exists in the database.
-        endpoint = db.query(models.Endpoints).filter(models.Endpoints.url == '/'+full_path).first()
-        if not endpoint:
-            db.close()
-            logger.warning(f"trace={trace_id} invalid_endpoint_url=/{full_path}")
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'The endpoint url: /{full_path} is not valid')
-        
-        endpoint_fields = db.query(models.EndpointFields).filter(models.EndpointFields.endpoint_id == endpoint.endpoint_id).all()
-        
-        # getting all the routes with this endpoint as src endpoint.
-        routes = db.query(models.Route).filter(models.Route.src_endpoint_id == endpoint.endpoint_id).all()
-        server = db.get(models.Server, endpoint.server_id)
+        endpoint = db.query(models.Endpoints).filter(models.Endpoints.url == '/' + full_path).first()
+        server = db.get(models.Server, endpoint.server_id) if endpoint else None
         db.close()
-        logger.info(
-            "trace=%s ingest_received path=/%s protocol=%s routes_length=%s",
-            trace_id,
-            full_path,
-            server.protocol,
-            len(routes),
-        )
-        logger.info(f"trace={trace_id} Recieved request for endpoint/ {full_path} with protocol {server.protocol} and route count {len(routes)}")
+        if not endpoint:
+            logger.warning("trace=%s invalid_endpoint_url=/%s", trace_id, full_path)
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'The endpoint url: /{full_path} is not valid')
 
-        # Read the request body based on protocol.
-        # FHIR endpoints send JSON; HL7 endpoints send the raw HL7 string
-        # (either as text/plain bytes OR as a JSON-encoded string — we handle both).
         if server.protocol == "FHIR":
-            payload = await req.json()  # dict
-            # logger.info("trace=%s ingest_payload_preview=%s", trace_id, _payload_preview(payload))
-            logger.info("trace=%s ingest_payload_preview=%s", trace_id, payload)
+            payload = await req.json()
+            return await _process_message(full_path, payload, trace_id) and {"message": "Successfully sent data to all destinations"}
 
-            is_valid, message = validate_unknown_fhir_resource(fhir_data=payload) # validating fhir message
-            if not is_valid:
-                logger.exception(f"trace={trace_id} FHIR validation failed: {message}")
-                db_logger.error(f"FHIR validation failed for endpoint /{full_path}",
-                                extra= {
-                                        "src_message": json.dumps(payload),
-                                        "dest_message": "FHIR validation failed, so no dest message",
-                                        "op_heading": f"Endpoint: /{full_path}"
-                                    }
-                )
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(message))
-        else:
-            # Try JSON first (EHR may wrap the HL7 string in JSON). If that fails, fall back to raw text.
-            try:
-                payload = await req.json()
-                if not isinstance(payload, str):
-                    payload = str(payload)
-            except Exception:
-                logger.info("trace=%s ingest_hl7_json_parse_failed_falling_back_to_text", trace_id)
-                raw = await req.body()
-                payload = raw.decode("utf-8", errors="replace")
-            logger.info("trace=%s ingest_payload_preview=%s", trace_id, _payload_preview(payload))
-        
-        # Extract paths based on the protocol, mirroring how add_fhir/hl7_endpoint_fields
-        simple_paths = [] # contains paths without the counter in the segment name.
-        paths = []
-        if server.protocol == "FHIR":
-            resource_type = payload.get("resourceType", "Unknown")
-            bundle_path_to_resource = {}
-            if resource_type == "Bundle":
-                # Bundle: extract paths per entry resource, prefixed with each resource type.
-                for entry in payload.get("entry", []):
-                    resource = entry.get("resource", {})
-                    res_type = resource.get("resourceType", "Unknown")
+        # HL7: try JSON first (single string), then raw text
+        try:
+            payload = await req.json()
+        except Exception:
+            logger.info("trace=%s ingest_hl7_json_parse_failed_falling_back_to_text", trace_id)
+            raw = await req.body()
+            payload = raw.decode("utf-8", errors="replace")
 
-                    raw_paths = fhir_extract_paths(resource)
-                    for p in raw_paths:
-                        full_path = f"{res_type}-{p}"
-                        simple_paths.append(full_path) # useful for checking how many times this paht is comming to create that many resources.
-
-                        full_path = await increment_segment(segment_path=full_path, list_data=paths) # here if there is multiple same segments then it will increment the segment with [1], [2] etc.., useful when there is multiple same segments in the message.
-                        paths.append(full_path)
-                        bundle_path_to_resource[full_path] = resource
-            else:
-                # Single resource: prefix with that resource's type.
-                raw_paths = fhir_extract_paths(payload)
-                simple_paths = [f"{resource_type}-{p}" for p in raw_paths]
-                paths = [f"{await increment_segment(segment_path=f'{resource_type}-{p}', list_data=paths)}" for p in raw_paths]
-        else:
-            # HL7: iterate each non-MSH segment and collect paths, just like
-            # add_hl7_endpoint_fields does during endpoint registration.
-            for segment in payload.split('\n')[1:]:
-                if not segment.strip():
-                    continue
-                _, seg_paths = hl7_extract_paths(segment)
-                simple_paths.extend(seg_paths)
-                for p in seg_paths:
-                    p = await increment_segment(segment_path=p, list_data=paths) # here if there is multiple same segments then it will increment the segment with [1], [2] etc.., useful when there is multiple same segments in the message.
-                    paths.append(p)
-
-        # Data Validation --> here you can do any kind of step if data is not available
-        # you can also return the msg back, if data is not valid. but right know we will just ignore it.
-        logger.info("trace=%s extracted_paths=%s", trace_id, paths)
-        for field in endpoint_fields:
-            if await increment_segment(segment_path=field.path, list_data=[]) not in paths:
-                logger.warning("trace=%s missing_path=%s", trace_id, field.path)
-        
-        # Extract value based on the path
-        # Note: get_fhir_value_by_path strips the resource prefix internally
-        src_path_to_value = {}
-        if server.protocol == "FHIR":
-            # Use a single loop for both single resources and Bundles.
-            # For Bundles, each full path maps to its entry resource object.
-            for path in paths:
-                resource = bundle_path_to_resource.get(path, payload) if resource_type == "Bundle" else payload # if the type is bundle then take the specific resource else take the whole payload as resource
-                value = get_fhir_value_by_path(obj=resource, path=path) # path = Patient[1]-birthDate, value = 2004-10-06
-
-                src_path_to_value[path] = value # increment here...
-        else:
-            # For HL7, extract all values in one pass over the message segments
-            src_path_to_value = get_hl7_value_by_path(hl7_message=payload, paths=paths)
-        
-        # For each route, create a Future so we can await the delivery result.
-        # route_worker resolves the future after it gets a response from the destination.
-        loop = asyncio.get_event_loop()
-        delivery_futures = []
-        for route in routes:
-            if route.route_id in route_queue:
-                future = loop.create_future()
-                await route_queue[route.route_id].put((src_path_to_value, simple_paths, future, payload))
-                delivery_futures.append((route.route_id, route.name, future))
-            else:
-                logger.warning("trace=%s route_queue_missing route_id=%s", trace_id, route.name)
-        
-        # Wait for all route workers to finish delivery.
-        # If any delivery failed, raise an error so the caller (EHR) knows to rollback.
-        errors = []
-        for route_id, route_name, future in delivery_futures:
-            try:
-                await future
-            except Exception as exp:
-                errors.append(f"Route -> {route_name}: {str(exp)}")
-        
-        if errors:
-            logger.error("trace=%s delivery_failed errors=%s", trace_id, errors)
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=f"One or more downstream deliveries failed: {'; '.join(errors)}"
-            )
-        logger.info("trace=%s ingest_delivery_succeeded destination_count=%s", trace_id, len(delivery_futures))
-        return {"message": "Successfully sent data to all destinations"}
+        if not isinstance(payload, str):
+            payload = str(payload)
+        # process a single hl7 message
+        return await _process_message(full_path, payload, trace_id) and {"message": "Successfully sent data to all destinations"}
     except HTTPException:
         raise  # re-raise HTTP exceptions as-is
     except Exception as exp:
         logger.exception("trace=%s ingest_unhandled_error=%s", trace_id, str(exp))
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
+
+@app.post("/batch", status_code=status.HTTP_200_OK)
+async def ingest_batch(req: Request):
+    trace_id = req.headers.get("X-Trace-Id") or uuid4().hex[:12]
+    payload = await req.json()
+    if not isinstance(payload, list):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Batch payload must be a list")
+
+    # Limit in-flight batch work to avoid overload.
+    semaphore = asyncio.Semaphore(_BATCH_CONCURRENCY)
+    tasks = []
+
+    async def _run_one(path_key: str, item, idx, system_id: str):
+        async with semaphore:
+            full_path = path_key
+            return await _process_message(full_path, item, f"{trace_id}-{idx}", system_id=system_id)
+
+    msg_idx = 0
+    for batch_item in payload:
+        if not isinstance(batch_item, dict):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Each batch item must be an object")
+
+        system_id = batch_item.get("system_id", None)
+        if system_id is None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Each batch item must include a 'system_id' field")
+        for path_key, messages in batch_item.items():
+            if path_key == "system_id":
+                continue
+            if isinstance(messages, list):
+                for msg in messages:
+                    tasks.append(_run_one(path_key, msg, msg_idx, system_id))
+                    msg_idx += 1
+            else:
+                tasks.append(_run_one(path_key, messages, msg_idx, system_id))
+                msg_idx += 1
+
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    errors = [str(res) for res in results if isinstance(res, Exception)]
+    if errors:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"One or more downstream deliveries failed: {'; '.join(errors)}",
+        )
+
+    return {"message": "Successfully sent data to all destinations"}
 
 
 if "__main__" == __name__:

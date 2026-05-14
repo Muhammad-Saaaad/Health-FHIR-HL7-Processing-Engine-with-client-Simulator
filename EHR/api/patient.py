@@ -26,7 +26,7 @@ handler.setFormatter(formatter)
 logger.addHandler(handler)
 
 
-@router.get("/patients/{hospital_id}", response_model=list[schema.get_patient], status_code=status.HTTP_200_OK)
+@router.get("/all-patients/{hospital_id}", response_model=list[schema.get_patient], status_code=status.HTTP_200_OK)
 @limiter.limit("20/minute")
 def get_patient(hospital_id: int, request: Request, response: Response, db: Session = Depends(get_db)):
     """
@@ -81,7 +81,6 @@ def get_patient(patient_id: int, request: Request, response: Response, db: Sessi
         patient = db.query(model.Patient).filter(model.Patient.mpi == patient_id).first()
         if not patient:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found")
-        
         patient_detail = schema.SpecificPatient(
             mpi=patient.mpi,
             name=patient.name,
@@ -148,7 +147,7 @@ async def add_patient(patient: schema.post_patient, request: Request, response: 
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"message":"hospital_id does not exist"})
 
         # select top 1 from patient where nic = patient.nic
-        if db.query(model.Patient).filter(model.Patient.nic == patient.nic).first():
+        if db.query(model.Patient).filter(model.Patient.nic == patient.nic, model.Patient.hospital_id == patient.hospital_id).first():
             logger.warning(f"Attempt to register patient with existing NIC: {patient.nic}")
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"message":"nic already exists"})
 
@@ -229,13 +228,18 @@ async def add_patient(patient: schema.post_patient, request: Request, response: 
             
             endpoint_already_added = False
             for endpoint in config_data.data:
-                if endpoint.get("/fhir/add-patient", False): # if endpoint exists in config.
+                if endpoint.get("system_id") == hospital.hospital_id and endpoint.get("/fhir/add-patient"): # if endpoint exists in config for this system
                     endpoint["/fhir/add-patient"].append(fhir_patient)
                     endpoint_already_added = True
                     break
             
             if not endpoint_already_added:
-                config_data.data.append({"/fhir/add-patient": [fhir_patient]})
+                config_data.data.append(
+                    {   
+                        "system_id": hospital.hospital_id,
+                        "/fhir/add-patient": [fhir_patient]
+                    }
+                )
 
             flag_modified(config_data, "history")
             flag_modified(config_data, "data")
@@ -243,7 +247,7 @@ async def add_patient(patient: schema.post_patient, request: Request, response: 
             logger.info(f"Data added to config for hospital {hospital.name} due to hold flag. Current history: {config_data.history}")
             return {"message": "data added to config due to hold flag"}
         
-        asyncio.create_task(engine_service.send_to_engine(fhir_patient, url="http://127.0.0.1:9000/fhir/add-patient"))
+        asyncio.create_task(engine_service.send_to_engine(fhir_patient, url="http://127.0.0.1:9000/fhir/add-patient", system_id=str(hospital.hospital_id)))
         
         db.commit()
         logger.info(f"Patient registered successfully in FHIR: {new_patient.name} (NIC: {new_patient.mpi})")
