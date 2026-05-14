@@ -4,6 +4,7 @@ from logging.handlers import RotatingFileHandler
 from fastapi import APIRouter, status, Depends, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
+from sqlalchemy import desc
 
 from database import get_db
 from rate_limiting import limiter
@@ -49,8 +50,12 @@ def create_admin(admin: schema.Admin, request: Request, response: Response, db :
     **Error Responses:**
     - `400 Bad Request`: Database error or validation error
     """
+    logger.info(f"Admin signup request received for email: {admin.email}")
+    if db.query(model.Users).filter(model.Users.email == admin.email).first():
+        logger.warning(f"Admin signup failed - email already exists: {admin.email}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="email already exists")
+
     try:
-        logger.info(f"Admin signup request received for email: {admin.email}")
         new_admin = model.Users(
             email = admin.email,
             password = admin.password,
@@ -80,7 +85,7 @@ def login_admin(admin: schema.Admin, request: Request, response: Response, db :S
     - `email` (str): Admin's registered email address
     - `password` (str): Admin's password
     - `name` (str, nullable): Admin's full name
-    - `hospital_id` (int, nullable): Associated hospital ID (typically NULL for admins)
+    - `hospital_id` (str, nullable): Associated hospital ID (typically NULL for admins)
     - `specialization` (str, nullable): Admin's specialization
     - `roll` (int): Role identifier (2 for Admin)
     - `date_join` (datetime): Timestamp when admin was registered
@@ -98,7 +103,7 @@ def login_admin(admin: schema.Admin, request: Request, response: Response, db :S
     """
     
     try:
-        is_valid_user = db.query(model.Users).filter(model.Users.email == admin.email).first()
+        is_valid_user = db.query(model.Users).filter(model.Users.email == admin.email, model.Users.roll == 2).first()
     except Exception as e:
         logger.error(f"Database error during login for email {admin.email}: {str(e)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
@@ -124,7 +129,7 @@ def create_doctor(doctor: schema.SignUp, request: Request, response: Response, d
     - `name` (str, required): Doctor's full name.
     - `email` (EmailStr, required): Doctor's email address.
     - `password` (str, required): Secure password for authentication.
-    - `hospital_id` (int, required): The ID of the hospital where the doctor will work.
+    - `hospital_id` (str, required): The ID of the hospital where the doctor will work.
 
     **Response (201 Created):**
     Returns a JSON confirmation message:
@@ -138,7 +143,7 @@ def create_doctor(doctor: schema.SignUp, request: Request, response: Response, d
     - `name` (str)
     - `email` (EmailStr)
     - `password` (str)
-    - `hospital_id` (int)
+    - `hospital_id` (str)
 
     **Constraints:**
     - The combination of email and hospital_id must be unique. Same email can exist in different hospitals.
@@ -148,12 +153,16 @@ def create_doctor(doctor: schema.SignUp, request: Request, response: Response, d
     - `404 Not Found`: Hospital ID does not exist in the system
     - `400 Bad Request`: Database error or validation error
     """
+    logger.info(f"Signup request received for email: {doctor.email}")
+    if db.get(model.Hospital, doctor.hospital_id) is None:
+        logger.warning(f"Signup failed - hospital not found with ID: {doctor.hospital_id}")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="hospital id not valid")
+
+    if db.query(model.Users).filter(model.Users.email == doctor.email, model.Users.hospital_id == doctor.hospital_id).first():
+        logger.warning(f"Signup failed - email already exists for hospital ID: {doctor.hospital_id}, email: {doctor.email}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="email already exists for this hospital")
+
     try:
-        logger.info(f"Signup request received for email: {doctor.email}")
-        if db.get(model.Hospital, doctor.hospital_id) is None:
-            logger.warning(f"Signup failed - hospital not found with ID: {doctor.hospital_id}")
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="hospital id not valid")
-        
         new_user = model.Users(
             name = doctor.name,
             email = doctor.email,
@@ -180,12 +189,12 @@ def login_doctor(doctor: schema.Login, request: Request, response: Response, db 
     **Request Body:**
     - `email` (EmailStr, required): The doctor's registered email address.
     - `password` (str, required): The doctor's password.
-    - `hospital_id` (int, required): The hospital ID associated with the doctor.
+    - `hospital_id` (str, required): The hospital ID associated with the doctor.
 
     **Response (200 OK):**
     Returns the authenticated doctor object with the following fields:
     - `users_id` (int): Unique identifier for the doctor
-    - `hospital_id` (int): The hospital ID associated with the doctor
+    - `hospital_id` (str): The hospital ID associated with the doctor
     - `name` (str): Doctor's full name
     - `email` (str): Doctor's registered email address
     - `password` (str): Doctor's password
@@ -198,7 +207,7 @@ def login_doctor(doctor: schema.Login, request: Request, response: Response, db 
     ```json
     {
       "users_id": 2,
-      "hospital_id": 1,
+      "hospital_id": "EHR-1",
       "name": "saim",
       "email": "saim0067@gmail.com",
       "password": "1234",
@@ -212,7 +221,7 @@ def login_doctor(doctor: schema.Login, request: Request, response: Response, db 
     **Request Schema (`schema.Login`):**
     - `email` (EmailStr)
     - `password` (str)
-    - `hospital_id` (int)
+    - `hospital_id` (str)
 
     **Error Responses:**
     - `404 Not Found`: Email is not registered in the system
@@ -220,18 +229,22 @@ def login_doctor(doctor: schema.Login, request: Request, response: Response, db 
     - `404 Not Found`: Password does not match the registered email
     - `400 Bad Request`: Unexpected database or server error
     """
+    logger.info(f"Login attempt for email: {doctor.email}")
+
+    if db.get(model.Hospital, doctor.hospital_id) is None:
+        logger.warning(f"Signup failed - hospital not found with ID: {doctor.hospital_id}")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="hospital id not valid")
+
     try:
-        logger.info(f"Login attempt for email: {doctor.email}")
-
-        if db.get(model.Hospital, doctor.hospital_id) is None:
-            logger.warning(f"Signup failed - hospital not found with ID: {doctor.hospital_id}")
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="hospital id not valid")
-
-        is_valid_doc = db.query(model.Users).filter(model.Users.email == doctor.email).first()
+        is_valid_doc = db.query(model.Users).filter(model.Users.email == doctor.email, model.Users.hospital_id == doctor.hospital_id, model.Users.roll == 1).first()
     except Exception as e:
         logger.error(f"Database error during login for email {doctor.email}: {str(e)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
-        
+
+    if is_valid_doc is None:
+        logger.warning(f"Login failed - email not found for hospital ID: {doctor.hospital_id}, email: {doctor.email}")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="email not valid for this hospital")
+
     if not is_valid_doc:
         logger.warning(f"Login failed - email not found: {doctor.email}")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="email not valid")
@@ -253,6 +266,7 @@ def get_all_doctors(request: Request, response: Response, db: Session = Depends(
     **Response (200 OK):**
     Returns a JSON array of all user records from the database. Each item contains:
     - `users_id` (int): Unique identifier for the user
+    - `hospital_id` (str): Hospital ID associated with the user, or null for admins
     - `name` (str, nullable): User's full name
     - `email` (str): User's registered email address
     - `password` (str): User's password
@@ -266,6 +280,7 @@ def get_all_doctors(request: Request, response: Response, db: Session = Depends(
     [
       {
         "users_id": 2,
+        "hospital_id": "EHR-1",
         "name": "saim",
         "email": "saim0067@gmail.com",
         "password": "1234",
@@ -285,6 +300,8 @@ def get_all_doctors(request: Request, response: Response, db: Session = Depends(
         users = db.query(model.Users).all()
         logger.info(f"Retrieved {len(users)} users from database")
         return users
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error retrieving all users: {str(e)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
@@ -302,6 +319,7 @@ def get_doctor(doc_id: int, request: Request, response: Response, db: Session = 
     **Response (200 OK):**
     Returns the full user object with the following fields:
     - `users_id` (int): Unique identifier for the user
+    - `hospital_id` (str): Hospital ID associated with the user
     - `name` (str, nullable): User's full name
     - `email` (str): User's registered email address
     - `password` (str): User's password
@@ -314,6 +332,7 @@ def get_doctor(doc_id: int, request: Request, response: Response, db: Session = 
     ```json
     {
       "users_id": 2,
+      "hospital_id": "EHR-1",
       "name": "saim",
       "email": "saim0067@gmail.com",
       "password": "1234",
@@ -336,6 +355,8 @@ def get_doctor(doc_id: int, request: Request, response: Response, db: Session = 
         else:
             logger.info(f"Retrieved doctor with ID: {doc_id}, email: {doctor.email}")
         return doctor
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error retrieving doctor with ID {doc_id}: {str(e)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
@@ -354,7 +375,7 @@ def add_hospital(name: str, request: Request, response: Response, db :Session = 
     ```json
     {
       "message": "Hospital added successfully",
-      "hospital_id": 1
+      "hospital_id": "EHR-1"
     }
     ```
 
@@ -363,12 +384,21 @@ def add_hospital(name: str, request: Request, response: Response, db :Session = 
     """
     try:
         logger.info(f"Adding new hospital with name: {name}")
-        new_hospital = model.Hospital(name=name)
+        last_hospital = db.query(model.Hospital).order_by(desc(model.Hospital.hospital_id)).first()
+        if last_hospital is None:
+            new_id = "EHR-1"
+        else:
+            last_id_num = int(last_hospital.hospital_id.split("-")[1])
+            new_id = f"EHR-{last_id_num + 1}"
+            
+        new_hospital = model.Hospital(name=name, hospital_id=new_id)
         db.add(new_hospital)
         db.commit()
         db.refresh(new_hospital)
         logger.info(f"Hospital added successfully with ID: {new_hospital.hospital_id}, name: {name}")
         return JSONResponse(content={"message": "Hospital added successfully", "hospital_id": new_hospital.hospital_id})
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error adding hospital with name {name}: {str(e)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
@@ -378,11 +408,11 @@ def get_all_hospitals(request: Request, response: Response, db :Session = Depend
     """
     Retrieve a list of all hospitals in the system.
 
-    **Response (201 Created):**
+    **Response (200 OK):**
     Returns a **List** with json like this:
     ```json
     {
-      "hospital_id": 1,
+      "hospital_id": "EHR-1",
       "name": "Shifa International"
     }
     ```
@@ -392,8 +422,10 @@ def get_all_hospitals(request: Request, response: Response, db :Session = Depend
     """
     try:
        return db.query(model.Hospital).all()
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Error while retriving all hospitals: {str(e)}")
+        logger.error(f"Error while retrieving all hospitals: {str(e)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
 
 @router.put("/change-doctor/{doc_id}", status_code=status.HTTP_202_ACCEPTED)
@@ -445,6 +477,8 @@ def alter_doctor_info(doc_id: int, doctor: schema.DoctorUpdate, request: Request
 
         return {'message': "Doctor updated successfully"}
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error updating doctor with ID {doc_id}: {str(e)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")

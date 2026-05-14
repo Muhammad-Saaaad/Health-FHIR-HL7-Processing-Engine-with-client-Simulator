@@ -28,12 +28,12 @@ logger.addHandler(handler)
 
 @router.get("/all-patients/{hospital_id}", response_model=list[schema.get_patient], status_code=status.HTTP_200_OK)
 @limiter.limit("20/minute")
-def get_patient(hospital_id: int, request: Request, response: Response, db: Session = Depends(get_db)):
+def get_patient(hospital_id: str, request: Request, response: Response, db: Session = Depends(get_db)):
     """
     Retrieve all patients from the EHR system for a specific hospital.
     
     **Path Parameters:**
-    - `hospital_id` (int, required): The unique identifier of the hospital to retrieve patients for.
+    - `hospital_id` (str, required): The unique identifier of the hospital to retrieve patients for.
 
     **Response (200 OK):**
     Returns `list[schema.get_patient]`.
@@ -103,24 +103,26 @@ async def add_patient(patient: schema.post_patient, request: Request, response: 
     Register a new patient in the EHR system and sync with FHIR engine.
     
     **Request Body:**
+    - `hospital_id` (str, required): Hospital that owns the patient record.
     - `nic` (str, required): National ID/NIC - must be unique, validates against existing records
     - `name` (str, required): Patient's full name
     - `phone_no` (str, optional): Patient's phone number
     - `gender` (str, optional): Patient's gender - will be capitalized automatically
     - `date_of_birth` (date, optional): Patient's DOB in YYYY-MM-DD format
     - `address` (str, optional): Patient's address
-    - `policy_number` (str, required): Insurance policy number forwarded to Payer via FHIR Coverage resource
+    - `policy_number` (int, required): Insurance policy number forwarded to Payer via FHIR Coverage resource
     - `plan_type` (str, required): Insurance plan type forwarded to Payer via FHIR Coverage resource
     
     **Side Effect:** Automatically creates corresponding FHIR Patient + Coverage Bundle in InterfaceEngine,
     which routes the data to downstream systems (LIS, Payer).
     
     **Response (201 Created):**
-    Returns JSON object:
+    Returns JSON object with one of:
     - `message` (str): "data inserted sucessfully"
+    - `message` (str): "data added to config due to hold flag"
 
     **Request Schema (`schema.post_patient`):**
-    - `hospital_id` (int)
+    - `hospital_id` (str)
     - `nic` (str)
     - `name` (str)
     - `phone_no` (str | null)
@@ -132,10 +134,11 @@ async def add_patient(patient: schema.post_patient, request: Request, response: 
     - `plan_type` (str)
     
     **Constraints:**
-    - NIC must be unique (no duplicates allowed)
+    - `hospital_id` must refer to an existing hospital.
+    - The same NIC cannot be reused within the same hospital.
     
     **Error Responses:**
-    - 400 Bad Request: NIC already exists or FHIR integration failed
+    - 400 Bad Request: Hospital ID does not exist, NIC already exists for the hospital, or FHIR integration failed
     - 422 Unprocessable Entity: Invalid data or missing required fields
     
     **Note:** Registration is rolled back if FHIR registration fails to maintain data consistency
@@ -177,7 +180,6 @@ async def add_patient(patient: schema.post_patient, request: Request, response: 
                         "resourceType": "Patient",
                         "id": unique_id,
                         "identifier": [
-                            { "type": { "coding": [{ "code": "MR" }]}, "value": str(new_patient.mpi)},
                             { "type": { "coding": [{ "code": "NI" }]}, "value": str(patient.nic)}
                         ],
                         "name": [{"text": new_patient.name}],
@@ -200,7 +202,7 @@ async def add_patient(patient: schema.post_patient, request: Request, response: 
                             }
                         ],
                         "beneficiary": {
-                            "reference": str(new_patient.mpi) # patient mpi
+                            "reference": str(new_patient.nic) # patient nic
                         },
                         "subscriberId": str(patient.policy_number), # policy number
                         "payor": [
@@ -250,7 +252,7 @@ async def add_patient(patient: schema.post_patient, request: Request, response: 
         asyncio.create_task(engine_service.send_to_engine(fhir_patient, url="http://127.0.0.1:9000/fhir/add-patient", system_id=str(hospital.hospital_id)))
         
         db.commit()
-        logger.info(f"Patient registered successfully in FHIR: {new_patient.name} (NIC: {new_patient.mpi})")
+        logger.info(f"Patient registered successfully in FHIR: {new_patient.name} (NIC: {new_patient.nic})")
         return {"message": "data inserted sucessfully"}
     except Exception as exp:
         db.rollback()

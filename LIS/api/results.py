@@ -1,28 +1,40 @@
+import asyncio
+import logging
+from logging.handlers import RotatingFileHandler
 from datetime import datetime
-
-import model
-from database import get_db
 
 from fastapi import APIRouter, status, HTTPException, Depends, Request, Response
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.attributes import flag_modified
+from sqlalchemy import desc
 
 from database import get_db
 import model
 from schemas.result_schema import TestResultOut, MiniTestOut, CompleteTestResultCreate
 from schemas.lab_schema import TestRequestOut
 from rate_limiting import limiter
+from .engine_service import send_to_engine
 
 router = APIRouter(tags=["Results"])
+
+logger = logging.getLogger("patient_service")
+logger.setLevel(logging.INFO)
+formatter = logging.Formatter("%(asctime)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s")
+
+handler = RotatingFileHandler(r"logs/patient_service.log", maxBytes=1000000, backupCount=1)
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
 
 @router.post("/results/complete", status_code=status.HTTP_201_CREATED)
 @limiter.limit("15/minute")  # Limit to 15 requests per minute per IP
 def add_complete_result(r_in: CompleteTestResultCreate, request: Request, response: Response, db: Session = Depends(get_db)):
     """
-    Submit a complete lab result for an accepted and paid test request.
+    Submit a complete lab result for an accepted test request.
 
     **Request Body:**
     - `user_id` (int, required): ID of the lab technician submitting the result. Must be a valid user.
+    - `lab_id` (str, required): ID of the lab submitting the result.
     - `test_req_id` (int, required): ID of the test request this result belongs to. Must exist and be accepted.
     - `description` (str, optional): Overall description or summary of the test result.
     - `mini_tests` (list, required): List of individual sub-test results. Each item must include:
@@ -38,13 +50,16 @@ def add_complete_result(r_in: CompleteTestResultCreate, request: Request, respon
     **Side Effects:**
     - Automatically updates the test request `status` to "Completed".
     - Creates individual `MiniLabResult` records for each item in `mini_tests`.
+    - Sends or queues an HL7 result message for the InterfaceEngine.
 
     **Constraints:**
+    - `lab_id` must refer to a valid lab.
     - `user_id` must refer to a valid technician in the User table.
     - `test_req_id` must refer to an existing test request with `status == "Accepted"`.
     - Only one result can be submitted per test request (no duplicate results).
 
     **Error Responses:**
+    - `400 Bad Request`: Lab ID is invalid
     - `404 Not Found`: User (Technician) ID not found
     - `404 Not Found`: Test Request not found
     - `404 Not Found`: Test request status is not "Accepted"
@@ -53,6 +68,11 @@ def add_complete_result(r_in: CompleteTestResultCreate, request: Request, respon
     **Rate Limit:**
     - 15 requests per minute per client IP.
     """
+    lab = db.get(model.Lab, r_in.lab_id)
+    if not lab:
+        logger.error(f"Invalid lab ID provided: {r_in.lab_id}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid lab ID")
+    
     if not db.get(model.User, r_in.user_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User (Technician) ID not found.")
         
@@ -93,9 +113,49 @@ def add_complete_result(r_in: CompleteTestResultCreate, request: Request, respon
         )
     db.add_all(db_mini_tests)
 
-    # 4. Update TestRequest status to Completed
-    req.status = "Completed"
+    hl7_msg = """MSH|^~\\&|LIS|{lab_name}|EHR|{hospital_name}|{timestamp}||ORU^R01|{message_id}|P|2.3"""
 
+    # 4. Update TestRequest status to Completed
+    config_data= db.query(model.Config).filter(model.Config.sent_to_engine == False) \
+            .order_by(desc(model.Config.config_id)).first()
+    
+    if config_data and config_data.hold_flag: # if we have to hold the data
+        history_hospital = config_data.history.get(lab.name, {})
+
+        if history_hospital:
+            history_hospital["submit-lab-result"] = history_hospital.get("submit-lab-result", 0) + 1
+        else:
+            config_data.history[lab.name] = history_hospital
+            config_data.history[lab.name]["submit-lab-result"] = 1
+        
+        endpoint_already_added = False
+        for endpoint in config_data.data:
+            if endpoint.get("system_id") == lab.lab_id and endpoint.get("/submit-lab-result"): # if endpoint exists in config.
+                endpoint["/submit-lab-result"].append(hl7_msg)
+                endpoint_already_added = True
+                break
+        
+        if not endpoint_already_added:
+            config_data.data.append(
+                {   
+                    "system_id": lab.lab_id,
+                    "/submit-lab-result": [hl7_msg]
+                }
+            )
+
+        flag_modified(config_data, "history")
+        flag_modified(config_data, "data")
+
+        req.status = "Completed"
+        db.add(req)
+        db.commit()
+        logger.info(f"Data added to config for lab {lab.name} due to hold flag. Current history: {config_data.history}")
+        return {"message": "data added to config due to hold flag"}
+    
+    asyncio.create_task(send_to_engine(hl7_msg, "http://127.0.0.1:9000/submit-lab-result", lab.lab_id)) # send the data to engine asynchronously.
+
+    req.status = "Completed"
+    db.add(req)
     db.commit()
     return {"message": "result added"}
 
@@ -210,15 +270,16 @@ def unlock_test_request(test_req_id: int, user_id: int, request: Request, respon
     - If the request is locked by a different technician, the unlock is rejected.
 
         **Behavior:**
-        - Sets `locked_by = None` and `locked_at = None` for each matched request.
+    **Behavior:**
+    - Sets `locked_by = None` and `locked_at = None` for the request.
 
     **Error Responses:**
     - `403 Forbidden`: The test request is locked by a different technician
-        - `404 Not Found`: No test requests exist with the given `test_req_id`
+    - `404 Not Found`: No test requests exist with the given `test_req_id`
     - `404 Not Found`: User (Technician) ID not found.
 
-        **Rate Limit:**
-        - 15 requests per minute per client IP.
+    **Rate Limit:**
+    - 15 requests per minute per client IP.
     """
     if not db.get(model.User, user_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User (Technician) ID not found.")

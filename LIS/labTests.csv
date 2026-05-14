@@ -1,0 +1,34 @@
+Test code, Test Name ,Parameter,Unit,Gender,Age ≥ 18 (Adults),Age < 18 (Pediatric)
+1,Complete Blood Count (CBC) / Blood CP,Hemoglobin (Hb),g/dL,Male,13.2 – 16.6,11.5 – 15.5
+1,Complete Blood Count (CBC) / Blood CP,Hemoglobin (Hb),g/dL,Female,11.6 – 15.0,11.5 – 15.5
+1,Complete Blood Count (CBC) / Blood CP,RBC Count,1012/L,Male,4.35 – 5.65,4.0 – 5.2
+1,Complete Blood Count (CBC) / Blood CP,RBC Count,1012/L,Female,3.92 – 5.13,4.0 – 5.2
+1,Complete Blood Count (CBC) / Blood CP,WBC Count,109/L,Both,4.0 – 10.0,5.0 – 14.5*
+1,Complete Blood Count (CBC) / Blood CP,Platelet Count,109/L,Both,150 – 425,150 – 450
+1,Complete Blood Count (CBC) / Blood CP,Hematocrit (HCT),%,Male,38.3 – 48.6,35 – 45
+1,Complete Blood Count (CBC) / Blood CP,Hematocrit (HCT),%,Female,35.5 – 44.9,35 – 45
+1,Complete Blood Count (CBC) / Blood CP,MCV,fL,Both,80 – 100,75 – 90
+1,Complete Blood Count (CBC) / Blood CP,Neutrophils,%,Both,40 – 80,30 – 60
+1,Complete Blood Count (CBC) / Blood CP,Lymphocytes,%,Both,20 – 40,30 – 50
+2,Liver Function Test (LFT),Bilirubin (Total),mg/dL,Both,0.1 – 1.2,0.2 – 1.0
+2,Liver Function Test (LFT),SGPT (ALT),U/L,Male,up to 56,up to 40
+2,Liver Function Test (LFT),SGPT (ALT),U/L,Female,up to 34,up to 35
+2,Liver Function Test (LFT),SGOT (AST),U/L,Both,10 – 40,10 – 50
+2,Liver Function Test (LFT),Alkaline Phosphatase,U/L,Both,44 – 147,150 – 400*
+2,Liver Function Test (LFT),Total Protein,g/dL,Both,6.0 – 8.3,6.0 – 8.0
+2,Liver Function Test (LFT),Albumin,g/dL,Both,3.5 – 5.0,3.5 – 5.2
+3,Renal Function Test (RFT),Serum Creatinine,mg/dL,Male,0.7 – 1.3,0.3 – 0.9
+3,Renal Function Test (RFT),Serum Creatinine,mg/dL,Female,0.6 – 1.1,0.3 – 0.9
+3,Renal Function Test (RFT),Blood Urea,mg/dL,Both,10 – 45,5 – 20
+3,Renal Function Test (RFT),Uric Acid,mg/dL,Male,3.5 – 7.2,2.0 – 5.5
+3,Renal Function Test (RFT),Uric Acid,mg/dL,Female,2.6 – 6.0,2.0 – 5.5
+3,Renal Function Test (RFT),BUN,mg/dL,Both,7 – 20,5 – 18
+4,Lipid Profile,Total Cholesterol,mg/dL,Both,< 200,< 170
+4,Lipid Profile,Triglycerides,mg/dL,Both,< 150,< 90
+4,Lipid Profile,HDL (Good),mg/dL,Male,> 40,> 45
+4,Lipid Profile,HDL (Good),mg/dL,Female,> 50,> 45
+4,Lipid Profile,LDL (Bad),mg/dL,Both,< 100,< 110
+5,Thyroid Profile (TFT),TSH (Thyroid Stimulating Hormone),mIU/L,Both,0.4 – 4.2,0.7 – 6.0*
+5,Thyroid Profile (TFT),Total T3 (Triiodothyronine),ng/dL,Both,80 – 200,100 – 260
+5,Thyroid Profile (TFT),Total T4 (Thyroxine),$\mu$g/dL,Both,4.5 – 12.0,6.0 – 16.0
+5,Thyroid Profile (TFT),Free T4 (FT4),ng/dL,Both,0.8 – 1.8,0.9 – 2.2

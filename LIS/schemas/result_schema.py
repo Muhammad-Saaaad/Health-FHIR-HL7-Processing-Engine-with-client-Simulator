@@ -10,6 +10,7 @@ class MiniTestCreate(BaseModel):
 class CompleteTestResultCreate(BaseModel):
     user_id: int
     test_req_id: int
+    lab_id: int
     description: str| None = None
     mini_tests: list[MiniTestCreate] # Nested list of mini-tests
 

@@ -9,8 +9,12 @@ Base = declarative_base()
 class Hospital(Base):
     __tablename__ = 'hospital'
 
-    hospital_id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(100), unique=True, nullable=False) # add unique here.
+    hospital_id = Column(String(50), primary_key=True, index=True)
+    name = Column(String(100), nullable=False) # add unique here.
+
+    __table_args__ = (
+        UniqueConstraint('name', name='uq_hospital_name'),
+    )
 
     users = relationship("Users", back_populates="hospital")
     patient = relationship("Patient", back_populates="hospital")
@@ -20,8 +24,8 @@ class Config(Base):          # we can extract the operation heading, url, hospit
     __tablename__ = "config"
 
     config_id = Column(Integer, primary_key=True, index=True)
-    data = Column(JSON, nullable=False, default=[]) # e.g.: [{"endpoint1": [{data1}, {data2}]} , {"endpoint2": [{data1}, {data2}]} ]
-    history = Column(JSON, nullable=False, default={}) # e.g: {"Hospital A": {"add-patient": 10, "add-visit": 20}, "Hospital B": {"add-patient": 5, "submit-claim": 15}}
+    data = Column(JSON, nullable=False, default=list) # e.g.: [{"endpoint1": [{data1}, {data2}]} , {"endpoint2": [{data1}, {data2}]} ]
+    history = Column(JSON, nullable=False, default=dict) # e.g: {"Hospital A": {"add-patient": 10, "add-visit": 20}, "Hospital B": {"add-patient": 5, "submit-claim": 15}}
     hold_flag = Column(Boolean, default=False)
     sent_to_engine = Column(Boolean, default=False) # this is for the engine to know that this config is already sent to engine or not. if sent then it will not send again to engine.
 
@@ -29,7 +33,7 @@ class Users(Base):
     __tablename__ = 'users'
 
     users_id = Column(Integer, primary_key=True, index=True)
-    hospital_id = Column(Integer, ForeignKey('hospital.hospital_id'), nullable=True) # hospital(fk of hospital)
+    hospital_id = Column(String(50), ForeignKey('hospital.hospital_id', name='fk_users_hospital_id'), nullable=True) # hospital(fk of hospital)
 
     name = Column(String(100), nullable=True)
     email = Column(String(100), nullable=False)  # Removed unique=True - see __table_args__ for composite constraint
@@ -54,9 +58,9 @@ class Patient(Base):
     __tablename__ = 'patient'
 
     mpi = Column(Integer, primary_key= True, index= True)
-    hospital_id = Column(Integer, ForeignKey('hospital.hospital_id', name="FK__patient__hospita__5E8A0973"),  nullable=False) # hospital(fk of hospital)
+    hospital_id = Column(String(50), ForeignKey('hospital.hospital_id', name="FK__patient__hospita__5E8A0973"),  nullable=False) # hospital(fk of hospital)
 
-    nic = Column(String(15), nullable= False)
+    nic = Column(String(20), nullable= False)
     name = Column(String(100), nullable= False)
     phone_no = Column(String(100), nullable= True)
     gender = Column(String(10), nullable= False)
@@ -90,9 +94,9 @@ class VisitingNotes(Base):
 
     note_id = Column(Integer, primary_key=True, index=True)
 
-    mpi = Column(Integer,ForeignKey('patient.mpi'), nullable=False)
-    users_id = Column(Integer, ForeignKey('users.users_id'), nullable=False)
-    bill_id = Column(Integer, ForeignKey('bill.bill_id'), nullable=True)
+    mpi = Column(Integer,ForeignKey('patient.mpi', name='fk_visiting_notes_mpi'), nullable=False)
+    users_id = Column(Integer, ForeignKey('users.users_id', name='fk_visiting_notes_users_id'), nullable=False)
+    bill_id = Column(Integer, ForeignKey('bill.bill_id', name='fk_visiting_notes_bill_id'), nullable=True)
 
     visit_date = Column(DateTime, default=datetime.now())
     note_title = Column(String(1000), nullable=True)
@@ -100,7 +104,7 @@ class VisitingNotes(Base):
     dignosis = Column(String(255), nullable=True)
     note_details = Column(String(1000), nullable=True)
     
-    hospital_id = Column(Integer, ForeignKey('hospital.hospital_id'), nullable=False)
+    hospital_id = Column(String(50), ForeignKey('hospital.hospital_id', name='fk_visiting_notes_hospital_id'), nullable=False)
 
     user = relationship("Users", back_populates="visiting_notes")
     patient = relationship("Patient", back_populates="visiting_notes")
@@ -153,8 +157,8 @@ class LabReport(Base):
     __tablename__ = "lab_report"
 
     report_id = Column(Integer, primary_key=True, index=True)
-    visit_id = Column(Integer, ForeignKey('visiting_notes.note_id'), nullable=False)
-    loinc_code = Column(String(10), ForeignKey('loinc_master.loinc_code'), nullable=False)
+    visit_id = Column(Integer, ForeignKey('visiting_notes.note_id', name='fk_lab_report_visit_id'), nullable=False)
+    loinc_code = Column(String(10), ForeignKey('loinc_master.loinc_code', name='fk_lab_report_loinc_code'), nullable=False)
 
     lab_name = Column(String(100), nullable=False)
     test_name = Column(String(150), nullable=False) # the short name of the Loinc test
@@ -170,7 +174,7 @@ class MiniLabResult(Base):
     __tablename__ = "mini_test_result"
 
     mini_test_id = Column(Integer, primary_key=True, index= True)
-    report_id = Column(Integer, ForeignKey("lab_report.report_id"), nullable=False)
+    report_id = Column(Integer, ForeignKey("lab_report.report_id", name='fk_mini_test_result_report_id'), nullable=False)
 
     test_name = Column(String(50), nullable=False)
     normal_range = Column(String(20), nullable=False)

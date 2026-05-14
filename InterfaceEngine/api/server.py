@@ -6,6 +6,7 @@ import httpx
 from fastapi import APIRouter, status, HTTPException, Depends, Request, Response
 from sqlalchemy.orm import Session
 
+from InterfaceEngine.schemas import server
 from schemas.server import AddUpdateServer, GetServer
 import models
 from database import get_db, session_local
@@ -81,12 +82,12 @@ async def add_server(server: AddUpdateServer, request: Request, response: Respon
         logger.warning(f"Attempt to add server with duplicate name: {server.name}")
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Server with this name already exists")
     
-    if db.query(models.Server).filter(models.Server.ip == server.ip, models.Server.port == server.port).first():
-        logger.warning(f"Attempt to add server with duplicate IP and port: {server.ip}:{server.port}")
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Server with the same ip and port already exists")
+    if db.query(models.Server).filter(models.Server.ip == server.ip, models.Server.port == server.port, models.Server.system_id == server.system_id).first():
+        logger.warning(f"Attempt to add server with duplicate IP, port, and system_id: {server.ip}:{server.port}:{server.system_id}")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Server with the same ip, port, and system_id already exists")
 
     async with httpx.AsyncClient(timeout=httpx.Timeout(10.0)) as client:
-        is_reachable, reason = await add_server_reachability_check(client, server.ip, server.port)
+        is_reachable, reason = await add_server_reachability_check(client, server.ip, server.port, server.system_id)
         if not is_reachable:
             logger.error(
                 f"Add-server failed for {server.name} ({server.ip}:{server.port}): {reason}"
@@ -370,9 +371,9 @@ async def server_health_check(client, ip: str, port: int, system_id: str):
         return False
 
 
-async def add_server_reachability_check(client: httpx.AsyncClient, ip: str, port: int):
+async def add_server_reachability_check(client: httpx.AsyncClient, ip: str, port: int, system_id: str):
     """Return detailed reason when add-server cannot reach a target server."""
-    target_url = f"http://{ip}:{port}/health"
+    target_url = f"http://{ip}:{port}/health/{system_id}"
     try:
         response = await client.get(target_url, timeout=10)
         if response.status_code == 200:
@@ -390,26 +391,83 @@ async def add_server_reachability_check(client: httpx.AsyncClient, ip: str, port
         return False, f"unexpected error: {exp}"
 
 async def get_lis_payer():
-    try:
-        db = session_local()
-        all_EHRs = db.query(models.Server).filter(models.Server.category == "EHR").all()
-        all_LISs = db.query(models.Server).filter(models.Server.category == "LIS").all()
-        all_Payers = db.query(models.Server).filter(models.Server.category == "Payer").all()
-        
-        data = list()
-        for ehr in all_EHRs:
-            return_ehr = {
-                "id": ehr.server_id,
-                "name": ehr.name,
-                "systems": {
-                    "LIS": [{"id": lis.id, "name": lis.name } for lis in all_LISs],
-                    "Payer": [{ "id": payer.id, "name": payer.name } for payer in all_Payers]
-                }
-            }
-            data.append(return_ehr)
-        return data
+    """
+        create a list, that tells that from this ehr we can send data to this lab and this payer.
+        use to display the labs and payers in the ehr while adding patient, and visiting notes.
+    """
+    while True:
+        try:
+            db = session_local()
+            all_routes = db.query(models.Route).all()
+            
+            data = list()
+            for route in all_routes:
+                src_server = route.src_server # takes the entire server data.
+                dest_server = route.dest_server
+                
+                if src_server.category == "EHR" and dest_server.status == "Active":
+                    lab = dict()
+                    payer = dict()
 
-    except Exception as exp:
-        logger.exception(str(exp))
-    finally:
-        db.close()
+                    if dest_server.category == "LIS" and route.msg_type == "ORM^O01":
+                        lab['system_id'] = dest_server.system_id
+                        lab['name'] = dest_server.name
+
+                    elif dest_server.category == "Payer" and route.msg_type == "ADT^A04":
+                        payer['system_id'] = dest_server.system_id
+                        payer['name'] = dest_server.name
+                    
+                    saved_in_data = False
+                    for ehr in data:
+
+                        if ehr['ehr_system_id'] == src_server.system_id:
+                            if lab and lab not in ehr['labs']:
+                                ehr['labs'].append(lab)
+                            if payer and payer not in ehr['payers']:
+                                ehr['payers'].append(payer)
+                            saved_in_data = True
+                            break
+                            
+                    if not saved_in_data:
+                        data.append({
+                            "ehr_system_id": src_server.system_id,
+                            "labs": [lab] if lab else list(),
+                            "payers": [payer] if payer else list()
+                        })
+            db.close()
+            async with httpx.AsyncClient() as client:
+                status = await connected_systems_to_ehr(client, "127.0.0.1", 8001, data)
+                if status:
+                    logger.info("Successfully sent connected systems data to EHR")
+                else:
+                    logger.error("Failed to send connected systems data to EHR")
+
+        except Exception as exp:
+            db.close()
+            logger.exception(str(exp))
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(exp)}")
+        
+        await asyncio.sleep(30) # update the data after every 30 seconds
+    
+async def connected_systems_to_ehr(client, ip: str, port: int, data: list):
+    """
+    Perform a single health check against a server's `/health` endpoint.
+
+    Sends `GET http://{ip}:{port}/health` with a 10-second timeout.
+
+    Args:
+        client (httpx.AsyncClient): A shared async HTTP client.
+        ip (str): Server IP address or hostname.
+        port (int): Server port number.
+
+    Returns:
+        bool: `True` if the server responds with HTTP 200, `False` for any error or non-200 response.
+    """
+    try:
+        response = await client.get(f"http://{ip}:{port}/health", json=data, timeout=10)
+        if response.status_code != 200:
+            logger.warning(f"Health check failed for {ip}:{port} with status code {response.status_code}")  
+        return response.status_code == 200
+    except:
+        logger.error(f"Exception occurred while checking health for {ip}:{port}")
+        return False

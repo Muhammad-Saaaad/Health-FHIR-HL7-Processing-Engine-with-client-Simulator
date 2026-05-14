@@ -5,7 +5,7 @@ from pydantic import BaseModel, field_serializer
 from .lab_schema import LabBase
 
 class PatientBase(BaseModel):
-    mpi: int 
+    nic: str
     fname: str 
     lname: str
     updated_at: datetime
@@ -17,7 +17,7 @@ class PatientBase(BaseModel):
     model_config = {"from_attributes": True}
 
 class PatientDetail(BaseModel):
-    mpi: int
+    nic: str
     fname: str
     lname: str
     gender: str
@@ -40,7 +40,7 @@ class PatientDetail(BaseModel):
 class WaitingPatientList(BaseModel):
     test_req_id: int
     vid: str | None
-    mpi: int
+    nic: str
     fname: str
     lname: str
     status: str
@@ -54,7 +54,7 @@ class AcceptedPatientList(BaseModel):
     test_req_id: int
     test_name: str
     vid: str | None
-    mpi: int
+    nic: str
     fname: str
     lname: str
     status: str

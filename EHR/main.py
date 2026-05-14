@@ -1,6 +1,6 @@
 import os
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi.errors import RateLimitExceeded
@@ -57,10 +57,18 @@ def check_health(system_id: str):
     try:
         server = db.query(model.Hospital).filter(model.Hospital.hospital_id == system_id).first()
         if not server:
-            return {"message": f"Server with system_id '{system_id}' not found."}
+            raise HTTPException(status_code=404, detail={"message": f"Server with system_id '{system_id}' not found."})
         return {"message": f"✔ EHR running for system_id '{system_id}'"}
     finally:
         db.close()
+
+@app.get("/connected-labs-insuraces")
+async def get_connected_labs_insurances(request: Request):
+    """
+    
+    """
+    data = await request.json()
+    
 
 if __name__ == "__main__":
     import uvicorn

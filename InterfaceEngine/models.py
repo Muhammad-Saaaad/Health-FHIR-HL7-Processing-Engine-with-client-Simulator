@@ -15,7 +15,7 @@ class Server(Base):
     __tablename__ = "server"
 
     server_id = Column(Integer, primary_key=True, index=True)
-    system_id = Column(String(50), nullable=False, index=True) # e.g. Hospital A, Lab B
+    system_id = Column(String(50), nullable=False, index=True) # e.g. EHR-1, LIS-1, PHR-1, Payer-1
 
     ip = Column(String(15), nullable=False)
     port = Column(Integer, nullable=False)

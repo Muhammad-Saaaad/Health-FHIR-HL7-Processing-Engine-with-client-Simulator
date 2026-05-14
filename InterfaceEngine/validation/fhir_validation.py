@@ -251,7 +251,6 @@ if __name__ == "__main__":
                     "resourceType": "Patient",
                     "id": unique_id,
                     "identifier": [
-                        { "type": { "coding": [{ "code": "MR" }]}, "value": "23" },
                         { "type": { "coding": [{ "code": "NI" }]}, "value": "37201-23123123"}
                     ],
                     "name": [{ "text": "Muhammad Saad" }],
@@ -502,7 +501,7 @@ if __name__ == "__main__":
     # print("\n--- build_fhir_message sample output ---")
     # print(json.dumps(rebuilt, indent=2))
 
-    is_valid, message = validate_unknown_fhir_resource(patient_visit)
+    is_valid, message = validate_unknown_fhir_resource(patient_registration)
     print(is_valid, " --> \n" ,message)
 
     # import uuid

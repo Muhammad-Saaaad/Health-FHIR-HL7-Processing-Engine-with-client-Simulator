@@ -21,7 +21,7 @@ class TestRequestStatusUpdate(BaseModel):
 
 class TestRequestOut(BaseModel):
     test_req_id: int
-    mpi : int
+    nic: str
     test_name: str
     status: str
     locked_by: int | None

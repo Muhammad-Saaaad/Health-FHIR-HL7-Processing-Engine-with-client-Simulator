@@ -18,7 +18,7 @@ def get_all_patients(request: Request, response: Response, db: Session = Depends
 
     **Response (200 OK):**
     Returns `list[PatientBase]`. Each patient object includes:
-    - `mpi` (int)
+    - `nic` (str)
     - `fname` (str)
     - `lname` (str)
     - `updated_at` (str, formatted date)
@@ -29,46 +29,45 @@ def get_all_patients(request: Request, response: Response, db: Session = Depends
     patients = db.query(model.Patient).all()
     return patients
 
-@router.get("/patients/{mpi}", response_model=PatientDetail)
+@router.get("/patients/{nic}", response_model=PatientDetail)
 @limiter.limit("20/minute")  # Limit to 20 requests per minute per IP
-def get_patient_detail(mpi: int, request: Request, response: Response, db: Session = Depends(get_db)):
+def get_patient_detail(nic: str, request: Request, response: Response, db: Session = Depends(get_db)):
     """
         Retrieve detailed patient information and associated lab reports.
 
         **Path Parameters:**
-        - `mpi` (int, required): Master Patient Index (primary key) used to identify the patient.
+        - `nic` (str, required): National ID / CNIC used to identify the patient.
 
         **Response (200 OK):**
         Returns a merged patient detail object with:
-        - `mpi` (int): Patient MPI.
+        - `nic` (str): Patient NIC.
         - `fname` (str): First name.
         - `lname` (str): Last name.
         - `gender` (str): Gender value stored in LIS.
         - `age` (str): Computed from DOB and serialized as `"<years> years"`.
-        - `updated_at` (str): Last update timestamp serialized by schema.
         - `lab_reports` (list[object]): Patient lab test summaries, each containing:
             - `report_id` (int): Lab test request ID.
             - `test_name` (str): Name of requested test.
-            - `vid` (int | None): Visit ID linked to the test request.
+            - `vid` (str | None): Visit ID linked to the test request.
             - `status` (str): Current test/request status.
 
         **Error Responses:**
-        - `404 Not Found`: Patient with provided MPI was not found.
+        - `404 Not Found`: Patient with provided NIC was not found.
         - `429 Too Many Requests`: Rate limit exceeded (`20/minute`).
         - `500 Internal Server Error`: Unexpected unhandled server/database error.
     """
-    patient = db.get(model.Patient, mpi)
+    patient = db.get(model.Patient, nic)
     if not patient:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found")
     response = {
-        "mpi": patient.mpi,
+        "nic": patient.nic,
         "fname": patient.fname,
         "lname": patient.lname,
         "gender": patient.gender,
         "age": patient.dob
     }
 
-    lab_details = db.query(model.LabTestRequest).filter(model.LabTestRequest.mpi == mpi).all()
+    lab_details = db.query(model.LabTestRequest).filter(model.LabTestRequest.nic == nic).all()
     reports = [
         {
             "report_id": lab_detail.test_req_id,
@@ -95,7 +94,7 @@ def get_pending_requests(request: Request, response: Response, db: Session = Dep
     Each object is `WaitingPatientList` with:
     - `test_req_id` (int)
     - `vid` (str | null)
-    - `mpi` (int)
+    - `nic` (str)
     - `fname` (str)
     - `lname` (str)
     - `status` (str)
@@ -113,12 +112,12 @@ def get_pending_requests(request: Request, response: Response, db: Session = Dep
         if req.vid in seen_vids:
             continue
 
-        patient = db.get(model.Patient, req.mpi)
+        patient = db.get(model.Patient, req.nic)
         if patient:
             seen_vids.add(req.vid)
             waiting_list_patient = WaitingPatientList(
                 test_req_id=req.test_req_id,
-                mpi=patient.mpi,
+                nic=patient.nic,
                 fname=patient.fname,
                 lname=patient.lname,
                 status=req.status,
@@ -129,9 +128,9 @@ def get_pending_requests(request: Request, response: Response, db: Session = Dep
 
     return waiting_list_patients
 
-@router.get("/patient-process/{mpi}/{vid}", response_model=PatientDetail)
+@router.get("/patient-process/{nic}/{vid}", response_model=PatientDetail)
 @limiter.limit("20/minute")
-def get_patient_process(mpi: int, vid: str, request: Request, response: Response, db: Session = Depends(get_db)):
+def get_patient_process(nic: str, vid: str, request: Request, response: Response, db: Session = Depends(get_db)):
     """
     Retrieve a pending patient-processing view for a specific visit.
 
@@ -139,12 +138,12 @@ def get_patient_process(mpi: int, vid: str, request: Request, response: Response
     test requests are pulled by visit ID and combined with patient demographics.
 
     **Path Parameters:**
-    - `mpi` (int, required): Master Patient Index (primary key of `patient`).
+    - `nic` (str, required): National ID / CNIC (primary key of `patient`).
     - `vid` (str, required): Visit ID used to locate pending test requests.
 
     **Response (200 OK):**
     Returns `PatientDetail` with:
-    - `mpi` (int)
+    - `nic` (str)
     - `fname` (str)
     - `lname` (str)
     - `gender` (str)
@@ -157,18 +156,22 @@ def get_patient_process(mpi: int, vid: str, request: Request, response: Response
 
     **Error Responses:**
     - `404 Not Found`: No pending tests found for the given `vid`.
-    - `404 Not Found`: Patient with provided `mpi` does not exist.
+    - `404 Not Found`: Patient with provided `nic` does not exist.
     - `429 Too Many Requests`: Rate limit exceeded (`20/minute`).
     - `500 Internal Server Error`: Unexpected unhandled server/database error.
     """
 
-    lab_tests = db.query(model.LabTestRequest).filter(model.LabTestRequest.vid == vid, model.LabTestRequest.status == "Pending").all()
+    lab_tests = db.query(model.LabTestRequest).filter(
+        model.LabTestRequest.vid == vid,
+        model.LabTestRequest.nic == nic,
+        model.LabTestRequest.status == "Pending"
+    ).all()
     if not lab_tests:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Visit ID {vid} not found.")
     
-    patient =db.get(model.Patient, mpi) 
+    patient = db.get(model.Patient, nic) 
     if not patient:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Patient with MPI {mpi} not found.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Patient with NIC {nic} not found.")
     
     lab_details = []
     for lab_test in lab_tests:
@@ -180,7 +183,7 @@ def get_patient_process(mpi: int, vid: str, request: Request, response: Response
         })
 
     response = PatientDetail(
-        mpi=mpi,
+        nic=nic,
         fname=patient.fname,
         lname=patient.lname,
         gender=patient.gender,
@@ -194,18 +197,17 @@ def get_patient_process(mpi: int, vid: str, request: Request, response: Response
 @limiter.limit("20/minute")  # Limit to 20 requests per minute per IP
 def get_accepted_requests(request: Request, response: Response, db: Session = Depends(get_db)):
     """ 
-    Retrieve accepted lab test requests, keeping only one row per `vid`.
+    Retrieve accepted lab test requests.
 
     **Query Parameters:** None
 
     **Response (200 OK):**
     Returns a list of unique waiting-list entries for requests with `status == "Accepted"`.
-    If multiple accepted rows share the same `vid`, only the first one is returned.
     Each object is `AcceptedPatientList` with:
     - `test_req_id` (int)
     - `test_name` (str)
     - `vid` (str | null)
-    - `mpi` (int)
+    - `nic` (str)
     - `fname` (str)
     - `lname` (str)
     - `status` (str)
@@ -213,19 +215,18 @@ def get_accepted_requests(request: Request, response: Response, db: Session = De
 
     **Note:**
     - Returns an empty list if there are no accepted test requests.
-    - Uniqueness is based on `vid`.
     """
     accepted_requests = db.query(model.LabTestRequest).filter(model.LabTestRequest.status == "Accepted").all()
     patients_accepted_list = []
 
     for req in accepted_requests:
 
-        patient = db.get(model.Patient, req.mpi)
+        patient = db.get(model.Patient, req.nic)
         if patient:
             waiting_list_patient = AcceptedPatientList(
                 test_req_id=req.test_req_id,
                 test_name=req.test_name,
-                mpi=patient.mpi,
+                nic=patient.nic,
                 fname=patient.fname,
                 lname=patient.lname,
                 status=req.status,

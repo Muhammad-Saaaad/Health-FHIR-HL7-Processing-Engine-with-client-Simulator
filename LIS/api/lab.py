@@ -17,33 +17,32 @@ router = APIRouter(tags=["Test Requests"])
 #     Create a new lab test request for a patient.
 
 #     **Request Body:**
-#     - `patient_cnic` (str, required): The CNIC (National ID) of the patient requesting the test.
+#     - `nic` (str, required): The NIC/CNIC of the patient requesting the test.
 #       Must match an existing patient record.
 #     - `test_name` (str, required): Name of the lab test to be performed (e.g., "CBC", "Blood Sugar").
 
 #     **Response (201 Created):**
 #     Returns the created test request object including:
 #     - `test_req_id`: Auto-generated unique test request ID
-#     - `patient_id`: Internal patient ID resolved from CNIC
+#     - `nic`: Patient NIC/CNIC
 #     - `test_name`: The requested test name
 #     - `status`: Defaults to "Pending" on creation
 #     - `locked_by`: None (not locked initially)
 #     - `locked_at`: None (not locked initially)
 
 #     **Note:**
-#     - The patient is looked up by CNIC. The first patient whose CNIC does NOT match is used
-#       (this may be a bug in the current implementation; the filter uses `!=` instead of `==`).
+#     - The patient is looked up by NIC/CNIC.
 
 #     **Error Responses:**
-#     - `404 Not Found`: No patient found matching the given `patient_cnic`
+#     - `404 Not Found`: No patient found matching the given `nic`
 #     """
-#     is_patient = db.query(model.Patient).filter(model.Patient.cnic == data.patient_cnic).first()
+#     is_patient = db.query(model.Patient).filter(model.Patient.nic == data.nic).first()
     
 #     if not is_patient:
 #         raise HTTPException(status_code=404, detail="Patient not found")
         
 #     db_request = model.LabTestRequest(
-#         patient_id = is_patient.pid,
+#         nic = is_patient.nic,
 #         test_name = data.test_name,
 #         status = "Pending",
 #         locked_by = None,
@@ -68,7 +67,7 @@ def get_accepted_requests(request: Request, response: Response, db: Session = De
 
     Response type: `list[TestRequestOut]`, each item contains:
     - `test_req_id` (int)
-    - `mpi` (int)
+    - `nic` (str)
     - `test_name` (str)
     - `status` (str)
     - `locked_by` (int | null)
@@ -113,14 +112,14 @@ def update_request_status(status_update: TestRequestStatusUpdate, request: Reque
         - Validates the same request ID exists in `req_id_bill`.
     - Updates each request status.
     - Creates one `LabTestBilling` row per updated request with:
-        - `mpi`, `test_req_id`, `vid` from the request
+        - `nic`, `test_req_id`, `vid` from the request
         - `bill_amount` from `req_id_bill[req_id]`
         - `payment_status` set to `"pending"`
 
     **Response (200 OK):**
     Returns `list[TestRequestOut]`, where each item contains:
     - `test_req_id` (int)
-    - `mpi` (int)
+    - `nic` (str)
     - `test_name` (str)
     - `status` (str)
     - `locked_by` (int | null)
@@ -129,7 +128,7 @@ def update_request_status(status_update: TestRequestStatusUpdate, request: Reque
     **Error Responses:**
     - `400 Bad Request`: Invalid status value.
     - `400 Bad Request`: Request visit ID does not match payload `visit_id`.
-    - `403 Forbidden`: Request is unlocked or locked by another technician.
+    - `403 Forbidden`: Request is not locked or is locked by another technician.
     - `404 Not Found`: Visit ID not found.
     - `404 Not Found`: Test request ID not found.
     - `404 Not Found`: Request ID present in `req_id_status` but missing from `req_id_bill`.
@@ -169,7 +168,7 @@ def update_request_status(status_update: TestRequestStatusUpdate, request: Reque
         updated_requests.append(updated_request)
 
         req_bill = model.LabTestBilling(
-            mpi=updated_request.mpi,
+            nic=updated_request.nic,
             test_req_id=updated_request.test_req_id,
             bill_amount=status_update.req_id_bill[req_id],
             payment_status="pending",
@@ -244,16 +243,16 @@ def unlock_test_request(visit_id: str, user_id: int, request: Request, response:
     **Constraints:**
     - If the request is locked by a different technician, the unlock is rejected.
 
-        **Behavior:**
-        - Sets `locked_by = None` and `locked_at = None` for each matched request.
+    **Behavior:**
+    - Sets `locked_by = None` and `locked_at = None` for each matched request.
 
     **Error Responses:**
     - `403 Forbidden`: The test request is locked by a different technician
-        - `404 Not Found`: No test requests exist with the given `visit_id`
+    - `404 Not Found`: No test requests exist with the given `visit_id`
     - `404 Not Found`: User (Technician) ID not found.
 
-        **Rate Limit:**
-        - 15 requests per minute per client IP.
+    **Rate Limit:**
+    - 15 requests per minute per client IP.
     """
     if not db.get(model.User, user_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User (Technician) ID not found.")

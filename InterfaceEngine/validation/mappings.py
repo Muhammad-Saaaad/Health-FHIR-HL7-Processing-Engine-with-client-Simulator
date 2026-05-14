@@ -29,7 +29,7 @@ Three exports:
 Collision rules enforced throughout:
     # - "ResourceType-id"                  → "{resource}_fhir_id"  (internal server ID)
     - "ResourceType-identifier[x].value" → clinically meaningful name where known:
-        Patient-identifier[0].value      → "MPI"
+        Patient-identifier[0].value      → "NIC"
         Coverage-identifier[0].value     → "member_id"  (Member/Certificate ID)
         Claim-identifier[0].value        → "claim_number"
         all others                       → "{resource}_identifier"
@@ -68,10 +68,10 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
 
     # ── Patient ───────────────────────────────────────────────────────────────
     # "Patient-id":                                         "patient_fhir_id",
-    "Patient-identifier[0].value":                        "MPI",
-    "Patient-identifier[0].type.coding[0].code":          "MPI_type",
-    "Patient-identifier[1].value":                        "nic",
-    "Patient-identifier[1].type.coding[0].code":          "nic_type",
+    "Patient-identifier[0].value":                        "NIC",
+    "Patient-identifier[0].type.coding[0].code":          "NIC_type",
+    # "Patient-identifier[1].value":                        "nic",
+    # "Patient-identifier[1].type.coding[0].code":          "nic_type",
     "Patient-identifier[2].value":                        "ssn",
     "Patient-identifier[2].type.coding[0].code":          "ssn_type",
     "Patient-name[0].text":                               "fullname",
@@ -194,7 +194,7 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
     "Encounter-type[0].coding[0].display":                           "admission_type_name",
     "Encounter-serviceType.coding[0].code":                          "hospital_service",
     "Encounter-priority.coding[0].code":                             "encounter_priority",
-    "Encounter-subject.reference":                                   "encounter_patient_ref", # this will map to the patient MPI.
+    "Encounter-subject.reference":                                   "encounter_patient_ref", # this will map to the patient NIC.
     "Encounter-participant[0].type[0].coding[0].code":               "encounter_participant_type",
     "Encounter-participant[0].individual.reference":                 "encounter_provider",
     "Encounter-period.start":                                        "admit_datetime",
@@ -341,7 +341,7 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
     "ServiceRequest-code.coding[0].code":                     "lab_order_code",
     "ServiceRequest-code.coding[0].display":                  "lab_order_name",
     "ServiceRequest-code.coding[0].system":                   "lab_order_coding_system",
-    "ServiceRequest-subject.reference":                       "lab_order_patient_ref", # this will map to the patient MPI.
+    "ServiceRequest-subject.reference":                       "lab_order_patient_ref", # this will map to the patient NIC.
     "ServiceRequest-encounter.reference":                     "lab_order_encounter",
     "ServiceRequest-occurrenceDateTime":                      "observation_start_datetime",
     "ServiceRequest-occurrencePeriod.start":                  "lab_order_start",
@@ -489,7 +489,7 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
     "Claim-type.coding[0].display":                           "claim_type_name",
     "Claim-subType.coding[0].code":                           "claim_subtype",
     "Claim-use":                                              "claim_use",
-    "Claim-patient.reference":                                "claim_patient_ref", # this will map to the patient MPI.
+    "Claim-patient.reference":                                "claim_patient_ref", # this will map to the patient NIC.
     "Claim-billablePeriod.start":                             "claim_period_start",
     "Claim-billablePeriod.end":                               "claim_period_end",
     "Claim-created":                                          "datetime",
@@ -1091,8 +1091,8 @@ HL7_EXACT_CANONICAL: dict[str, str] = {
 
     # ── PID — Patient Identification ──────────────────────────────────────────
     "PID-2":      "patient_alt_id",
-    "PID-3":      "MPI",
-    "PID-3.1":    "MPI",
+    "PID-3":      "NIC",
+    "PID-3.1":    "NIC",
     "PID-3.4":    "assigning_authority",
     "PID-3.5":    "id_type_code",
     "PID-4":      "alternate_patient_id",
@@ -1237,7 +1237,7 @@ HL7_EXACT_CANONICAL: dict[str, str] = {
     "PV1-52":   "encounter_complaint",
     "PV1-53":   "encounter_diagnosis_display",
     "PV1-54":   "encounter_notes",
-    # "PV1-55":   "encounter_patient_MPI", we don't need this as it's redundant with PID-3 MPI field
+    # "PV1-55":   "encounter_patient_NIC", we don't need this as it's redundant with PID-3 NIC field
 
     # ── IN1 — Insurance ───────────────────────────────────────────────────────
     #
@@ -1608,7 +1608,7 @@ HL7_EXACT_CANONICAL: dict[str, str] = {
     "PID-Z906": "link_type",
     "PID-Z907": "linked_patient",
     "PID-Z908": "managing_org",
-    "PID-Z909": "MPI_type",
+    "PID-Z909": "NIC_type",
     "PID-Z910": "patient_active",
     "PID-Z911": "patient_photo_url",
     "PID-Z912": "phone_system",

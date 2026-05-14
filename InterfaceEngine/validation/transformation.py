@@ -34,11 +34,10 @@ def regex_replace_with_template(value: str, pattern_from: str, pattern_to: str) 
     # Replace that pattern in pattern_to with the capture group reference \1
     replacement_template = pattern_to.replace(captured_pattern, r"\1", 1)
     
-    print(f"Value: {value}")
-    print(f"Pattern from: {pattern_from}")
-    print(f"Pattern from (with capture): {pattern_from_captured}")
-    print(f"Replacement template: {replacement_template}")
-    print()
+    # print(f"Value: {value}")
+    # print(f"Pattern from: {pattern_from}")
+    # print(f"Pattern from (with capture): {pattern_from_captured}")
+    # print(f"Replacement template: {replacement_template}")
     
     return re.sub(pattern=pattern_from_captured, repl=replacement_template, string=value)
 
@@ -226,5 +225,5 @@ if __name__ == "__main__":
     # string = "Patient[23]"
     # pattern = r"\[(\d+)\]"
     # print(re.search(pattern, string).group(1))
-    # print(regex_replace_with_template("Practitioner/a123-c", "Practitioner/.+", ".+"))
+    # print(regex_replace_with_template("patient/37201-7687308-3", "patient/.+", ".+"))
     # print(regex_replace_with_template("a123-c/VID", ".+", "Practitioner/.+"))

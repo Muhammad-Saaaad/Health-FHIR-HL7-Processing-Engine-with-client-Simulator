@@ -158,7 +158,6 @@ def check_health():
 
 active_route_listners = {} # consist of all the running routes|Channels lisning for a soruce endpoint
 route_queue = {} # consist of each route key with that route value that it gets from source endpoint
-data_queue = {}
 
 _BATCH_CONCURRENCY = 8
 
@@ -186,7 +185,6 @@ async def route_manager():
                     if route.route_id not in active_route_listners:
 
                         route_queue[route.route_id] = asyncio.Queue() # make a async queue for a new route that is not listning
-                        data_queue[route.route_id] = asyncio.Queue() # Once the dest message is be created, then we put the data in this queue, after that we will send to the dest server.
                         task = asyncio.create_task(route_worker(route)) # this start the listning the route.
                         active_route_listners[route.route_id] = task
                         logger.info(f"route_worker start for route -> {route.name}")
@@ -249,6 +247,7 @@ async def route_worker(route):
         logger.info(f"route_Worker Started for route -> {route.name}")
 
         dest_endpoint_url = f"http://{dest_server.ip}:{dest_server.port}{dest_endpoint.url}"
+        dest_system_id = dest_server.system_id
 
         while True:
             # Each queue item is a (data, future) tuple.
@@ -414,10 +413,8 @@ async def route_worker(route):
                                                    dest=dest_server.name, msg_type=route.msg_type)
                 logger.info(f"Built message for route -> {route.name}:\n {msg}")
 
-                await data_queue[route.route_id].put(msg) # put the message in the data queue, after that we will send to the dest server.
                 # DELIVER — resolve the future so ingest() knows the result
                 async with httpx.AsyncClient() as client:
-                    data_msg = await data_queue[route.route_id].get()
                     db = session_local()
                     dest_server = db.get(models.Server, route.dest_server_id)
                     db.close()
@@ -431,21 +428,26 @@ async def route_worker(route):
                         dest_server = db.get(models.Server, route.dest_server_id)
                         db.close()
 
+                    request_headers = {}
+                    if dest_system_id is not None:
+                        request_headers["System-Id"] = str(dest_system_id)
+
                     if dest_server.protocol == "FHIR":
-                        response = await client.post(url=dest_endpoint_url, json=data_msg)
+                        response = await client.post(url=dest_endpoint_url, json=msg, headers=request_headers)
                     else:
                         # HL7 is plain text — do NOT json= encode it or it arrives as a
                         # JSON string "MSH|..." instead of the raw HL7 text
+                        request_headers["Content-Type"] = "text/plain"
                         response = await client.post(
                             url=dest_endpoint_url,
-                            content=data_msg,
-                            headers={"Content-Type": "text/plain"}
+                            content=msg,
+                            headers=request_headers
                         )
                     if response.status_code in (200, 201, 202, 203, 204):
                         db_logger.info(f"Data Sucessfully Send to : {dest_server.name}",
                                     extra= {
                                             "src_message": json.dumps(src_msg),
-                                            "dest_message": json.dumps(data_msg),
+                                            "dest_message": json.dumps(msg),
                                             "op_heading": f"Channel: {route.name}"
                                         }
                         )
@@ -457,7 +459,7 @@ async def route_worker(route):
                         db_logger.error(f"Data Failed to Send to : {dest_server.name}",
                                     extra= {
                                             "src_message": json.dumps(src_msg),
-                                            "dest_message": json.dumps(data_msg),
+                                            "dest_message": json.dumps(msg),
                                             "op_heading": f"Channel: {route.name}"
                                         }
                         )
@@ -468,8 +470,8 @@ async def route_worker(route):
                 db_logger.error(f"Data Failed to Send to : {dest_server.name}",
                                 extra= {
                                         "src_message": json.dumps(src_msg),
-                                        "dest_message": json.dumps(data_msg) if 'data_msg' in locals() else
-                                        "data_msg not defined due to error in message building",
+                                        "dest_message": json.dumps(msg) if 'msg' in locals() else
+                                        "msg not defined due to error in message building",
                                         "op_heading": f"Channel: {route.name}"
                                     }
                 )
@@ -509,7 +511,6 @@ async def _process_message(full_path: str, payload, trace_id: str, system_id: st
         if not isinstance(payload, dict):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="FHIR payload must be a JSON object")
 
-        # logger.info("trace=%s ingest_payload_preview=%s", trace_id, _payload_preview(payload))
         logger.info("trace=%s ingest_payload_preview=%s", trace_id, payload)
         # validating fhir message
         is_valid, message = await asyncio.to_thread(
@@ -623,6 +624,9 @@ async def ingest(full_path: str, req: Request):
     - `502 Bad Gateway`: One or more downstream deliveries failed.
     """
     trace_id = req.headers.get("X-Trace-Id") or uuid4().hex[:12]
+    system_id = req.headers.get("System-Id")
+    if system_id is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing System-Id header")
     try:
         db = session_local()
         endpoint = db.query(models.Endpoints).filter(models.Endpoints.url == '/' + full_path).first()
@@ -634,7 +638,7 @@ async def ingest(full_path: str, req: Request):
 
         if server.protocol == "FHIR":
             payload = await req.json()
-            return await _process_message(full_path, payload, trace_id) and {"message": "Successfully sent data to all destinations"}
+            return await _process_message(full_path, payload, trace_id, system_id=system_id) and {"message": "Successfully sent data to all destinations"}
 
         # HL7: try JSON first (single string), then raw text
         try:
@@ -647,7 +651,7 @@ async def ingest(full_path: str, req: Request):
         if not isinstance(payload, str):
             payload = str(payload)
         # process a single hl7 message
-        return await _process_message(full_path, payload, trace_id) and {"message": "Successfully sent data to all destinations"}
+        return await _process_message(full_path, payload, trace_id, system_id=system_id) and {"message": "Successfully sent data to all destinations"}
     except HTTPException:
         raise  # re-raise HTTP exceptions as-is
     except Exception as exp:

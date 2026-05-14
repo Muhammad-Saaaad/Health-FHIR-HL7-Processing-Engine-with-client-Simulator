@@ -224,6 +224,7 @@ PID|1||123||
 PV1|1||||||||||||||||||1231
 FT1|1|||20260203120000|||Service_LabTest|150.00||||||||||||||||
 """
+print(test1)
 
 for segment in test1.splitlines()[1:]:
     _, paths = hl7_extract_paths(segment)

@@ -214,7 +214,7 @@ def get_field_type(canonical_name: str) -> str:
     # ── Explicit overrides for ambiguous names ────────────────────────────────
     EXPLICIT = {
         # regex (Here we say that different names can have the regex pattern type, so we will take the pattern from the profile based on the canonical name)
-        "MPI":                                "id_format",
+        "NIC":                                "id_format",
         "VID":                                "id_format",
         "practitioner_id":                    "id_format",
         "claim_patient_ref":                  "subject_reference_format",

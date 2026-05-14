@@ -5,6 +5,7 @@ import re
 
 
 from fastapi import APIRouter, status, HTTPException, Request, Depends
+import httpx
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -20,6 +21,32 @@ handler = RotatingFileHandler(r"logs/engine_service.log", maxBytes=1000000, back
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
+async def send_to_engine(data: str, url: str, system_id: str):
+    """
+    Send a FHIR data to the InterfaceEngine for routing to downstream services.
+
+    Returns:
+        str: The literal value `"sucessfull"` if the engine responds with HTTP 200.
+
+    Raises:
+        Exception: If the engine returns a non-200 status (e.g., 502 on partial downstream failure),
+                   raises an exception with the engine's error detail so the caller can rollback.
+    """
+    try:
+        logger.info(f"Sending data to engine: {data}")
+        async with httpx.AsyncClient() as client:
+            headers = {"Content-Type": "text/plain", "System-Id": system_id}
+            response = await client.post(url, content=data, headers=headers, timeout=7)
+            if response.status_code == 200:
+                logger.info(f"Successfully sent data to engine with url {url}")
+                return "sucessfull"
+            raise Exception(response.json().get("detail", f"Engine returned {response.status_code}"))
+
+    except Exception as exp:
+        logger.error(f"Failed to send data to engine: {str(exp)}")
+        raise
+
+
 @router.post("/get/new-patient", status_code=status.HTTP_200_OK)
 async def add_patient(req: Request, db: Session = Depends(get_db)):
     """
@@ -32,7 +59,7 @@ async def add_patient(req: Request, db: Session = Depends(get_db)):
     **Request Body (raw HL7 v2.x message as plain text):**
     - A multi-line HL7 message string. The PID segment is expected on line 2 (index 1).
     - Key PID fields extracted:
-        - `PID-3`: MPI (Master Patient Index / Patient ID)
+        - `PID-3`: NIC / CNIC (patient identifier)
         - `PID-5` or `PID-5.1` / `PID-5.2`: Patient first and last name
         - `PID-7`: Date of birth in `YYYYMMDD` format (converted to `YYYY-MM-DD`)
         - `PID-8`: Gender code (`M` → "male", anything else → "female")
@@ -49,10 +76,19 @@ async def add_patient(req: Request, db: Session = Depends(get_db)):
     - HL7 component separators (`^`) and sub-component separators (`&`) are both handled.
 
     **Error Responses:**
-    - `400 Bad Request`: Invalid or malformed HL7 message, missing required PID fields, or DB error
+    - `400 Bad Request`: Invalid or malformed HL7 message, missing `System-Id`, unknown lab ID, missing required PID fields, or DB error
     """
     try:
         # HL7 is sent as plain text — read raw bytes and decode
+        lab_id = req.headers.get("System-Id", "Unknown")
+        if lab_id == "Unknown":
+            logger.warning("Received new patient HL7 message without System-Id header")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing System-Id header")
+        
+        if db.get(model.Lab, lab_id) is None:
+            logger.warning(f"Received new patient HL7 message with unknown System-Id: {lab_id}")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unknown System-Id: {lab_id}")
+        
         raw = await req.body()
         data = raw.decode("utf-8")
         logger.info(f"Received new patient HL7 message:\n{data}")
@@ -66,7 +102,8 @@ async def add_patient(req: Request, db: Session = Depends(get_db)):
         gender = "male" if values['PID-8'] == "M" else "female"
 
         patient = model.Patient(
-            mpi = values['PID-3'],
+            lab_id = lab_id,
+            nic = values['PID-3'],
             fname = values['PID-5.1'] if 'PID-5.1' in values else ' '.join(values.get('PID-5', '').split(' ')[:-1]), # here the last -1 is for last name.
             lname = values['PID-5.2'] if 'PID-5.2' in values else values.get('PID-5', '').split(' ')[-1],
             dob = date,
@@ -77,7 +114,7 @@ async def add_patient(req: Request, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(patient)
 
-        logger.info(f"Patient added successfully: {patient.fname + " " + patient.lname} (MPI: {patient.mpi})")
+        logger.info(f"Patient added successfully: {patient.fname + " " + patient.lname} (NIC: {patient.nic}, Lab ID: {patient.lab_id})")
         return {"message": "Patient Added sucessfully"}
 
     except HTTPException as http_exp:
@@ -92,64 +129,82 @@ async def take_lab_order(req: Request, db: Session = Depends(get_db)):
     """
     Receive HL7 lab-order message and create LIS test requests.
 
+    The `System-Id` request header must contain a valid LIS `lab_id`.
+    The patient identifier is read from `PID-3` and stored as `nic`.
+
     **Response (200 OK):**
     Returns JSON object with a message key. Possible values include:
     - `{ "message": "Lab order received successfully" }`
     - `{ "message": "No lab orders found in the message" }`
-    - `{ "message": "MPI <id> not found in the database" }`
+    - `{ "message": "NIC <id> not found in the database" }`
 
     **Error Responses:**
-    - `400 Bad Request`: Malformed HL7 or processing error.
+    - `400 Bad Request`: Malformed HL7, missing `System-Id`, unknown lab ID, missing NIC, or processing error.
     """
     try:
         raw = await req.body()
         text_data = raw.decode("utf-8")
         logger.info(f"Received new lab order HL7 message:\n{text_data}")
 
-        mpi = None
+        lab_id = req.headers.get("System-Id", "Unknown")
+        if lab_id == "Unknown":
+            logger.warning("Received lab order HL7 message without System-Id header")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing System-Id header")
+        
+        if db.get(model.Lab, lab_id) is None:
+            logger.warning(f"Received lab order HL7 message with unknown System-Id: {lab_id}")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unknown System-Id: {lab_id}")
+
+        nic = None
         lab_orders = []
-        mpi_not_found = False
+        nic_not_found = False
         for segment in text_data.splitlines()[1:]:
             _, paths = hl7_extract_paths(segment)
             path_to_values = get_hl7_value_by_path(segment, paths) # paths and values for 1 segment
 
             if "PID-1" in path_to_values.keys() and path_to_values["PID-1"] == "1":
-                mpi = path_to_values.get("PID-3")
+                nic = path_to_values.get("PID-3")
                 continue
-            if "OBR-1" not in path_to_values.keys() or not mpi:
-                logger.warning(f"Skipping segment {segment} due to missing OBR-1 or MPI: {segment}")
+            if "OBR-1" not in path_to_values.keys() or not nic:
+                logger.warning(f"Skipping segment {segment} due to missing OBR-1 or NIC: {segment}")
                 continue
             if "OBR-2" not in path_to_values.keys():
                 logger.warning(f"Skipping segment {segment} due to missing OBR-2 (VID): {segment}")
                 continue
             
-            if db.get(model.Patient, mpi) is None: # if the mpi does not exists in the database.
-                mpi_not_found = True
+            patient = db.get(model.Patient, nic)
+            if patient is None or patient.lab_id != lab_id:
+                nic_not_found = True
                 break
             
+            test_code = path_to_values.get("OBR-4.1", None)
             test_name = path_to_values.get("OBR-4.2", None)
             if not test_name:
                 continue
+            if db.query(model.LabTest).filter(model.LabTest.test_code == test_code).first() is None:
+                logger.warning(f"Unknown test code {test_code} in segment: {segment}")
+                continue
             lab_orders.append(model.LabTestRequest(
-                mpi = mpi,
+                nic=nic,
+                lab_id=lab_id,
                 vid = path_to_values.get("OBR-2"),
-                test_name= test_name # OBR-4.2 is the component of OBR-4 which contains the test name, if not found then set it as unknown test.
+                test_name= test_name, # OBR-4.2 is the component of OBR-4 which contains the test name, if not found then set it as unknown test.
             ))
         
-        if not mpi:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="MPI not found in the message")
+        if not nic:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="NIC not found in the message")
         
-        if mpi_not_found:
-            logger.critical(f"Lab order received for non-existent MPI: {mpi}. No orders were processed.")
-            return {"message": f"MPI {mpi} not found in the database"}
+        if nic_not_found:
+            logger.critical(f"Lab order received for non-existent NIC: {nic}. No orders were processed.")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"message": f"NIC {nic} not found in the database"})
         
         if not lab_orders:
-            logger.warning(f"No lab orders found in the message for MPI: {mpi}")
-            return {"message": "No lab orders found in the message"}
+            logger.warning(f"No lab orders found in the message for NIC: {nic}")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"message": "No lab orders found in the message"})
 
         db.add_all(lab_orders)
         db.commit()
-        logger.info(f"Lab orders added successfully for MPI: {mpi}, Orders: {[order.test_name for order in lab_orders]}")
+        logger.info(f"Lab orders added successfully for NIC: {nic}, Orders: {[order.test_name for order in lab_orders]}")
 
         return {"message": "Lab order received successfully"}
 

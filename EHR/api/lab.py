@@ -142,7 +142,7 @@ async def test_search(search_name: str, request: Request, response: Response, db
     - `search_name` (str, required): Case-insensitive text to match in `long_common_name`.
 
     **Response (200 OK):**
-    Returns `list[schema.LoincMaster]` (maximum 10 rows), each item containing:
+    Returns `list[schema.LoincMaster]` (up to 25 queried rows before display-name de-duplication), each item containing:
     - `loinc_code` (str)
     - `long_common_name` (str)
     - `short_name` (str | null)

@@ -29,12 +29,41 @@ logger.addHandler(handler)
 @router.post("/submit-claims")
 @limiter.limit("30/minute")
 async def submit_claim(claim_data: schema.ClaimSubmission, request: Request, response: Response, db: Session = Depends(get_db)):
+    """
+    Submit an insurance claim for an existing visit note.
+
+    **Request Body (`schema.ClaimSubmission`):**
+    - `vid` (int, required): Visit note ID.
+    - `mpi` (int, required): Patient Master Patient Index.
+    - `service_included` (bool, required): Whether consultation/service charges are included.
+    - `lab_included` (bool, required): Whether lab charges are included.
+    - `total_fee` (float, required): Total amount submitted in the claim.
+
+    **Response (200 OK):**
+    Returns one of:
+    ```json
+    { "detail": "Claim submitted successfully." }
+    ```
+    ```json
+    { "message": "data added to config due to hold flag" }
+    ```
+
+    **Side Effects:**
+    - Builds a FHIR Claim resource and sends or queues it for the InterfaceEngine.
+    - Sets the linked bill status to `"In Process"`.
+
+    **Error Responses:**
+    - `404 Not Found`: Visit note, patient, or bill was not found.
+    - `400 Bad Request`: A claim is already in process for this visit note.
+    - `500 Internal Server Error`: Unexpected claim submission failure.
+    """
     visit_note = db.get(model.VisitingNotes, claim_data.vid)
     if visit_note is None:
         logger.warning(f"Claim submission attempted for MPI {claim_data.mpi} and VID {claim_data.vid} but no visit note found.")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Visiting note not found.")
     
-    if db.get(model.Patient, claim_data.mpi) is None:
+    is_patient = db.get(model.Patient, claim_data.mpi)
+    if is_patient is None:
         logger.warning(f"Claim submission attempted for MPI {claim_data.mpi} and VID {claim_data.vid} but no patient found.")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found.")
     
@@ -68,7 +97,7 @@ async def submit_claim(claim_data: schema.ClaimSubmission, request: Request, res
             },
             "use": "claim",
             "patient": {
-                "reference": "patient/"+str(claim_data.mpi)
+                "reference": "patient/"+str(is_patient.nic)
             },
             "provider": {
                 "reference":  "Encounter/"+str(claim_data.vid)

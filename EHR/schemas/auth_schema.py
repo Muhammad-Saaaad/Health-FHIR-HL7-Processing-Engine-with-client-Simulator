@@ -5,20 +5,20 @@ class SignUp(BaseModel):
     name: str
     email: EmailStr
     password: str
-    hospital_id: int
+    hospital_id: str
 
     model_config = {"from_attributes": True}
 
 class Login(BaseModel):
     email: EmailStr
     password: str
-    hospital_id: int
+    hospital_id: str
 
     model_config = {"from_attributes": True}
 
 class DoctorResponse(BaseModel):
     users_id: int
-    hospital_id: int
+    hospital_id: str
     name: str
     email: str
     password: str

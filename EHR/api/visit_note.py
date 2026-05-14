@@ -35,9 +35,9 @@ async def add_visit_note(visit_note: schema.VisitNote ,request: Request, respons
     - `doctor_id` (int, required): ID of the doctor creating the visit note.
     - `note_title` (str, required): Short title or subject of the visit (e.g., "Routine Checkup").
     - `patient_complaint` (str, required): Description of the patient's presenting complaint.
-    - `dignosis` (str, required): Doctor's diagnosis for the visit.
+    - `dignosis` (str, required): Doctor's diagnosis for the visit. The request field is currently named `dignosis`.
     - `note_details` (str, optional): Additional notes or details from the visit.
-    - `bill_amount` (float, required): Total insurance/billing amount for this visit.
+    - `bill_amount` (float, required): Consultation amount for this visit.
     - `lab_name` (str, optional): Name of the laboratory for ordered tests (required if test_names is provided).
     - `test_names`
         
@@ -69,8 +69,9 @@ async def add_visit_note(visit_note: schema.VisitNote ,request: Request, respons
     - `message`: "data inserted sucessfully"
 
     **Side Effects:**
-    - Automatically creates a `Bill` record for the visit with `bill_status = False` (unpaid).
-    - If `test_names` is provided, creates corresponding `LabReport` records linked to this visit.
+    - Automatically creates a `Bill` record for the visit with `bill_status = "Unpaid"`.
+    - If both `test_names` and `lab_name` are provided, creates corresponding `LabReport` records linked to this visit.
+    - Sends or queues a FHIR bundle for the InterfaceEngine, depending on config hold status.
     - All operations are atomic; a rollback occurs if any step fails.
 
     **Error Responses:**
@@ -94,7 +95,8 @@ async def add_visit_note(visit_note: schema.VisitNote ,request: Request, respons
         bill_id = new_bill.bill_id
         logger.info(f"Created bill with ID: {bill_id}")
         
-        if not db.get(model.Patient, visit_note.mpi):
+        is_patient = db.get(model.Patient, visit_note.mpi)
+        if not is_patient:
             logger.error(f"Invalid patient MPI provided: {visit_note.mpi}")
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid patient MPI")
 
@@ -179,7 +181,7 @@ async def add_visit_note(visit_note: schema.VisitNote ,request: Request, respons
                                 }
                             }
                         ],
-                        "subject": {"reference": f"patient/{str(visit_note.mpi)}"}, # reference to the patient resource (with mpi = 32 in this case)
+                        "subject": {"reference": f"patient/{str(is_patient.nic)}"}, # reference to the patient resource (with nic = 37201-23123123 in this case)
                         # 4. CONSULTATION NOTES
                         "extension": [{
                                 "valueString": new_visit_note.note_details
@@ -192,7 +194,7 @@ async def add_visit_note(visit_note: schema.VisitNote ,request: Request, respons
                         "resourceType": "Invoice",
                         "id": "5e4d2222-11b8-4acc-9998-40a49e273c4e",
                         "status": "issued",
-                        "subject": {"reference": f"patient/{str(visit_note.mpi)}"},
+                        "subject": {"reference": f"patient/{str(is_patient.nic)}"},
                         "participant": [{"actor": {"reference": f"Practitioner/{str(is_doctor.users_id)}" } }],
                         "totalNet": {"value": str(visit_note.bill_amount)} # "currency": "USD", this can also be added.
                     }
@@ -206,7 +208,7 @@ async def add_visit_note(visit_note: schema.VisitNote ,request: Request, respons
                 unique_id = unique_id,
                 fhir_message = patient_visit,
                 visit_id = new_visit_note.note_id,
-                mpi = visit_note.mpi,
+                nic = is_patient.nic,
                 lab_name = visit_note.lab_name,
                 test_details = visit_note.test_names,
                 db = db
@@ -269,16 +271,16 @@ def get_test_report(
         unique_id: str,
         fhir_message: dict,
         visit_id: int,
-        mpi: int,
+        nic: int,
         lab_name: str, 
         test_details: list[lab_schema.LoincMaster], 
         db: Session) -> tuple[bool , dict[str, str]]:
     """
-        Here I take the lab tests, and check if they exisits in the loinc master table, if yes then I will
-        add them to the database as well as in the fhir message.
+        Validate requested lab tests against the LOINC master table, create matching LabReport rows,
+        and append FHIR ServiceRequest resources to the outgoing bundle.
     """
 
-    logger.info(f"Processing lab test details for visit ID: {visit_id}, patient MPI: {mpi}, lab name: {lab_name}")
+    logger.info(f"Processing lab test details for visit ID: {visit_id}, patient NIC: {nic}, lab name: {lab_name}")
 
     lab_reports = []
     for test_detail in test_details:
@@ -310,7 +312,7 @@ def get_test_report(
                             }
                         ]
                     },
-                    "subject": {"reference": f"patient/{str(mpi)}"},
+                    "subject": {"reference": f"patient/{str(nic)}"},
                     "performer": [{"identifier": {"value": "PRAC-001"}, "display": lab_name.strip()}] # for now it is set to this dummy data.
                 }
             }
@@ -391,7 +393,7 @@ def visit_note(note_id: int, request: Request, response: Response, db: Session =
     - `bill_id` (int | null)
     - `note_title` (str | null)
     - `patient_complaint` (str | null)
-    - `dignosis` (str | null)
+    - `dignosis` (str | null): Diagnosis field; the database column is currently named `dignosis`.
     - `note_details` (str | null)
     - `bill_amount` (float | null)
     - `bill_status` (str)

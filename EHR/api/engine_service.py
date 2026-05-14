@@ -31,7 +31,7 @@ async def send_to_engine(data: dict, url: str, system_id: str):
     Send a FHIR data to the InterfaceEngine for routing to downstream services.
 
     Returns:
-        str: "sucessfull" if the engine responds with HTTP 200.
+        str: The literal value `"sucessfull"` if the engine responds with HTTP 200.
 
     Raises:
         Exception: If the engine returns a non-200 status (e.g., 502 on partial downstream failure),
@@ -54,14 +54,15 @@ async def send_to_engine(data: dict, url: str, system_id: str):
 @router.post("/fhir/claim-response")
 async def submit_claim_from_engine(req: Request, db: Session = Depends(get_db)):
     """
-    Ingest patient FHIR payload from InterfaceEngine and store in PHR database.
+    Ingest a FHIR ClaimResponse payload from InterfaceEngine and update the matching EHR bill.
 
     **Response (200 OK):**
     Returns JSON object:
-    - `message` (dict): extracted FHIR path-value map used for DB insertion.
+    - `message` (str): Bill status update summary for the patient NIC and visit ID.
 
     **Error Responses:**
-    - `400 Bad Request`: Payload parsing, mapping, or database error.
+    - `400 Bad Request`: Unknown system ID, payload parsing, mapping, or database error.
+    - `404 Not Found`: No matching visit note exists for the claim response.
     """
     try:
         json_data = await req.json()
@@ -91,19 +92,24 @@ async def submit_claim_from_engine(req: Request, db: Session = Depends(get_db)):
                     value = get_fhir_value_by_path(json_data, path)
                     db_data[path] = value
 
-        mpi = str(db_data.get("patient.reference").split("/")[-1]).strip() # MPI
+        nic = str(db_data.get("patient.reference").split("/")[-1]).strip() # NIC
         vid = str(db_data.get("request.reference").split("/")[-1]).strip() # vid
         claim_status = str(db_data.get("status")).strip()
-        logger.info(f"Extracted data for DB: MPI={mpi}, VID={vid}, Status={claim_status}")
+        logger.info(f"Extracted data for DB: NIC={nic}, VID={vid}, Status={claim_status}")
 
-        visit_note = db.query(model.VisitingNotes).filter(model.VisitingNotes.mpi == mpi, model.VisitingNotes.note_id == vid).first()
+        is_patient = db.query(model.Patient).filter(model.Patient.nic == nic).first()
+        if is_patient is None:
+            logger.error(f"No patient found for NIC={nic} in claim response")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No patient found for NIC={nic}")
+
+        visit_note = db.query(model.VisitingNotes).filter(model.VisitingNotes.mpi == is_patient.mpi, model.VisitingNotes.note_id == vid).first()
         if visit_note:
             bill = db.get(model.Bill, visit_note.bill_id)
             bill.bill_status = "Paid" if str(claim_status).lower() == "approved" else "Denied"
             bill.bill_date = datetime.now()
             db.add(bill)
             db.commit()
-            logger.info(f"Updated bill status to {bill.bill_status} for MPI={mpi}, VID={vid}")
+            logger.info(f"Updated bill status to {bill.bill_status} for MPI={is_patient.mpi}, VID={vid}")
 
             fhir_msg = {
                 "resourceType": "ClaimResponse",
@@ -112,7 +118,7 @@ async def submit_claim_from_engine(req: Request, db: Session = Depends(get_db)):
                 "type": { "coding": [{"code": "professional"}] },
                 "use": "claim",
                 "patient": {
-                    "reference": "patient/"+str(mpi) 
+                    "reference": "patient/"+str(nic) 
                 },
                 "request": {
                     "reference": "Encounter/"+str(vid)
@@ -126,12 +132,12 @@ async def submit_claim_from_engine(req: Request, db: Session = Depends(get_db)):
             logger.info(f"Prepared FHIR ClaimResponse to send to engine: {fhir_msg}")
 
             asyncio.create_task(send_to_engine(data=fhir_msg, url="http://127.0.0.1:9000/fhir/send-response-claim", system_id=str(system_id)))
-            logger.info(f"Successfully sent claim response to engine for MPI={mpi}, VID={vid}")       
+            logger.info(f"Successfully sent claim response to engine for MPI={is_patient.mpi}, VID={vid}")       
 
-            return {"message": f"Bill status updated to {bill.bill_status} for MPI={mpi}, VID={vid}"}
+            return {"message": f"Bill status updated to {bill.bill_status} for MPI={is_patient.mpi}, VID={vid}"}
         else:
-            logger.error(f"No visit note found for MPI={mpi}, VID={vid}")
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No visit note found for MPI={mpi}, VID={vid}")
+            logger.error(f"No visit note found for MPI={is_patient.mpi}, VID={vid}")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No visit note found for MPI={is_patient.mpi}, VID={vid}")
 
 
     except Exception as e:

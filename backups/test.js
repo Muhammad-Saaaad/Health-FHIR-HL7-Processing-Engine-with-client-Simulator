@@ -15,7 +15,6 @@ add_patient = { // ehr -> endpoint => /fhir/add-patient
                 "resource": {
                     "resourceType": "Patient",
                     "identifier": [
-                        { "type": { "coding": [{ "code": "MR" }]}, "value": "23" },
                         { "type": { "coding": [{ "code": "NI" }]}, "value": "37201-23123123"}
                     ],
                     "name": [{ "text": "Muhammad Saad" }],
@@ -59,7 +58,6 @@ add_patient = { // ehr -> endpoint => /fhir/add-patient
 add_patient ={ // phr -> endpoint => /add/patient
     "resourceType": "Patient",
     "identifier": [
-        { "type": { "coding": [{ "code": "MR" }]}, "value": "23" },
         { "type": { "coding": [{ "code": "NI" }]}, "value": "37201-23123123"}
     ],
     "name": [{"text": "Muhammad Saad"}],
@@ -127,7 +125,7 @@ add_visit_note = { // ehr -> endpoint => /fhir/add-visit-note
                             }
                         }
                     ],
-                    "subject": {"reference": "patient/32"},
+                    "subject": {"reference": "patient/37201-23123123"},
                     "extension": [{
                             "valueString": "Patient responded well to medication. Follow-up advised in 2 weeks."
                         }
@@ -139,7 +137,7 @@ add_visit_note = { // ehr -> endpoint => /fhir/add-visit-note
                     "resourceType": "Invoice",
                     "id": "5e4d2222-11b8-4acc-9998-40a49e273c4e",
                     "status": "issued",
-                    "subject": {"reference": "Patient/32"},
+                    "subject": {"reference": "Patient/37201-23123123"},
                     "participant": [{"actor": {"reference": "Practitioner/PRAC-001"}}],
                     "totalNet": {"value": "150.00"}
                 }
@@ -158,7 +156,7 @@ add_visit_note = { // ehr -> endpoint => /fhir/add-visit-note
                             }
                         ]
                     },
-                    "subject": {"reference": "patient/32"},
+                    "subject": {"reference": "patient/37201-23123123"},
                     "performer": [{"identifier": {"value": "PRAC-001"}, "display": "IDC"}]
                 }
             }
@@ -221,7 +219,7 @@ add_visit_note = { // phr -> endpoint => /get-visit-note
                             }
                         }
                     ],
-                    "subject": {"reference": "patient/32"},
+                    "subject": {"reference": "patient/37201-23123123"},
                     "extension": [{
                             "valueString": "Patient responded well to medication. Follow-up advised in 2 weeks."
                         }
@@ -233,7 +231,7 @@ add_visit_note = { // phr -> endpoint => /get-visit-note
                     "resourceType": "Invoice",
                     "id": "5e4d2222-11b8-4acc-9998-40a49e273c4e",
                     "status": "issued",
-                    "subject": {"reference": "Patient/32"},
+                    "subject": {"reference": "Patient/37201-23123123"},
                     "participant": [{"actor": {"reference": "Practitioner/PRAC-001"}}],
                     "totalNet": {"value": "150.00"}
                 }
@@ -252,7 +250,7 @@ add_visit_note = { // phr -> endpoint => /get-visit-note
                             }
                         ]
                     },
-                    "subject": {"reference": "patient/32"},
+                    "subject": {"reference": "patient/37201-23123123"},
                     "performer": [{"identifier": {"value": "PRAC-001"}, "display": "IDC"}]
                 }
             }
@@ -272,7 +270,7 @@ submit_claim ={   // ehr => endpoint => /fhir/submit-claim
         },
         "use": "claim",
         "patient": {
-            "reference": "Patient/23"
+            "reference": "Patient/37201-23123123"
         },
         "created": "2026-02-03T12:00:00Z",
         "provider": {
@@ -306,7 +304,7 @@ response_claim = { // ehr => endpoint => /fhir/claim-response
         "type": { "coding": [{"code": "professional"}] },
         "use": "claim",
         "patient": {
-            "reference": "patient/1232" 
+            "reference": "patient/37201-23123123" 
         },
         "request": {
             "reference": "Encounter/123"
@@ -325,7 +323,7 @@ send_response_claim = { // ehr => endpoint => /fhir/send-response-claim
     "type": { "coding": [{"code": "professional"}] },
     "use": "claim",
     "patient": {
-        "reference": "patient/1232" 
+        "reference": "patient/37201-23123123" 
     },
     "request": {
         "reference": "Encounter/123"
@@ -344,7 +342,7 @@ recieve_response_claim = { // phr => endpoint => /receive-response-claim
     "type": { "coding": [{"code": "professional"}] },
     "use": "claim",
     "patient": {
-        "reference": "patient/1232" 
+        "reference": "patient/37201-23123123" 
     },
     "request": {
         "reference": "Encounter/123"
@@ -358,11 +356,11 @@ recieve_response_claim = { // phr => endpoint => /receive-response-claim
 
 add_patient = // LIS -> endpoint => /get/new-patient
 MSH|^~\\&|EHR||LIS||20260203120000||ADT^A01|MSG00001|P|2.5
-PID|1||23||saad^Muhammad||20041006|M|||||+92-315-3726612
+PID|1||37201-7687213-2||saad^Muhammad||20041006|M|||||+92-315-3726612
 
 add_patient = // Payer -> endpoint => /get/registed_patient
 MSH|^~\\&|EHR||payer||20260203120000||ADT^A01|MSG00001|P|2.5
-PID|1||23||saad^Muhammad||20041006|M|||||
+PID|1||37201-7687213-2||saad^Muhammad||20041006|M|||||
 IN1|||||||||||||||Silver|||||||||||||||||||||9||||||||||||||||
 
 // -----------------------------------------------------------------------------------------------------------------------------------------
@@ -370,7 +368,7 @@ IN1|||||||||||||||Silver|||||||||||||||||||||9||||||||||||||||
 
 add_visit_note = // lis => endpoint -> /take_lab_order
 MSH|^~\\&|EHR||LIS||20260203120000||ORM^O01|MSG00002|P|2.5
-PID|1||23|||||||||||
+PID|1||37201-7687213-2|||||||||||
 OBR|01|VID-01||2093-3^Total cholesterol|||||||||||
 
 
@@ -378,12 +376,12 @@ OBR|01|VID-01||2093-3^Total cholesterol|||||||||||
 
 submit_claim = // Payer => endpoint => /submit-claim
 MSH|^~\\&|EHR||LIS||20260203120000||ADT^A01|MSG00001|P|2.5
-PID|1||123||
+PID|1||137201-7687213-2||
 PV1|1||||||||||||||||||1231
 FT1|1|||20260203120000|||Service_LabTest|150.00||||||||||||||||
 
 response_claim = // Payer => endpoint => /send/claim_response
 MSH|^~\\&|payer||EHR||20260502132315||ACK^P03|MSG00003|P|2.5
-PID|1||1232||
+PID|1||137201-7687213-2||
 PV1|1||||||||||||||||||1231
 MSA|AA|MSG00003|ClaimAccepted
