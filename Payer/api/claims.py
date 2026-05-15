@@ -172,7 +172,7 @@ async def claim_status(user_id: int, claim_id : int, claim_status: str, request:
     - `404 Not Found`: The policy linked to the claim was not found
     """
     logger.info(f"claim_status update requested: claim_id={claim_id} status={claim_status}")
-    if not claim_status in ('Approved', 'Rejected'):
+    if not claim_status in ('Approved', 'Rejected', 'Accepted', 'Reject'):
         logger.error(f"claim_status invalid status provided: {claim_status}")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Status should be either Approved or Rejected")
 
@@ -181,14 +181,6 @@ async def claim_status(user_id: int, claim_id : int, claim_status: str, request:
     if not claim:
         logger.error(f"claim_status: claim_id={claim_id} not found")
         raise HTTPException(status_code=404, detail="claim id not found")
-    
-    if claim.locked_by_user_id is None or claim.locked_by_user_id != user_id:
-        logger.warning(f"claim_status: claim_id={claim_id} is not locked by user_id={user_id}, cannot update status")
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="claim is not locked for processing")
-
-    if claim.locked_by_user_id != user_id:
-        logger.warning(f"claim_status: claim_id={claim_id} is locked by another user, cannot update status")
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="claim is locked by another user")
     
     claim.claim_status = claim_status
 
@@ -254,95 +246,3 @@ async def claim_status(user_id: int, claim_id : int, claim_status: str, request:
 
     db.commit()
     return {"message": f"status set to {claim_status}"}
-
-@router.put("/lock_claim{claim_id}/by{user_id}", status_code=status.HTTP_202_ACCEPTED)
-@limiter.limit("20/minute")  # Limit to 20 requests per minute per IP
-def claim_lock(claim_id : int, user_id: int, request: Request, response: Response, db: Session = Depends(get_db)):
-    """
-    Lock a claim to a specific user to prevent concurrent modifications during processing.
-
-    **Path Parameters:**
-    - `claim_id` (int, required): The unique identifier of the claim to lock.
-    - `user_id` (int, required): The ID of the user who is locking the claim.
-
-    **Response (202 Accepted):**
-    Returns a confirmation message:
-    - `message`: e.g., "claim locked by john_doe"
-
-    **Constraints:**
-    - A user can re-lock a claim they have already locked (idempotent).
-    - A different user cannot lock a claim that is already locked by someone else.
-
-    **Error Responses:**
-    - `404 Not Found`: No claim exists with the given `claim_id`
-    - `404 Not Found`: No user exists with the given `user_id`
-    - `409 Conflict`: The claim is already locked by a different user
-    """
-    claim = db.query(models.PatientClaim).filter(models.PatientClaim.claim_id == claim_id).first()
-    if not claim:
-        logger.error(f"claim_lock: claim_id={claim_id} not found")
-        raise HTTPException(status_code=404, detail="claim id not found")
-    
-    user = db.query(models.SystemUser).filter(models.SystemUser.user_id == user_id).first()
-    if not user:
-        logger.error(f"claim_lock: user_id={user_id} not found")
-        raise HTTPException(status_code=404, detail="user id not found")
-    
-    if claim.locked_by_user_id != None and claim.locked_by_user_id != user_id:
-        logger.warning(f"claim_lock: claim_id={claim_id} already locked by another user")
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="claim already locked")
-
-    claim.locked_by_user_id = user_id
-    claim.locked_at = datetime.now()
-    
-    db.add(claim)
-    db.commit()
-
-    logger.info(f"claim_lock: claim_id={claim_id} locked by user_id={user_id}")
-    return {"message": f"claim locked by {user.user_name}"}
-
-@router.put("/unlock_claim{claim_id}/by{user_id}", status_code=status.HTTP_202_ACCEPTED)
-@limiter.limit("20/minute")
-def claim_unlock(claim_id : int, user_id: int, request: Request, response: Response, db: Session = Depends(get_db)):
-    """
-    Unlock a claim to release it from processing so it can be worked on again.
-
-    **Path Parameters:**
-    - `claim_id` (int, required): The unique identifier of the claim to unlock.
-    - `user_id` (int, required): The ID of the user requesting the unlock.
-
-    **Response (202 Accepted):**
-    Returns a confirmation message:
-    - `message`: e.g., "claim unlocked by john_doe"
-
-    **Constraints:**
-    - Only the user who originally locked the claim can unlock it (if currently locked).
-    - If the claim is already unlocked, the operation succeeds (idempotent).
-
-    **Error Responses:**
-    - `404 Not Found`: No claim exists with the given `claim_id`
-    - `404 Not Found`: No user exists with the given `user_id`
-    - `409 Conflict`: The claim is locked by another user
-    """
-    claim = db.query(models.PatientClaim).filter(models.PatientClaim.claim_id == claim_id).first()
-    if not claim:
-        logger.error(f"claim_unlock: claim_id={claim_id} not found")
-        raise HTTPException(status_code=404, detail="claim id not found")
-
-    user = db.query(models.SystemUser).filter(models.SystemUser.user_id == user_id).first()
-    if not user:
-        logger.error(f"claim_unlock: user_id={user_id} not found")
-        raise HTTPException(status_code=404, detail="user id not found")
-    
-    # If claim is locked by another user, reject the unlock
-    if claim.locked_by_user_id is not None and claim.locked_by_user_id != user_id:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="claim locked by another user")
-    
-    claim.locked_by_user_id = None
-    claim.locked_at = None
-
-    db.add(claim)
-    db.commit()
-    db.refresh(claim)
-    logger.info(f"claim_unlock: claim_id={claim_id} unlocked by user_id={user_id}")
-    return {"message": f"claim unlocked by {user.user_name}"}

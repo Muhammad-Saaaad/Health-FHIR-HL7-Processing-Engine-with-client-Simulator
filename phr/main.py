@@ -38,15 +38,15 @@ app.include_router(engine_service.router)
 app.include_router(visit_note.router)
 app.include_router(lab.router)
 
-@app.get("/health")
-def check_health():
+@app.get("/health/{system_id}")
+def check_health(system_id: str):
     """
     Health-check endpoint for PHR service.
 
     **Response (200 OK):**
     - JSON object: `{ "message": "✔ PHR running" }`
     """
-    return {"message": "✔ PHR running"}
+    return {"message": f"✔ PHR running for system_id '{system_id}'"}
 
 if __name__ == "__main__":
     import uvicorn
