@@ -4,8 +4,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi.errors import RateLimitExceeded
-# from sqlalchemy.exc import SAWarning
-# import warnings
+from sqlalchemy.exc import SAWarning
+import warnings
  
 from api import authentication, doctor, engine_service, visit_note, lab
 from database import engine
@@ -17,7 +17,7 @@ import warnings
 warnings.filterwarnings("ignore", category=SAWarning)
 os.makedirs("logs", exist_ok=True)
 
-# warnings.filterwarnings("ignore", category=SAWarning)
+warnings.filterwarnings("ignore", category=SAWarning)
 app = FastAPI(title="PHR System")
 app.add_middleware(
     CORSMiddleware,

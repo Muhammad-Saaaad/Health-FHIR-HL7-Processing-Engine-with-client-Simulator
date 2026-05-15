@@ -114,7 +114,7 @@ async def add_server(server: AddUpdateServer, request: Request, response: Respon
             },
             "boolean": {"true": "true", "false": "false"},
             "id_format": ".+", # regex
-            "subject_reference_format": "patient/.+", # e.g. patient/32, we will extract the mpi from this reference and then use it in the transformation
+            "subject_reference_format": "patient/.+", # e.g. patient/32, we will extract the nic from this reference and then use it in the transformation
             "practitioner_reference_format": "Practitioner/.+", # e.g. Practitioner/PRAC-001, we will extract the practitioner id from this reference and then use it in the transformation
             "encounter_reference_format": "Encounter/.+" # e.g. Encounter/45, we will extract the encounter id from this reference and then use it in the transformation
         }
@@ -127,7 +127,7 @@ async def add_server(server: AddUpdateServer, request: Request, response: Respon
         config["status_code"] = {"active": "A", "inactive": "I", "final": "F", "pending": "P" }
         config["boolean"] = {"true": "Y", "false": "N"}
         config["id_format"]= ".+"
-        config["subject_reference_format"] = ".+" # e.g. patient/32, we will extract the mpi from this reference and then use it in the transformation
+        config["subject_reference_format"] = ".+" # e.g. patient/32, we will extract the nic from this reference and then use it in the transformation
         config["practitioner_reference_format"] = ".+" # e.g. Practitioner/PRAC-001, we will extract the practitioner id from this reference and then use it in the transformation
         config["encounter_reference_format"] = ".+" # e.g. Encounter/45, we will extract the encounter id from this reference and then use it in the transformation
 

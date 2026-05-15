@@ -279,7 +279,7 @@ if __name__ == "__main__":
                         }
                     ],
                     "beneficiary": {
-                        "reference": "23" # patient mpi
+                        "reference": "23" # patient nic
                     },
                     "subscriberId": "21", # policy number
                     "payor": [
@@ -351,7 +351,7 @@ if __name__ == "__main__":
                             }
                         }
                     ],
-                    "subject": {"reference": "Patient/32"}, # reference to the patient resource (with mpi = 32 in this case)
+                    "subject": {"reference": "Patient/32"}, # reference to the patient resource (with nic = 32 in this case)
                     # 4. CONSULTATION NOTES
                     "extension": [{
                             "valueString": "Patient responded well to medication. Follow-up advised in 2 weeks."

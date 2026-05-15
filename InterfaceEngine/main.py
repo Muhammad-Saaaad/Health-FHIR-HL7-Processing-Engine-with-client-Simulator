@@ -461,6 +461,8 @@ async def route_worker(route, worker_number: int = 1):
                     request_headers = {}
                     if dest_system_id is not None:
                         request_headers["System-Id"] = str(dest_system_id)
+                        request_headers["Src-System-Id"] = str(src_server.system_id)
+                        request_headers["Src-System-Name"] = str(src_server.name)
 
                     async with destination_semaphore:
                         logger.info(f"Sending data to url: {dest_endpoint_url}")

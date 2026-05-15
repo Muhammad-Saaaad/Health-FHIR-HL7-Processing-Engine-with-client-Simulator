@@ -11,7 +11,7 @@ from sqlalchemy import desc
 from database import get_db
 import model
 from schemas.result_schema import TestResultOut, MiniTestOut, CompleteTestResultCreate
-from schemas.lab_schema import TestRequestOut
+# from schemas.lab_schema import TestRequestOut
 from rate_limiting import limiter
 from .engine_service import send_to_engine
 
@@ -206,3 +206,94 @@ def get_test_result(test_req_id: int, request:Request, response: Response, db: S
         )
     result_out.mini_test_results = mini_tests_out
     return result_out
+
+
+
+# @router.put("/requests/lock_test/{test_req_id}/user_id/{user_id}", response_model=TestRequestOut)
+# @limiter.limit("15/minute")  # Limit to 15 requests per minute per IP
+# def lock_test_request(test_req_id: int, user_id: int, request: Request, response: Response, db: Session = Depends(get_db)):
+#     """
+#     Lock a lab test request to a specific technician to prevent concurrent processing.
+
+#     **Path Parameters:**
+#     - `test_req_id` (int, required): Test request ID to lock.
+#     - `user_id` (int, required): ID of the technician locking the request.
+
+#     **Response (200 OK):**
+#     Returns the updated test request with `locked_by` set to `user_id`
+#     and `locked_at` set to the current timestamp.
+
+#     **Constraints:**
+#     - If the request is already locked by a different technician, the lock is rejected.
+#     - A technician can re-lock their own already-locked request.
+
+#     **Error Responses:**
+#     - `403 Forbidden`: The test request is already locked by a different technician
+#     - `404 Not Found`: No test requests exist with the given `test_req_id`
+#     - `404 Not Found`: User (Technician) ID not found
+
+#     **Rate Limit:**
+#     - 15 requests per minute per client IP.
+#     """
+    
+#     if not db.get(model.User, user_id):
+#         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User (Technician) ID not found.")
+    
+#     current_request = db.query(model.LabTestRequest).filter(model.LabTestRequest.test_req_id == test_req_id).first()
+#     if not current_request:
+#         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Test request not found.")
+    
+#     # is the page is locked and it is not locked by you, then error. if it is locked by you, then ok.
+#     if current_request.locked_by and current_request.locked_by != user_id:
+#         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="This page is already locked by another technician.")
+            
+#     current_request.locked_by = user_id
+#     current_request.locked_at = datetime.now()
+
+#     db.commit()        
+#     return current_request
+
+# @router.put("/requests/unlock_test_request/test_req_id/{test_req_id}/user_id/{user_id}", response_model=TestRequestOut)
+# @limiter.limit("15/minute")  # Limit to 15 requests per minute per IP
+# def unlock_test_request(test_req_id: int, user_id: int, request: Request, response: Response, db: Session = Depends(get_db)):
+#     """
+#     Unlock a lab test request to release it from a technician's hold.
+
+#     **Path Parameters:**
+#         - `test_req_id` (int, required): Test request ID to unlock.
+#         - `user_id` (int, required): ID of the technician requesting the unlock.
+
+#     **Response (200 OK):**
+#         Returns the updated test request after unlocking.
+
+#     **Constraints:**
+#     - If the request is locked by a different technician, the unlock is rejected.
+
+#         **Behavior:**
+#     **Behavior:**
+#     - Sets `locked_by = None` and `locked_at = None` for the request.
+
+#     **Error Responses:**
+#     - `403 Forbidden`: The test request is locked by a different technician
+#     - `404 Not Found`: No test requests exist with the given `test_req_id`
+#     - `404 Not Found`: User (Technician) ID not found.
+
+#     **Rate Limit:**
+#     - 15 requests per minute per client IP.
+#     """
+#     if not db.get(model.User, user_id):
+#         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User (Technician) ID not found.")
+    
+#     current_request = db.query(model.LabTestRequest).filter(model.LabTestRequest.test_req_id == test_req_id).first()
+#     if not current_request:
+#         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Test request not found.")
+    
+#     if current_request.locked_by != user_id:
+#         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Page is not locked by this user: {user_id}")
+            
+#     current_request.locked_by = None
+#     current_request.locked_at = None
+
+#     db.commit()
+    
+#     return current_request

@@ -37,6 +37,9 @@ async def add_patient(req: Request, db: Session = Depends(get_db)):
     - `400 Bad Request`: Payload parsing, mapping, or database error.
     """
     try:
+        src_system_id = req.headers.get("Src-System-Id", "Unknown-hospital-id")
+        src_system_name = req.headers.get("Src-System-Name", "Unknown-hospital")
+        
         json_data = await req.json()
 
         print(f"Recieved FHIR Data: {json_data}")
@@ -64,11 +67,7 @@ async def add_patient(req: Request, db: Session = Depends(get_db)):
                     value = get_fhir_value_by_path(json_data, path)
                     db_data[path] = value
         
-        nic = db_data.get("identifier[1].value", None)
-        mpi = db_data.get("identifier[0].value", None)
-        if mpi is None:
-            logger.warning(f"Missing MPI in FHIR data: {json_data}")
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Missing MPI in FHIR data: {json_data}")
+        nic = db_data.get("identifier[1].value", None) or db_data.get("identifier[0].value", None)
         if nic is None:
             logger.warning(f"Missing NIC in FHIR data: {json_data}")
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Missing NIC in FHIR data: {json_data}")
@@ -78,8 +77,7 @@ async def add_patient(req: Request, db: Session = Depends(get_db)):
             return {"message": f"Patient with NIC {nic} already exists in DB"}
 
         patient = model.Patient(
-            nic = db_data["identifier[1].value"], # NIC
-            mpi = db_data["identifier[0].value"], # MPI
+            nic = nic,
             name = db_data["name[0].text"],
             gender = db_data["gender"],
             date_of_birth = db_data["birthDate"],
@@ -87,9 +85,26 @@ async def add_patient(req: Request, db: Session = Depends(get_db)):
             phone_no = db_data["telecom[0].value"]
         )
         db.add(patient)
+
+        # if hospital exists then don't add the hospital, else add the hospital.
+        hospital = db.query(model.Hospital).filter(model.Hospital.hospital_id == src_system_id).first()
+        if not hospital:
+            hospital = model.Hospital(
+                hospital_id = src_system_id,
+                name = src_system_name
+            )
+            db.add(hospital)
+        db.flush() # flush to get the hospital object with id for the patient relation.
+
+        patient_relation = model.PatientRelation(
+            patient_nic = patient.nic,
+            doctor_id = None,
+            hospital_id = hospital.hospital_id
+        )
+        db.add(patient_relation)
         db.commit()
 
-        logger.info(f"Patient added to DB with MPI: {patient.mpi}")
+        logger.info(f"Patient added to DB with NIC: {patient.nic}")
         return {"message": db_data}
 
     except Exception as e:
@@ -112,6 +127,9 @@ async def get_visit_note(req: Request, db: Session = Depends(get_db)):
     - `400 Bad Request`: Invalid payload or processing error.
     """
     try:
+        src_system_id = req.headers.get("Src-System-Id", "Unknown-hospital-id")
+        src_system_name = req.headers.get("Src-System-Name", "Unknown-hospital")
+        
         json_data = await req.json()
 
         print(f"Recieved FHIR Data: {json_data}")
@@ -172,11 +190,11 @@ async def get_visit_note(req: Request, db: Session = Depends(get_db)):
                     logger.warning(f"No visit note id found: \n {indiviual_entry}")
                     return {"message": f"No visit note id found: \n {indiviual_entry}"}
 
-                mpi = resource.get("subject", {"reference": None}).get("reference", None)
-                if not mpi:
+                nic = resource.get("subject", {"reference": None}).get("reference", None)
+                if not nic:
                     logger.warning(f"No patient reference found in: \n {indiviual_entry}")
                     return {"message": f"No patient reference found \n {indiviual_entry}"}
-                visit_note['mpi'] = mpi.split("/")[-1] # extract the mpi from the reference
+                visit_note['nic'] = nic.split("/")[-1] # extract the nic from the reference
 
                 types = resource.get("type", [])
                 visit_note['note_title'] = types[0].get("text", None) if types else None
@@ -209,7 +227,7 @@ async def get_visit_note(req: Request, db: Session = Depends(get_db)):
             logger.warning(f"No doctor id found in the entire bundle: \n {json_data}")
             return {"message": f"No doctor id found in the entire bundle: \n {json_data}"}
         
-        if not visit_note.get("mpi", None):
+        if not visit_note.get("nic", None):
             logger.warning(f"No patient reference found in the entire bundle: \n {json_data}")
             return {"message": f"No patient reference found in the entire bundle: \n {json_data}"}
 
@@ -219,11 +237,11 @@ async def get_visit_note(req: Request, db: Session = Depends(get_db)):
             resource = lab_test.get("resource", None)
 
             if resource and resource.get("resourceType") == "Invoice":
-                mpi = resource.get("subject", {"reference": None}).get("reference", None)
+                nic = resource.get("subject", {"reference": None}).get("reference", None)
                 participants = resource.get("participant", [])
                 participant = participants[0].get("actor", {"reference": None}).get("reference", None) if participants else None
                 
-                if not mpi:
+                if not nic:
                     logger.warning(f"No patient reference found in invoice resource: \n {lab_test}")
                     pass
                 if not participant:
@@ -250,8 +268,8 @@ async def get_visit_note(req: Request, db: Session = Depends(get_db)):
                     logger.warning(f"No test code or name found in: \n {lab_test}")
                     continue
 
-                lab_mpi = resource.get("subject", {"reference": None}).get("reference", None)
-                if lab_mpi and lab_mpi.split("/")[-1] != visit_note['mpi']:
+                lab_nic = resource.get("subject", {"reference": None}).get("reference", None)
+                if lab_nic and lab_nic.split("/")[-1] != visit_note['nic']:
                     logger.warning(f"Patient reference in lab test does not match with the patient reference in visit note: \n {lab_test}")
                     continue
                 performers = resource.get("performer", [])
@@ -274,10 +292,10 @@ async def get_visit_note(req: Request, db: Session = Depends(get_db)):
         logger.info(f"Extracted Visit Note Data: {visit_note}")
         logger.info(f"Extracted Lab Tests Data: {lab_tests}")
 
-        patient = db.query(model.Patient).filter(model.Patient.mpi == visit_note['mpi']).first()
+        patient = db.query(model.Patient).filter(model.Patient.nic == visit_note['nic']).first()
         if not patient:
-            logger.warning(f"No patient found with MPI in database: {visit_note['mpi']}")
-            return {"message": f"No patient found with MPI in database: {visit_note['mpi']}"}
+            logger.warning(f"No patient found with NIC in database: {visit_note['nic']}")
+            return {"message": f"No patient found with NIC in database: {visit_note['nic']}"}
         
         is_doctor = db.query(model.Doctor).filter(model.Doctor.doctor_id == doctor['doctor_id']).first()
         # if doctor is not avaiable then add the doctor else update the doctor information.
@@ -297,6 +315,20 @@ async def get_visit_note(req: Request, db: Session = Depends(get_db)):
             is_doctor.about = doctor['about']
             db.add(is_doctor)
         
+        is_patient_relation = db.query(model.PatientRelation) \
+            .filter(model.PatientRelation.patient_nic == str(visit_note['nic']).strip(), model.PatientRelation.hospital_id == src_system_id).first()
+        
+        # if no relation exists than add the relation.
+        if not is_patient_relation:
+            patient_relation_obj = model.PatientRelation(
+                patient_nic = visit_note['nic'],
+                doctor_id = doctor['doctor_id'],
+                hospital_id = src_system_id
+            )
+            db.add(patient_relation_obj)
+        else:
+            is_patient_relation.doctor_id = doctor['doctor_id']
+            db.add(is_patient_relation)
         
         is_visit_note = db.query(model.VisitingNotes).filter(model.VisitingNotes.note_id == visit_note['note_id']).first()
         if is_visit_note:
@@ -305,7 +337,7 @@ async def get_visit_note(req: Request, db: Session = Depends(get_db)):
         
         visit_note_obj = model.VisitingNotes(
             note_id = visit_note['note_id'],
-            mpi = visit_note['mpi'],
+            nic = visit_note['nic'],
             doctor_id = doctor['doctor_id'],
             note_title = visit_note.get('note_title', None),
             patient_complaint = visit_note.get('patient_complaint', None),
@@ -333,7 +365,7 @@ async def get_visit_note(req: Request, db: Session = Depends(get_db)):
             )
             db.add(lab_report_obj)
         db.commit()
-        logger.info(f"Visit note and lab tests added to DB for patient MPI: {visit_note['mpi']}")
+        logger.info(f"Visit note and lab tests added to DB for patient NIC: {visit_note['nic']}")
         return {"message": "Visit note and lab tests added to DB successfully"}
 
     except HTTPException as exp:
@@ -390,7 +422,7 @@ async def submit_claim_from_engine(req: Request, db: Session = Depends(get_db)):
         if not patient_ref:
             logger.warning(f"Missing patient.reference in FHIR data: {json_data}")
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing patient.reference in FHIR data")
-        mpi = str(patient_ref.split("/")[-1]).strip()
+        nic = str(patient_ref.split("/")[-1]).strip()
         
         request_ref = db_data.get("request.reference")
         if not request_ref:
@@ -403,19 +435,19 @@ async def submit_claim_from_engine(req: Request, db: Session = Depends(get_db)):
             logger.warning(f"Missing status in FHIR data: {json_data}")
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing status in FHIR data")
         claim_status = str(claim_status).strip()
-        logger.info(f"Extracted data for DB: MPI={mpi}, VID={vid}, Status={claim_status}")
+        logger.info(f"Extracted data for DB: NIC={nic}, VID={vid}, Status={claim_status}")
 
-        visit_note = db.query(model.VisitingNotes).filter(model.VisitingNotes.mpi == mpi, model.VisitingNotes.note_id == vid).first()
+        visit_note = db.query(model.VisitingNotes).filter(model.VisitingNotes.nic == nic, model.VisitingNotes.note_id == vid).first()
         if visit_note:
             visit_note.payment_status = str(claim_status).strip().capitalize()
             db.add(visit_note)
             db.commit()
-            logger.info(f"Updated payment status to {visit_note.payment_status} for MPI={mpi}, VID={vid}")
+            logger.info(f"Updated payment status to {visit_note.payment_status} for NIC={nic}, VID={vid}")
             
-            return {"message": f"Payment status updated to {visit_note.payment_status} for MPI={mpi}, VID={vid}"}
+            return {"message": f"Payment status updated to {visit_note.payment_status} for NIC={nic}, VID={vid}"}
         else:
-            logger.error(f"No visit note found for MPI={mpi}, VID={vid}")
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No visit note found for MPI={mpi}, VID={vid}")
+            logger.error(f"No visit note found for NIC={nic}, VID={vid}")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No visit note found for NIC={nic}, VID={vid}")
 
     except Exception as e:
         logger.error(f"Error processing FHIR data: {str(e)}")

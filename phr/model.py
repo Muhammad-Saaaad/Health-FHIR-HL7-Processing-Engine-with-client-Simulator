@@ -12,7 +12,7 @@ class Hospital(Base):
     hospital_id = Column(String(50), primary_key=True, index=True)
     name = Column(String(100), nullable=False)
 
-    patient = relationship("Patient", back_populates="hospital")
+    patient_relation = relationship("PatientRelation", back_populates="hospital")
 
 class Doctor(Base):
     __tablename__ = 'doctor'
@@ -23,18 +23,17 @@ class Doctor(Base):
     name = Column(String(100), nullable=False)
     specialization = Column(String(50), nullable=True)
 
-    last_visit = Column(Date, default=datetime.now().date())
+    last_visit = Column(Date, default=lambda: datetime.now().date())
     about = Column(String(255), nullable=True)
     phone_no = Column(String(20), nullable=True)
 
     visiting_notes = relationship("VisitingNotes", back_populates="doctor")
+    patient_relation = relationship("PatientRelation", back_populates="doctor")
     
 class Patient(Base):
     __tablename__ = 'patient'
 
     nic = Column(String(20), primary_key=True, nullable= False)
-    mpi = Column(String(20), index= True, nullable=True) # i believe we should remove this.
-    hospital_id = Column(String(50), ForeignKey('hospital.hospital_id'), nullable=True)
 
     password = Column(String(50), nullable= False, default="")
     name = Column(String(100), nullable= False)
@@ -44,8 +43,21 @@ class Patient(Base):
     address = Column(String(255), nullable= True)
 
     visiting_notes = relationship("VisitingNotes", back_populates="patient")
-    hospital = relationship("Hospital", back_populates="patient")
     profile = relationship("Profile", back_populates="patient")
+    patient_relation = relationship("PatientRelation", back_populates="patient")
+
+class PatientRelation(Base):
+    __tablename__ = 'patient_relation'
+
+    relation_id = Column(Integer, primary_key=True, index=True)
+    
+    patient_nic = Column(String(20), ForeignKey('patient.nic'), nullable=False)
+    doctor_id = Column(String(20), ForeignKey('doctor.doctor_id'), nullable=True)
+    hospital_id = Column(String(50), ForeignKey('hospital.hospital_id'), nullable=False)
+
+    patient = relationship("Patient", back_populates="patient_relation")
+    doctor = relationship("Doctor", back_populates="patient_relation")
+    hospital = relationship("Hospital", back_populates="patient_relation")
 
 class Profile(Base):
     __tablename__ = 'profile'
@@ -71,7 +83,7 @@ class VisitingNotes(Base):
     nic = Column(String(20),ForeignKey('patient.nic'), nullable=False)
     doctor_id = Column(String(20), ForeignKey('doctor.doctor_id'), nullable=False)
 
-    visit_date = Column(DateTime, default=datetime.now())
+    visit_date = Column(DateTime, default=lambda: datetime.now().date())
     note_title = Column(Text, nullable=True)
     patient_complaint = Column(String(255), nullable=True)
     diagnosis = Column(String(255), nullable=True)
@@ -98,8 +110,8 @@ class LabReport(Base):
     test_bill = Column(Float, default=0, nullable=True)
     description = Column(String(255), nullable=True) # added this for lab result description.
     test_status = Column(String(10), default="Pending") # Completed, Pending, Cancelled
-    created_at = Column(DateTime, default=datetime.now())
-    updated_at = Column(DateTime, default=datetime.now())
+    created_at = Column(DateTime, default=lambda: datetime.now().date())
+    updated_at = Column(DateTime, default=lambda: datetime.now().date())
 
     visiting_notes = relationship("VisitingNotes", back_populates="report")
     mini_test = relationship("MiniLabResult", back_populates="test_report")

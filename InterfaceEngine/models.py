@@ -54,7 +54,7 @@ class EndpointFields(Base):
     endpoint_id = Column(Integer, ForeignKey("endpoints.endpoint_id"), nullable=False) # source(fk of endpoint)
     resource = Column(String(50), nullable=False) # Patient | PID | Encounter | ORU -> useful when there are multiple resources in a msg
     path = Column(String(100), nullable=False) # name.text | name.given
-    name = Column(String(100), nullable=False) # fullname | given name | mpi
+    name = Column(String(100), nullable=False) # fullname | given name | nic
 
     endpoint = relationship("Endpoints", back_populates="endpoint_fields")
 

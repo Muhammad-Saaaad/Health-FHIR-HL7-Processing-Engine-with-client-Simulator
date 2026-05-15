@@ -2,6 +2,7 @@ import asyncio
 from uuid import uuid4
 import logging
 from logging.handlers import RotatingFileHandler
+import json
 
 from fastapi import APIRouter, Response, status, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
@@ -25,6 +26,20 @@ handler = RotatingFileHandler(r"logs/patient_service.log", maxBytes=1000000, bac
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
+@router.get("/get-payers/{hospital_id}", status_code=status.HTTP_200_OK)
+def get_payers(hospital_id: str):
+    try:
+        ehr_connected_systems = []
+        with open(r"E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\EHR\ehr_connected_systems.json", "r") as f:
+            ehr_connected_systems.extend(json.load(f))
+        payers = []
+        for system in ehr_connected_systems:
+            if system.get("hospital_id") == hospital_id:
+                payers.extend(system.get("payers", []))
+        return payers
+    except Exception as e:
+        logger.error(f"Error retrieving payers for hospital_id {hospital_id}: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
 
 @router.get("/all-patients/{hospital_id}", response_model=list[schema.get_patient], status_code=status.HTTP_200_OK)
 @limiter.limit("20/minute")

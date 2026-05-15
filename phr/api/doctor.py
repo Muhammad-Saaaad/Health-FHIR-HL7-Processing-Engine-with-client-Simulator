@@ -134,15 +134,15 @@ def get_doctor_by_id(request: Request, response: Response, doctor_id: int, db: S
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
 
 
-@router.get("/doctor-encountered-by-patient/{mpi}", response_model=list[DoctorBase])
+@router.get("/doctor-encountered-by-patient/{nic}", response_model=list[DoctorBase])
 @limiter.limit("30/minute")
-def get_doctor_encountered_by_patient(request: Request, response: Response, mpi: int, db: Session = Depends(get_db)):
+def get_doctor_encountered_by_patient(request: Request, response: Response, nic: str, db: Session = Depends(get_db)):
     """
         Retrieve doctors encountered by a specific patient.
 
         Input:
         - Path parameter:
-            - `mpi` (int): Patient MPI identifier.
+            - `nic` (str): Patient NIC identifier.
         - No request body.
 
         Returns:
@@ -154,7 +154,7 @@ def get_doctor_encountered_by_patient(request: Request, response: Response, mpi:
         - `400 Bad Request`: Any unexpected database/server exception.
     """
     try:
-        joined_response = db.query(model.VisitingNotes).filter(model.VisitingNotes.mpi == mpi).options(
+        joined_response = db.query(model.VisitingNotes).filter(model.VisitingNotes.nic == nic).options(
             joinedload(model.VisitingNotes.patient),
             joinedload(model.VisitingNotes.doctor)
         ).all()
@@ -174,9 +174,9 @@ def get_doctor_encountered_by_patient(request: Request, response: Response, mpi:
         doctors = list(unique_doctors.values())
         
         if doctors is []:
-            logger.warning(f"This patient with MPI {mpi} has not encountered any doctor yet.")
+            logger.warning(f"This patient with NIC {nic} has not encountered any doctor yet.")
         return doctors
     
     except Exception as exp:
-        logger.error(f"Error fetching doctor with ID {mpi}: {str(exp)}")
+        logger.error(f"Error fetching doctors for patient NIC {nic}: {str(exp)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))

@@ -97,8 +97,8 @@ def get_rules(request: Request, response: Response, route_id: int, db: Session =
     - **copy / map / format** — one-to-one field mapping:
       ```json
       {
-        "src_field": { "endpoint_field_id": 45, "resource": "Patient", "path": "identifier[0].value", "name": "mpi" },
-        "dest_field": { "endpoint_field_id": 49, "resource": "PID", "path": "PID-3", "name": "mpi" },
+        "src_field": { "endpoint_field_id": 45, "resource": "Patient", "path": "identifier[0].value", "name": "nic" },
+        "dest_field": { "endpoint_field_id": 49, "resource": "PID", "path": "PID-3", "name": "nic" },
         "mapping_rule_id": 17,
         "transform_type": "copy",
         "config": {}

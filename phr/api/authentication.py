@@ -59,7 +59,7 @@ def login_patient(patient: auth_schema.Login, request: Request, response: Respon
 
         Returns:
         - `200 OK` with `patient_schema.Patient`:
-            - `mpi` (str), `nic` (str), `name` (str), `phone_no` (str | null),
+            - `nic` (str), `name` (str), `phone_no` (str | null),
                 `gender` (str), `date_of_birth` (date), `address` (str | null).
 
         Potential errors:
@@ -78,5 +78,35 @@ def login_patient(patient: auth_schema.Login, request: Request, response: Respon
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="password not valid")
         
         return is_valid_patient
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
+
+@router.get("/hospitals/{nic}")
+@limiter.limit("20/minute")
+async def get_hospitals_for_patient(nic: str, request: Request, response: Response, db :Session = Depends(get_db)):
+    """
+        Retrieve a list of hospitals associated with a patient.
+
+        Input:
+        - Path parameter:
+            - `nic` (str): Patient NIC.
+
+        Returns:
+        - `200 OK` with JSON:
+            - `hospitals` (List[str]): List of hospital names associated with the patient.
+
+        Potential errors:
+        - `404 Not Found`: Patient with provided NIC does not exist.
+        - `400 Bad Request`: Any unexpected database/server exception.
+    """
+    try:
+        is_valid_patient = db.query(model.Patient).filter(model.Patient.nic == nic).first()
+
+        if not is_valid_patient:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="patient does not exists")
+
+        hospital_names = [relation.hospital.name for relation in is_valid_patient.patient_relation]
+        
+        return {"hospitals": hospital_names}
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")

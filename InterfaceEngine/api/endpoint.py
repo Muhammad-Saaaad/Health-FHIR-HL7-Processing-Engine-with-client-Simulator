@@ -91,7 +91,7 @@ async def add_endpoint(endpoint: AddEndpoint, request: Request, response: Respon
     - Unrecognized paths are logged as warnings and skipped.
 
     **Supported Canonical Field Names:**
-    `mpi`, `fullname`, `given name`, `family name`, `gender`, `birth date`, `phone number`, `address`
+    `nic`, `fullname`, `given name`, `family name`, `gender`, `birth date`, `phone number`, `address`
 
     **Constraints:**
     - `server_id` must refer to an existing server.
@@ -182,7 +182,7 @@ def endpoint_field_paths(endpoint_id: int, request: Request, response: Response,
     - `endpoint_id`: The parent endpoint's ID
     - `resource`: The FHIR resource type or HL7 segment (e.g., "Patient", "PID")
     - `path`: The field path in dot/bracket notation (e.g., "name[0].text", "PID-5.1")
-    - `name`: The canonical human-readable field name (e.g., "fullname", "mpi")
+    - `name`: The canonical human-readable field name (e.g., "fullname", "nic")
 
     **Error Responses:**
     - `404 Not Found`: No endpoint exists with the given `endpoint_id`

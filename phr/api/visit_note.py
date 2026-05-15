@@ -21,15 +21,15 @@ handler = RotatingFileHandler(
 handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s'))
 logger.addHandler(handler)
 
-@router.get("/doctor-visit-notes/{mpi}/{doctor_id}", response_model=list[VisitNoteBase])
+@router.get("/doctor-visit-notes/{nic}/{doctor_id}", response_model=list[VisitNoteBase])
 @limiter.limit("30/minute")
-def get_doctors_visit_notes(request: Request, response: Response, mpi: str, doctor_id: int, db: Session = Depends(get_db)):
+def get_doctors_visit_notes(request: Request, response: Response, nic: str, doctor_id: int, db: Session = Depends(get_db)):
     """
         Retrieve all visit notes of a patient for a specific doctor.
 
         Input:
         - Path parameters:
-            - `mpi` (str): Patient MPI identifier.
+            - `nic` (str): Patient NIC identifier.
             - `doctor_id` (int): Doctor identifier.
         - No request body.
 
@@ -47,22 +47,22 @@ def get_doctors_visit_notes(request: Request, response: Response, mpi: str, doct
         - `400 Bad Request`: Any unexpected database/server exception.
     """
     try:
-        if db.get(model.Patient, mpi) is None:
-            logger.warning(f"Patient with MPI {mpi} not found.")
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Patient with the given MPI {mpi} not found.")
+        if db.get(model.Patient, nic) is None:
+            logger.warning(f"Patient with NIC {nic} not found.")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Patient with the given NIC {nic} not found.")
         
         if db.get(model.Doctor, doctor_id) is None:
             logger.warning(f"Doctor with ID {doctor_id} not found.")
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Doctor with the given ID {doctor_id} not found.")
         
-        visit_notes = db.query(model.VisitingNotes).filter_by(mpi=mpi, doctor_id=doctor_id).all()
+        visit_notes = db.query(model.VisitingNotes).filter_by(nic=nic, doctor_id=doctor_id).all()
         if not visit_notes:
-            logger.warning(f"No visit notes found for MPI {mpi} and doctor ID {doctor_id}.")
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No visit notes found for the given MPI {mpi} and doctor ID {doctor_id}.")
+            logger.warning(f"No visit notes found for NIC {nic} and doctor ID {doctor_id}.")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No visit notes found for the given NIC {nic} and doctor ID {doctor_id}.")
         return visit_notes
     
     except Exception as exp:
-        logger.error(f"Error fetching visit notes for MPI {mpi} and doctor ID {doctor_id}: {str(exp)}")
+        logger.error(f"Error fetching visit notes for NIC {nic} and doctor ID {doctor_id}: {str(exp)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
     
 @router.get("/visit-note-details/{note_id}", response_model=VisitNoteDetail)
