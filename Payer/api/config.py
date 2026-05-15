@@ -10,10 +10,10 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
-from database import get_db, session_local
+from database import get_db, SessionLocal
 from rate_limiting import limiter
 from schemas import config_schema as schema
-import model
+import models
 
 router = APIRouter(tags=['Config'])
 
@@ -67,10 +67,10 @@ def change_config_status(conf_data: schema.ChangeConfig, request: Request, respo
     - `500 Internal Server Error`: Unexpected database or server error
     """
     try:
-        config = db.query(model.Config).filter(model.Config.sent_to_engine == False) \
-            .order_by(desc(model.Config.config_id)).first()
+        config = db.query(models.Config).filter(models.Config.sent_to_engine == False) \
+            .order_by(desc(models.Config.config_id)).first()
         if not config:
-            config = model.Config(data=[], history={}, hold_flag=True, sent_to_engine=False)
+            config = models.Config(data=[], history={}, hold_flag=True, sent_to_engine=False)
             db.add(config)
             db.commit()
             return {"message": "New configuration added"}
@@ -86,14 +86,14 @@ def change_config_status(conf_data: schema.ChangeConfig, request: Request, respo
     
 async def _post_config(config_id: int, data):
     try:
-        timeout = httpx.Timeout(60.0, connect=5.0) # connect=5.0 means if we can't establish a connection within 5 seconds, give up immediately. The overall timeout for the request is 60 seconds.
+        timeout = httpx.Timeout(60.0, connect=5.0)
         async with httpx.AsyncClient(timeout=timeout) as client:
             response = await client.post("http://127.0.0.1:9000/batch", json=data)
-            response.raise_for_status() # raises an exception if the response status code is 4xx or 5xx, which we can catch and log
+            response.raise_for_status()
 
-        bg_db = session_local()
+        bg_db = SessionLocal()
         try:
-            config = bg_db.get(model.Config, config_id)
+            config = bg_db.get(models.Config, config_id)
             if config:
                 config.sent_to_engine = True
                 bg_db.add(config)
@@ -145,8 +145,8 @@ async def sent_config_to_engine(request: Request, response: Response, db: Sessio
     - `500 Internal Server Error`: Unexpected database or server error
     """
     try:
-        config = db.query(model.Config).filter(model.Config.sent_to_engine == False) \
-            .order_by(desc(model.Config.config_id)).first()
+        config = db.query(models.Config).filter(models.Config.sent_to_engine == False) \
+            .order_by(desc(models.Config.config_id)).first()
         if not config:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No unsent configuration found")
         if config.data == []:
@@ -156,7 +156,7 @@ async def sent_config_to_engine(request: Request, response: Response, db: Sessio
 
         logger.info(f"Config with ID {config.config_id} queued to send to engine")
         return JSONResponse(
-            status_code=status.HTTP_201_CREATED,
+            status_code=status.HTTP_202_ACCEPTED,
             content={"message": f"Config with ID {config.config_id} queued to send to engine"}
         )
     except HTTPException:
@@ -172,20 +172,16 @@ def config_history(request: Request, response: Response, db: Session = Depends(g
     Retrieve the configuration history with operational statistics.
 
     **Response (200 OK):**
-    Returns a JSON array of records showing hospital-level operational counts:
+    Returns a JSON array of records showing insurance-level operational counts:
     ```json
     [
         {
-            "hospital_name": "Shifa International",
-            "add_patient_count": 2,
-            "add_visit_count": 0,
-            "add_claim_count": 0
+            "insurance_name": "Shifa International",
+            "submit-claim-response": 2,
         },
         {
-            "hospital_name": "Holly Family",
-            "add_patient_count": 1,
-            "add_visit_count": 1,
-            "add_claim_count": 0
+            "insurance_name": "Holly Family",
+            "submit-claim-response": 1,
         }
     ]
     ```
@@ -199,14 +195,14 @@ def config_history(request: Request, response: Response, db: Session = Depends(g
     **Query Process:**
     - Retrieves the most recent unsent configuration (sent_to_engine == False)
     - Calls parse_config() to transform the nested history structure into flat records
-    - Each record represents a hospital's operation count
+    - Each record represents a insurance's operation count
 
     **Error Responses:**
     - `500 Internal Server Error`: Unexpected database or server error
     """
     try:
-        config = db.query(model.Config).filter(model.Config.sent_to_engine == False) \
-            .order_by(desc(model.Config.config_id)).first()
+        config = db.query(models.Config).filter(models.Config.sent_to_engine == False) \
+            .order_by(desc(models.Config.config_id)).first()
         
         # turn the JSON into a stable string and hash it
         raw = json.dumps(config.data, sort_keys=True)
@@ -231,12 +227,10 @@ def config_history(request: Request, response: Response, db: Session = Depends(g
 def parse_config(data):
     try:
         records = []
-        for hospital_name, operations in data.items():
+        for insurance_name, operations in data.items():
             records.append({
-                "hospital_name": hospital_name,
-                "add_patient_count": operations.get("add-patient", 0),
-                "add_visit_count": operations.get("add-visit-note", 0),
-                "add_claim_count": operations.get("submit-claim", 0),
+                "insurance_name": insurance_name,
+                "submit-claim-response": operations.get("submit-claim-response", 0)
             })
         return records
     except Exception as e:

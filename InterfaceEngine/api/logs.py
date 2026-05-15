@@ -9,6 +9,18 @@ from database import get_db
 
 router = APIRouter(tags=["Logs"])
 
+def _format_log_message(message: str | None) -> str | None:
+    if not message:
+        return None
+
+    try:
+        parsed_message = json.loads(message)
+        if isinstance(parsed_message, (dict, list)):
+            return json.dumps(parsed_message, indent=2)
+        return str(parsed_message)
+    except Exception:
+        return message
+
 @router.get("/show-logs", status_code=status.HTTP_200_OK, response_model=list[LogEntry])
 async def show_logs(db: Session = Depends(get_db)):
     """
@@ -27,7 +39,7 @@ async def show_logs(db: Session = Depends(get_db)):
     - 409 Conflict: Database retrieval error
     """
     try:
-        logs = db.query(models.Logs).order_by(models.Logs.datetime.desc()).limit(20).all()
+        logs = db.query(models.Logs).order_by(models.Logs.datetime.desc()).limit(30).all()
         return logs
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
@@ -50,11 +62,9 @@ async def show_log_msg(log_id: int, db: Session = Depends(get_db)):
     """
     try:
         log = db.query(models.Logs).filter(models.Logs.log_id == log_id).first()
-        try:
-            log.src_message = json.loads(log.src_message) if log.src_message else None
-            log.dest_message = json.loads(log.dest_message) if log.dest_message else None
-        except:
-            pass
+        if log:
+            log.src_message = _format_log_message(log.src_message)
+            log.dest_message = _format_log_message(log.dest_message)
 
         return log
     except Exception as e:

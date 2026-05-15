@@ -7,7 +7,7 @@ from slowapi.errors import RateLimitExceeded
 
 from database import engine, SessionLocal
 import models
-from api import auth, claims, engine_service, patient, policy
+from api import auth, claims, engine_service, patient, policy, config
 from rate_limiting import limiter, rate_limit_exceeded_handler
 from sqlalchemy.exc import SAWarning
 import warnings
@@ -34,6 +34,7 @@ app.include_router(patient.router)
 app.include_router(engine_service.router)
 app.include_router(policy.router)
 app.include_router(claims.router)
+app.include_router(config.router)
 
 @app.get("/health/{system_id}")
 def check_health(system_id: str):

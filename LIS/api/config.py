@@ -1,14 +1,16 @@
+import asyncio
 import json
 import hashlib
 import logging
 from logging.handlers import RotatingFileHandler
 
+import httpx
 from fastapi import APIRouter, status, Depends, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
-from sqlalchemy import desc
+from sqlalchemy import desc, asc
 from sqlalchemy.orm import Session
 
-from database import get_db
+from database import get_db, local_session
 from rate_limiting import limiter
 from schemas import config_schema as schema
 import model
@@ -81,7 +83,35 @@ def change_config_status(conf_data: schema.ChangeConfig, request: Request, respo
     except Exception as e:
         logger.error(f"Error changing config status: {str(e)}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
-    
+
+async def _post_config(config_id: int, data: str):
+    try:
+        timeout = httpx.Timeout(60.0, connect=5.0) # connect=5.0 means if we can't establish a connection within 5 seconds, give up immediately. The overall timeout for the request is 60 seconds.
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            response = await client.post("http://127.0.0.1:9000/batch", content=str(data))
+            response.raise_for_status() # raises an exception if the response status code is 4xx or 5xx, which we can catch and log
+
+        bg_db = local_session()
+        try:
+            config = bg_db.get(model.Config, config_id)
+            if config:
+                config.sent_to_engine = True
+                bg_db.add(config)
+                bg_db.commit()
+                logger.info(f"Config with ID {config_id} successfully sent to engine")
+        finally:
+            bg_db.close()
+    except httpx.TimeoutException:
+        logger.error(f"Timed out while sending config with ID {config_id} to engine")
+    except httpx.HTTPStatusError as exp:
+        logger.error(
+            f"Engine rejected config with ID {config_id}: "
+            f"status={exp.response.status_code}, response={exp.response.text}"
+        )
+    except Exception as exp:
+        logger.exception(f"Unexpected error while sending config with ID {config_id} to engine: {str(exp)}")
+
+  
 @router.post("/sent-config-to-engine")
 @limiter.limit("20/minute")
 def sent_config_to_engine(request: Request, response: Response, db: Session = Depends(get_db)):
@@ -119,16 +149,19 @@ def sent_config_to_engine(request: Request, response: Response, db: Session = De
         config = db.query(model.Config).filter(model.Config.sent_to_engine == False) \
             .order_by(desc(model.Config.config_id)).first()
         if not config:
-            return {"message": "No unsent configuration found"}
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No unsent configuration found")
+        if config.data == []:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Current configuration is empty, nothing to send")
 
-        config.sent_to_engine = True
-        db.add(config)
-        db.commit()
+        asyncio.create_task(_post_config(config.config_id, config.data)) # send batch to the engine.
 
-        # add the logic here to sent the bulk data to engine.
-
-        logger.info(f"Config with ID {config.config_id} sent to engine")
-        return JSONResponse(content={"message": f"Config with ID {config.config_id} sent to engine"})
+        logger.info(f"Config with ID {config.config_id} queued to send to engine")
+        return JSONResponse(
+            status_code=status.HTTP_201_CREATED,
+            content={"message": f"Config with ID {config.config_id} queued to send to engine"}
+        )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error sending config to engine: {str(e)}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
@@ -145,11 +178,11 @@ def config_history(request: Request, response: Response, db: Session = Depends(g
     [
         {
             "lab_name": "IDC",
-            "send_lab_report": 2,
+            "submit-lab-result": 2,
         },
         {
             "lab_name": "CITI Lab",
-            "send_lab_report": 1
+            "submit-lab-result": 1
         }
     ]
     ```
@@ -195,10 +228,10 @@ def config_history(request: Request, response: Response, db: Session = Depends(g
 def parse_config(data):
     try:
         records = []
-        for lab_name, operations in data.items():
+        for hospital_name, operations in data.items():
             records.append({
-                "lab_name": lab_name,
-                "submit_lab_result": operations.get("submit-lab-result", 0)
+                "hospital_name": hospital_name,
+                "submit-lab-result": operations.get("submit-lab-result", 0)
             })
         return records
     except Exception as e:

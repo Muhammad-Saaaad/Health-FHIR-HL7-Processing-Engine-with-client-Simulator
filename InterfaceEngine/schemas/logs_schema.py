@@ -15,7 +15,7 @@ class LogMsg(BaseModel):
     datetime: datetime
     status: str
     operation_heading: str
-    src_message: str | dict | None
-    dest_message: str | dict | None
+    src_message: str | None
+    dest_message: str | None
 
     model_config = {"from_attributes": True}

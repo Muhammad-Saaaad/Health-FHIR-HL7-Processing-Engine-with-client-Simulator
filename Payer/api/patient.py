@@ -107,6 +107,7 @@ def register_patient(data: schema.PatientCreate, insurance_id: str, request: Req
         logger.info(f"Total coverage for {data.insurance_type} is {total_coverage}")
 
         new_policy = models.InsurancePolicy(
+            insurance_id=insurance_id,
             pid=new_patient.pid,
             u_id = new_patient.u_id,
             category_name=data.insurance_type,

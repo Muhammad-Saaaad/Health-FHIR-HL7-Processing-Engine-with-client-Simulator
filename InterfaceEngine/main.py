@@ -111,13 +111,20 @@ logger_mapping.addHandler(main_log_handler_mapping)
 
 @asynccontextmanager # handle lifespan events like startup or shutdown
 async def lifeSpan(app: FastAPI):
-    app.state.check_server_status = asyncio.create_task(server.server_health())
+    app.state.server_health_task = asyncio.create_task(server.server_health())
+    app.state.connected_systems_task = asyncio.create_task(server.get_lis_payer())
     app.state.route_manager_task = asyncio.create_task(route_manager())
 
     yield
     
-    app.state.route_manager_task.cancel()
-    app.state.check_server_status.cancel()
+    shutdown_tasks = [
+        app.state.server_health_task,
+        app.state.connected_systems_task,
+        app.state.route_manager_task,
+    ]
+    for task in shutdown_tasks:
+        task.cancel()
+    await asyncio.gather(*shutdown_tasks, return_exceptions=True)
     return
 
 app = FastAPI(title="Interface Engine", lifespan=lifeSpan)
@@ -158,8 +165,12 @@ def check_health():
 
 active_route_listners = {} # consist of all the running routes|Channels lisning for a soruce endpoint
 route_queue = {} # consist of each route key with that route value that it gets from source endpoint
+destination_semaphores = {}
 
-_BATCH_CONCURRENCY = 8
+_BATCH_CONCURRENCY = int(os.getenv("BATCH_CONCURRENCY", "25"))
+_ROUTE_WORKER_CONCURRENCY = int(os.getenv("ROUTE_WORKER_CONCURRENCY", "15"))
+_DESTINATION_CONCURRENCY = int(os.getenv("DESTINATION_CONCURRENCY", "3"))
+_HTTP_READ_TIMEOUT = float(os.getenv("HTTP_READ_TIMEOUT", "30"))
 
 def _payload_preview(data, max_len: int = 400) -> str:
     text = str(data)
@@ -167,6 +178,12 @@ def _payload_preview(data, max_len: int = 400) -> str:
     if len(compact) <= max_len:
         return compact
     return compact[:max_len] + "..."
+
+
+def _get_destination_semaphore(dest_server_id: int) -> asyncio.Semaphore:
+    if dest_server_id not in destination_semaphores:
+        destination_semaphores[dest_server_id] = asyncio.Semaphore(_DESTINATION_CONCURRENCY)
+    return destination_semaphores[dest_server_id]
 
 async def route_manager():
     """
@@ -185,9 +202,16 @@ async def route_manager():
                     if route.route_id not in active_route_listners:
 
                         route_queue[route.route_id] = asyncio.Queue() # make a async queue for a new route that is not listning
-                        task = asyncio.create_task(route_worker(route)) # this start the listning the route.
-                        active_route_listners[route.route_id] = task
-                        logger.info(f"route_worker start for route -> {route.name}")
+                        tasks = [
+                            asyncio.create_task(route_worker(route, worker_number=worker_number))
+                            for worker_number in range(1, _ROUTE_WORKER_CONCURRENCY + 1)
+                        ]
+                        active_route_listners[route.route_id] = tasks
+                        logger.info(
+                            "route_workers started for route -> %s workers=%s",
+                            route.name,
+                            _ROUTE_WORKER_CONCURRENCY,
+                        )
                 await asyncio.sleep(5)
 
             except asyncio.CancelledError:
@@ -202,12 +226,16 @@ async def route_manager():
 
         logger.info(f"Route Manger shutting down")
         # Cleanup: cancle all route_worker tasks that we run above
-        for route_id, task in active_route_listners.items():
-            task.cancel()
+        for route_id, tasks in active_route_listners.items():
+            for task in tasks:
+                task.cancel()
         # wait for all the route_workers to finish
-        await asyncio.gather(*active_route_listners.values(), return_exceptions=True)
+        await asyncio.gather(
+            *(task for tasks in active_route_listners.values() for task in tasks),
+            return_exceptions=True,
+        )
 
-async def route_worker(route):
+async def route_worker(route, worker_number: int = 1):
     """
         use Route worker to listen incomming data using aysync queue, then it validates, sends data,
         parses data and converts data from fhir <--> hl7.
@@ -244,16 +272,18 @@ async def route_worker(route):
         dest_id_to_path = {f.endpoint_field_id: f.path for f in dest_endpoint_fields}
         dest_path_to_resource = {f.path: f.resource for f in dest_endpoint_fields} # use resource for making messages.
 
-        logger.info(f"route_Worker Started for route -> {route.name}")
+        logger.info(f"route_worker {worker_number} started for route -> {route.name}")
 
         dest_endpoint_url = f"http://{dest_server.ip}:{dest_server.port}{dest_endpoint.url}"
         dest_system_id = dest_server.system_id
+        client = httpx.AsyncClient(timeout=httpx.Timeout(_HTTP_READ_TIMEOUT, connect=5.0))
+        destination_semaphore = _get_destination_semaphore(route.dest_server_id)
 
         while True:
             # Each queue item is a (data, future) tuple.
             # The future lets ingest() know whether delivery succeeded or failed.
             src_path_to_value, simple_paths, result_future, src_msg = await route_queue[route.route_id].get()
-            logger.info(f"route_worker for route -> {route.name} received data: {src_path_to_value}")
+            logger.info(f"route_worker {worker_number} for route -> {route.name} received data: {src_path_to_value}")
             normal_src_paths_counter = [] # this will contain data just the output_data dictionary, but with the src paths instead of dest paths, useful for multiple same segments/sources to extract data from.
             split_src_paths_counter = []
             concat_src_paths_counter = []
@@ -414,7 +444,7 @@ async def route_worker(route):
                 logger.info(f"Built message for route -> {route.name}:\n {msg}")
 
                 # DELIVER — resolve the future so ingest() knows the result
-                async with httpx.AsyncClient() as client:
+                if client:
                     db = session_local()
                     dest_server = db.get(models.Server, route.dest_server_id)
                     db.close()
@@ -432,17 +462,19 @@ async def route_worker(route):
                     if dest_system_id is not None:
                         request_headers["System-Id"] = str(dest_system_id)
 
-                    if dest_server.protocol == "FHIR":
-                        response = await client.post(url=dest_endpoint_url, json=msg, headers=request_headers)
-                    else:
+                    async with destination_semaphore:
+                        logger.info(f"Sending data to url: {dest_endpoint_url}")
+                        if dest_server.protocol == "FHIR":
+                            response = await client.post(url=dest_endpoint_url, json=msg, headers=request_headers)
+                        else:
                         # HL7 is plain text — do NOT json= encode it or it arrives as a
                         # JSON string "MSH|..." instead of the raw HL7 text
-                        request_headers["Content-Type"] = "text/plain"
-                        response = await client.post(
-                            url=dest_endpoint_url,
-                            content=msg,
-                            headers=request_headers
-                        )
+                            request_headers["Content-Type"] = "text/plain"
+                            response = await client.post(
+                                url=dest_endpoint_url,
+                                content=msg,
+                                headers=request_headers
+                            )
                     if response.status_code in (200, 201, 202, 203, 204):
                         db_logger.info(f"Data Sucessfully Send to : {dest_server.name}",
                                     extra= {
@@ -479,6 +511,8 @@ async def route_worker(route):
                     result_future.set_exception(exp)
 
     except Exception as exp:
+        if 'client' in locals():
+            await client.aclose()
         return str(exp)
 
 # Shared processing for single or batch items.
@@ -607,6 +641,73 @@ async def _process_message(full_path: str, payload, trace_id: str, system_id: st
     logger.info("trace=%s ingest_delivery_succeeded destination_count=%s", trace_id, len(delivery_futures))
     return True
 
+@app.post("/batch", status_code=status.HTTP_200_OK)
+async def ingest_batch(req: Request):
+    trace_id = req.headers.get("X-Trace-Id") or uuid4().hex[:12]
+    start_time = time.perf_counter()
+    logger.info("trace=%s batch_received", trace_id)
+
+    try:
+        payload = await req.json()
+    except Exception as exp:
+        logger.exception("trace=%s batch_json_parse_failed", trace_id)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid JSON batch payload: {str(exp)}")
+
+    if not isinstance(payload, list):
+        logger.warning("trace=%s batch_invalid_payload_type=%s", trace_id, type(payload).__name__)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Batch payload must be a list")
+
+    logger.info("trace=%s batch_item_count=%s", trace_id, len(payload))
+
+    semaphore = asyncio.Semaphore(_BATCH_CONCURRENCY)
+    tasks = []
+
+    async def _run_one(path_key: str, item, idx: int, system_id: str):
+        item_trace_id = f"{trace_id}-{idx}"
+        async with semaphore:
+            try:
+                return await _process_message(path_key, item, item_trace_id, system_id=system_id)
+            except Exception as exp:
+                logger.exception("trace=%s batch_item_failed path=%s error=%s", item_trace_id, path_key, str(exp))
+                raise
+
+    msg_idx = 0
+    for batch_idx, batch_item in enumerate(payload):
+        if not isinstance(batch_item, dict):
+            logger.warning("trace=%s batch_invalid_item index=%s item_type=%s", trace_id, batch_idx, type(batch_item).__name__)
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Each batch item must be an object")
+
+        system_id = batch_item.get("system_id", None)
+        if system_id is None:
+            logger.warning("trace=%s batch_missing_system_id index=%s", trace_id, batch_idx)
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Each batch item must include a 'system_id' field")
+
+        for path_key, messages in batch_item.items():
+            if path_key == "system_id":
+                continue
+            if isinstance(messages, list):
+                for msg in messages:
+                    tasks.append(_run_one(path_key, msg, msg_idx, system_id))
+                    msg_idx += 1
+            else:
+                tasks.append(_run_one(path_key, messages, msg_idx, system_id))
+                msg_idx += 1
+
+    logger.info("trace=%s batch_message_count=%s", trace_id, len(tasks))
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    errors = [str(res) for res in results if isinstance(res, Exception)]
+    if errors:
+        logger.error("trace=%s batch_failed error_count=%s first_error=%s", trace_id, len(errors), errors[0])
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"One or more downstream deliveries failed: {'; '.join(errors)}",
+        )
+
+    duration = time.perf_counter() - start_time
+    logger.info("trace=%s batch_success processed_count=%s duration=%.2fs", trace_id, len(results), duration)
+    return {"message": "Successfully sent data to all destinations"}
+
+
 @app.post("/{full_path:path}", status_code=status.HTTP_200_OK)
 async def ingest(full_path: str, req: Request):
     """
@@ -657,52 +758,6 @@ async def ingest(full_path: str, req: Request):
     except Exception as exp:
         logger.exception("trace=%s ingest_unhandled_error=%s", trace_id, str(exp))
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
-
-@app.post("/batch", status_code=status.HTTP_200_OK)
-async def ingest_batch(req: Request):
-    trace_id = req.headers.get("X-Trace-Id") or uuid4().hex[:12]
-    payload = await req.json()
-    if not isinstance(payload, list):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Batch payload must be a list")
-
-    # Limit in-flight batch work to avoid overload.
-    semaphore = asyncio.Semaphore(_BATCH_CONCURRENCY)
-    tasks = []
-
-    async def _run_one(path_key: str, item, idx, system_id: str):
-        async with semaphore:
-            full_path = path_key
-            return await _process_message(full_path, item, f"{trace_id}-{idx}", system_id=system_id)
-
-    msg_idx = 0
-    for batch_item in payload:
-        if not isinstance(batch_item, dict):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Each batch item must be an object")
-
-        system_id = batch_item.get("system_id", None)
-        if system_id is None:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Each batch item must include a 'system_id' field")
-        for path_key, messages in batch_item.items():
-            if path_key == "system_id":
-                continue
-            if isinstance(messages, list):
-                for msg in messages:
-                    tasks.append(_run_one(path_key, msg, msg_idx, system_id))
-                    msg_idx += 1
-            else:
-                tasks.append(_run_one(path_key, messages, msg_idx, system_id))
-                msg_idx += 1
-
-    results = await asyncio.gather(*tasks, return_exceptions=True)
-    errors = [str(res) for res in results if isinstance(res, Exception)]
-    if errors:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"One or more downstream deliveries failed: {'; '.join(errors)}",
-        )
-
-    return {"message": "Successfully sent data to all destinations"}
-
 
 if "__main__" == __name__:
     import uvicorn

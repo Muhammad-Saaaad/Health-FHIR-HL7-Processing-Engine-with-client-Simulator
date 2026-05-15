@@ -250,13 +250,12 @@ async def submit_claim_from_engine(req: Request, db: Session = Depends(get_db)):
         logger.error(f"Error processing claim submission from engine: {str(exp)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
 
-async def claim_response_to_engine(data: str, system_id: str):
+async def claim_response_to_engine(url: str, data: str, system_id: str):
     try:
         logger.info(f"Sending claim response to engine: {data}")
 
         headers = {"Content-Type": "text/plain", "System-Id": system_id}
-        response = httpx.post("http://127.0.0.1:9000/send/claim_response", content=data,
-                            headers=headers, timeout=7)
+        response = httpx.post(url, content=data, headers=headers, timeout=7)
         
         if response.status_code in (200, 201):
             logger.info(f"Successfully sent claim response to engine")

@@ -6,7 +6,6 @@ import httpx
 from fastapi import APIRouter, status, HTTPException, Depends, Request, Response
 from sqlalchemy.orm import Session
 
-from InterfaceEngine.schemas import server
 from schemas.server import AddUpdateServer, GetServer
 import models
 from database import get_db, session_local
@@ -31,6 +30,7 @@ class ExcludeHealthCheckLogs(logging.Filter):
             "checking health",
             "while checking health",
             "/health",
+            "/connected-labs-insuraces"
         )
         return not any(marker in message for marker in health_markers)
 
@@ -436,8 +436,8 @@ async def get_lis_payer():
                         })
             db.close()
             async with httpx.AsyncClient() as client:
-                status = await connected_systems_to_ehr(client, "127.0.0.1", 8001, data)
-                if status:
+                is_sent = await connected_systems_to_ehr(client, "127.0.0.1", 8001, data)
+                if is_sent:
                     logger.info("Successfully sent connected systems data to EHR")
                 else:
                     logger.error("Failed to send connected systems data to EHR")
@@ -453,7 +453,7 @@ async def connected_systems_to_ehr(client, ip: str, port: int, data: list):
     """
     Perform a single health check against a server's `/health` endpoint.
 
-    Sends `GET http://{ip}:{port}/health` with a 10-second timeout.
+    Sends `POST http://{ip}:{port}/connected-labs-insuraces` with a 10-second timeout.
 
     Args:
         client (httpx.AsyncClient): A shared async HTTP client.
@@ -464,10 +464,10 @@ async def connected_systems_to_ehr(client, ip: str, port: int, data: list):
         bool: `True` if the server responds with HTTP 200, `False` for any error or non-200 response.
     """
     try:
-        response = await client.get(f"http://{ip}:{port}/health", json=data, timeout=10)
+        response = await client.post(f"http://{ip}:{port}/connected-labs-insuraces", json=data, timeout=10)
         if response.status_code != 200:
-            logger.warning(f"Health check failed for {ip}:{port} with status code {response.status_code}")  
+            logger.warning(f"Failed to send connected systems data to EHR for {ip}:{port} with status code {response.status_code}")  
         return response.status_code == 200
     except:
-        logger.error(f"Exception occurred while checking health for {ip}:{port}")
+        logger.error(f"Exception occurred while sending connected systems data to EHR for {ip}:{port}")
         return False
