@@ -64,40 +64,50 @@ def expense_breakdown(pid: int, policy_id: int, request: Request, response: Resp
     logger.info(f"expense_breakdown returning {len(claim_expense)} records for pid={pid} policy_id={policy_id}")
     return claim_expense
 
-@router.get("/get_all_claims", response_model=list[schema.AllClaims])
+@router.get("/get_all_claims/{insurance_id}", response_model=list[schema.AllClaims])
 @limiter.limit("30/minute")  # Limit to 30 requests per minute per IP
-def get_all_pending_claims(request: Request, response: Response, db: Session = Depends(get_db)):
+def get_all_pending_claims(insurance_id: str, request: Request, response: Response, db: Session = Depends(get_db)):
     """
     Retrieve all claims that are currently in "Pending" status.
 
-    **Query Parameters:** None
+    **Path Parameters:**
+    - `insurance_id` (str): Insurance company ID used to filter pending claims.
 
     **Response (200 OK):**
     Returns `list[schema.AllClaims]`. Each item includes:
     - `claim_id` (int)
-    - `mpi` (int)
+    - `nic` (str | null)
     - `policy_number` (int)
     - `name` (str)
     - `created_at` (datetime | null)
 
     **Note:**
     - Only claims with `claim_status == "Pending"` are returned.
+    - Claims are returned only when the linked patient has the provided `insurance_id`.
     - Returns an empty list if there are no pending claims.
     """
-    logger.info("get_all_pending_claims called")
-    all_claims = db.query(models.PatientClaim).filter(models.PatientClaim.claim_status == 'Pending').all()
-    claims =[ 
+    logger.info(f"get_all_pending_claims called for insurance_id={insurance_id}")
+    all_claims = (
+        db.query(models.PatientClaim)
+        .join(models.Patient, models.Patient.pid == models.PatientClaim.pid)
+        .filter(
+            models.PatientClaim.claim_status == "Pending",
+            models.Patient.insurance_id == insurance_id
+        )
+        .all()
+    )
+    claims = [
         {
             "claim_id" : claim.claim_id,
-            "mpi": db.get(models.Patient, claim.pid).mpi,
+            "nic": claim.patient.nic,
             "policy_number": claim.policy_id,
             "name": claim.patient.name,
             "created_at": claim.created_at
         }
-        for claim in all_claims # called list comprehension. cleaner way
+        for claim in all_claims
     ]
 
-    logger.info(f"get_all_pending_claims returning {len(claims)} claims")
+    logger.info(f"get_all_pending_claims returning {len(claims)} claims for insurance_id={insurance_id}")
     return claims
 
 @router.get("/get_single_claim{claim_id}", response_model=schema.PatientClaimDisplay)
@@ -188,8 +198,8 @@ async def claim_status(user_id: int, claim_id : int, claim_status: str, request:
     user = db.get(models.Patient, test_req.pid)
     
     msg_id = str(uuid4())
-    hl7_msg = f"MSH|^~\&|PAYER||EHR||20260502153000|{msg_id}|ACK^P03||P|2.5\n"
-    hl7_msg += f"PID|1||{user.mpi}\n"
+    hl7_msg = f"MSH|^~\\&|PAYER||EHR||20260502153000|{msg_id}|ACK^P03||P|2.5\n"
+    hl7_msg += f"PID|1||{user.nic}\n"
     hl7_msg += f"PV1|1||||||||||||||||||{claim.vid}\n"
     hl7_msg += f"MSA|1|AA|{claim_status}\n"
 

@@ -356,11 +356,11 @@ recieve_response_claim = { // phr => endpoint => /receive-response-claim
 
 add_patient = // LIS -> endpoint => /get/new-patient
 MSH|^~\\&|EHR||LIS||20260203120000||ADT^A01|MSG00001|P|2.5
-PID|1||37201-7687213-2||saad^Muhammad||20041006|M|||||+92-315-3726612
+PID|1||37201-7687213-2||saad^Muhammad||20041006|M|||||
 
 add_patient = // Payer -> endpoint => /get/registed_patient
 MSH|^~\\&|EHR||payer||20260203120000||ADT^A01|MSG00001|P|2.5
-PID|1||37201-7687213-2||saad^Muhammad||20041006|M|||||
+PID|1||37201-7687213-2||saad^Muhammad||20041006|M|||||+92-315-3726612
 IN1|||||||||||||||Silver|||||||||||||||||||||9||||||||||||||||
 
 // -----------------------------------------------------------------------------------------------------------------------------------------

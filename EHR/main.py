@@ -1,4 +1,5 @@
 import os
+import json
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -62,12 +63,17 @@ def check_health(system_id: str):
     finally:
         db.close()
 
-@app.get("/connected-labs-insuraces")
+@app.post("/connected-labs-insuraces")  
 async def get_connected_labs_insurances(request: Request):
     """
-    
+        take the connected system and give it to this variable that is 
+        located in the labs_payers.py file.
     """
     data = await request.json()
+    with open(r"E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\EHR\ehr_connected_systems.json", mode="w") as f:
+        f.write(json.dumps(data))
+
+    return {"message": "Connected labs and insurances data received successfully"}
     
 
 if __name__ == "__main__":

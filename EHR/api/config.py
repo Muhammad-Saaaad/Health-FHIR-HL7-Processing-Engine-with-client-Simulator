@@ -1,8 +1,10 @@
+import asyncio
 import json
 import hashlib
 import logging
 from logging.handlers import RotatingFileHandler
 
+import httpx
 from fastapi import APIRouter, status, Depends, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from sqlalchemy import desc
@@ -82,9 +84,13 @@ def change_config_status(conf_data: schema.ChangeConfig, request: Request, respo
         logger.error(f"Error changing config status: {str(e)}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
     
+async def _post_config(data):
+    async with httpx.AsyncClient() as client:
+        await client.post("http://127.0.0.1:9000/batch", json=data)
+
 @router.post("/sent-config-to-engine")
 @limiter.limit("20/minute")
-def sent_config_to_engine(request: Request, response: Response, db: Session = Depends(get_db)):
+async def sent_config_to_engine(request: Request, response: Response, db: Session = Depends(get_db)):
     """
     Mark the current configuration as sent to the InterfaceEngine.
 
@@ -119,14 +125,16 @@ def sent_config_to_engine(request: Request, response: Response, db: Session = De
         config = db.query(model.Config).filter(model.Config.sent_to_engine == False) \
             .order_by(desc(model.Config.config_id)).first()
         if not config:
-            return {"message": "No unsent configuration found"}
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No unsent configuration found")
+        if config.data == []:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Current configuration is empty, nothing to send")
 
         config.sent_to_engine = True
         db.add(config)
+
+        asyncio.create_task(_post_config(config.data)) # send batch to the engine.
+
         db.commit()
-
-        # add the logic here to sent the bulk data to engine.
-
         logger.info(f"Config with ID {config.config_id} sent to engine")
         return JSONResponse(content={"message": f"Config with ID {config.config_id} sent to engine"})
     except Exception as e:

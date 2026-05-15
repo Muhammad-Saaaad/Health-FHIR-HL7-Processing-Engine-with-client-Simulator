@@ -1,3 +1,4 @@
+import json
 import logging
 from logging.handlers import RotatingFileHandler
 
@@ -57,6 +58,7 @@ def create_admin(admin: schema.Admin, request: Request, response: Response, db :
 
     try:
         new_admin = model.Users(
+            name="Admin",
             email = admin.email,
             password = admin.password,
             roll=2
@@ -481,4 +483,34 @@ def alter_doctor_info(doc_id: int, doctor: schema.DoctorUpdate, request: Request
         raise
     except Exception as e:
         logger.error(f"Error updating doctor with ID {doc_id}: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
+
+@router.post("/get-labs-payers/{hospital_id}", status_code=status.HTTP_200_OK)
+async def get_connected_labs_insurances(hospital_id: str):
+    """
+    Receive connected labs and insurances data from the InterfaceEngine.
+
+    **Response (200 OK):**
+    """
+
+    try:
+
+        response_data = dict()
+
+        with open(r"E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\EHR\ehr_connected_systems.json", mode="r") as f:
+            data = f.read()
+            data = json.loads(data)
+
+            for item in data:
+                if item["ehr_system_id"] == hospital_id:
+                    response_data = {
+                        "labs": item.get("labs", []),
+                        "payers": item.get("payers", [])
+                    }
+                    break
+        
+        return response_data
+
+    except Exception as e:
+        logger.error(f"Error retrieving connected labs and insurances for hospital ID {hospital_id}: {str(e)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")

@@ -32,6 +32,7 @@ async def add_visit_note(visit_note: schema.VisitNote ,request: Request, respons
 
     **Request Body:**
     - `mpi` (int, required): Master Patient Index - the unique identifier of the patient.
+    - `hospital_id` (String, required): ID of the hospital where the visit is taking place.
     - `doctor_id` (int, required): ID of the doctor creating the visit note.
     - `note_title` (str, required): Short title or subject of the visit (e.g., "Routine Checkup").
     - `patient_complaint` (str, required): Description of the patient's presenting complaint.

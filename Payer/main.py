@@ -1,11 +1,11 @@
 import os
 
-from fastapi import FastAPI, status
+from fastapi import FastAPI, status, HTTPException
 from fastapi.middleware.cors import CORSMiddleware 
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi.errors import RateLimitExceeded
 
-from database import engine
+from database import engine, SessionLocal
 import models
 from api import auth, claims, engine_service, patient, policy
 from rate_limiting import limiter, rate_limit_exceeded_handler
@@ -35,15 +35,22 @@ app.include_router(engine_service.router)
 app.include_router(policy.router)
 app.include_router(claims.router)
 
-@app.get("/health", status_code=status.HTTP_200_OK)
-def home():
+@app.get("/health/{system_id}")
+def check_health(system_id: str):
     """
     Health-check endpoint for Payer service.
 
     **Response (200 OK):**
-    - JSON object: `{ "message": "Final System is Live! 🚀 Go to /docs" }`
+    - JSON object: `{ "message": "✔ Payer running" }`
     """
-    return {"message": "Final System is Live! 🚀 Go to /docs"}
+    db = SessionLocal()
+    try:
+        server = db.query(models.Insurance).filter(models.Insurance.insurance_id == system_id).first()
+        if not server:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"message": f"Server with system_id '{system_id}' not found."})
+        return {"message": f"✔ Payer running for system_id '{system_id}'"}
+    finally:
+        db.close()
 
 if __name__ == "__main__":
     import uvicorn

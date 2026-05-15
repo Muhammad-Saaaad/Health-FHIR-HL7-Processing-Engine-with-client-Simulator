@@ -60,6 +60,7 @@ def create_admin(admin: SignUpAdmin, request: Request, response: Response, db :S
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="email already exists")
         
         new_admin = model.User(
+            name="Admin",
             email = admin.email,
             password = admin.password,
             roll=2

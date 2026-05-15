@@ -8,11 +8,11 @@ from rate_limiting import limiter
 
 router = APIRouter(tags=["patient"])
 
-@router.get("/get_patients", response_model=list[PatientBase])
+@router.get("/get_patients/{lab_id}", response_model=list[PatientBase])
 @limiter.limit("20/minute")  # Limit to 20 requests per minute per IP
-def get_all_patients(request: Request, response: Response, db: Session = Depends(get_db)):
+def get_all_patients(lab_id: str, request: Request, response: Response, db: Session = Depends(get_db)):
     """
-    Retrieve all patients registered in the LIS system.
+    Retrieve all patients registered in the LIS system for a specific lab.
 
     **Query Parameters:** None
 
@@ -26,17 +26,18 @@ def get_all_patients(request: Request, response: Response, db: Session = Depends
     **Note:**
     - Returns an empty list if no patients exist in the system.
     """
-    patients = db.query(model.Patient).all()
+    patients = db.query(model.Patient).filter(model.Patient.lab_id == lab_id).all()
     return patients
 
-@router.get("/patients/{nic}", response_model=PatientDetail)
+@router.get("/patients/{nic}/{lab_id}", response_model=PatientDetail)
 @limiter.limit("20/minute")  # Limit to 20 requests per minute per IP
-def get_patient_detail(nic: str, request: Request, response: Response, db: Session = Depends(get_db)):
+def get_patient_detail(nic: str, lab_id: str, request: Request, response: Response, db: Session = Depends(get_db)):
     """
         Retrieve detailed patient information and associated lab reports.
 
         **Path Parameters:**
         - `nic` (str, required): National ID / CNIC used to identify the patient.
+        - `lab_id` (str, required): ID of the laboratory to which the patient belongs.
 
         **Response (200 OK):**
         Returns a merged patient detail object with:
@@ -59,6 +60,8 @@ def get_patient_detail(nic: str, request: Request, response: Response, db: Sessi
     patient = db.get(model.Patient, nic)
     if not patient:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found")
+    if patient.lab_id != lab_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found for the specified lab")
     response = {
         "nic": patient.nic,
         "fname": patient.fname,
@@ -80,13 +83,13 @@ def get_patient_detail(nic: str, request: Request, response: Response, db: Sessi
     response["lab_reports"] = reports
     return response
 
-@router.get("/patient-waiting-list", response_model=list[WaitingPatientList])
+@router.get("/patient-waiting-list/{lab_id}", response_model=list[WaitingPatientList])
 @limiter.limit("20/minute")  # Limit to 20 requests per minute per IP
-def get_pending_requests(request: Request, response: Response, db: Session = Depends(get_db)):
+def get_pending_requests(lab_id: str, request: Request, response: Response, db: Session = Depends(get_db)):
     """ 
-    Retrieve pending lab test requests, keeping only one row per `vid`.
+    Retrieve pending lab test requests for a specific lab, keeping only one row per `vid`.
 
-    **Query Parameters:** None
+    **Query Parameters:** lab_id (str, required): ID of the laboratory to filter pending requests.
 
     **Response (200 OK):**
     Returns a list of unique waiting-list entries for requests with `status == "Pending"`.
@@ -104,7 +107,7 @@ def get_pending_requests(request: Request, response: Response, db: Session = Dep
     - Returns an empty list if there are no pending test requests.
     - Uniqueness is based on `vid`.
     """
-    pending_requests = db.query(model.LabTestRequest).filter(model.LabTestRequest.status == "Pending").all()
+    pending_requests = db.query(model.LabTestRequest).filter(model.LabTestRequest.status == "Pending", model.LabTestRequest.lab_id == lab_id).all()
     waiting_list_patients = []
     seen_vids = set()
 
@@ -130,7 +133,7 @@ def get_pending_requests(request: Request, response: Response, db: Session = Dep
 
 @router.get("/patient-process/{nic}/{vid}", response_model=PatientDetail)
 @limiter.limit("20/minute")
-def get_patient_process(nic: str, vid: str, request: Request, response: Response, db: Session = Depends(get_db)):
+def get_patient_process(nic: str, vid: str, lab_id: str, request: Request, response: Response, db: Session = Depends(get_db)):
     """
     Retrieve a pending patient-processing view for a specific visit.
 
@@ -140,6 +143,7 @@ def get_patient_process(nic: str, vid: str, request: Request, response: Response
     **Path Parameters:**
     - `nic` (str, required): National ID / CNIC (primary key of `patient`).
     - `vid` (str, required): Visit ID used to locate pending test requests.
+    - `lab_id` (str, required): ID of the laboratory to filter test requests.
 
     **Response (200 OK):**
     Returns `PatientDetail` with:
@@ -193,13 +197,13 @@ def get_patient_process(nic: str, vid: str, request: Request, response: Response
 
     return response    
 
-@router.get("/patient-Accepted-list", response_model=list[AcceptedPatientList])
+@router.get("/patient-Accepted-list/{lab_id}", response_model=list[AcceptedPatientList])
 @limiter.limit("20/minute")  # Limit to 20 requests per minute per IP
-def get_accepted_requests(request: Request, response: Response, db: Session = Depends(get_db)):
+def get_accepted_requests(lab_id: str, request: Request, response: Response, db: Session = Depends(get_db)):
     """ 
-    Retrieve accepted lab test requests.
+    Retrieve accepted lab test requests for a specific lab.
 
-    **Query Parameters:** None
+    **Query Parameters:** lab_id (str, required): ID of the laboratory to filter accepted requests.
 
     **Response (200 OK):**
     Returns a list of unique waiting-list entries for requests with `status == "Accepted"`.
@@ -216,7 +220,7 @@ def get_accepted_requests(request: Request, response: Response, db: Session = De
     **Note:**
     - Returns an empty list if there are no accepted test requests.
     """
-    accepted_requests = db.query(model.LabTestRequest).filter(model.LabTestRequest.status == "Accepted").all()
+    accepted_requests = db.query(model.LabTestRequest).filter(model.LabTestRequest.status == "Accepted", model.LabTestRequest.lab_id == lab_id).all()
     patients_accepted_list = []
 
     for req in accepted_requests:

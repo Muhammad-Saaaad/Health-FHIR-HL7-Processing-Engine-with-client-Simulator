@@ -4,7 +4,7 @@ from datetime import date
 from schemas.policy_schema import patient_policy
 
 class PatientCreate(BaseModel):
-    mpi: int | None = None
+    nic: str | None = None
     name: str
     phone_no: str | None
     gender: str | None
@@ -14,7 +14,8 @@ class PatientCreate(BaseModel):
 
 class PatientDisplay(BaseModel):
     p_id: int
-    mpi: int | None
+    nic: str | None
+    insurance_id : str
     name: str
     gender: str | None
     date_of_birth: date | None
@@ -31,7 +32,7 @@ class PatientDisplay(BaseModel):
 
 class PatientPolicyDetails(BaseModel):
     p_id: int
-    mpi: int | None
+    nic: str | None
     name: str
     Age: str | date | None
     phone_no: str | None

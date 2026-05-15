@@ -61,13 +61,14 @@ class Patient(base):
     created_at = Column(DateTime, default=datetime.now())
     updated_at = Column(DateTime, default=datetime.now())
 
+    __table_args__ = (
+        UniqueConstraint('lab_id', 'nic', name='uq_lab_nic'),
+    )
+    
     test_bill = relationship("LabTestBilling", back_populates="patient")
     test_req = relationship("LabTestRequest", back_populates="patient")
     lab = relationship("Lab", back_populates="patient")
 
-    __table_args__ = (
-        UniqueConstraint('lab_id', 'nic', name='uq_lab_nic'),
-    )
 
 class LabTestRequest(base):
     __tablename__ = "test_request"

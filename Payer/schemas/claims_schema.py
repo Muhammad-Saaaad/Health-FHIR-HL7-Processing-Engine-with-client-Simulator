@@ -10,7 +10,7 @@ class PatientClaimCreate(BaseModel):
 
 class AllClaims(BaseModel):
     claim_id: int
-    mpi: int
+    nic: str | None
     policy_number: int
     name: str
     created_at: datetime | None

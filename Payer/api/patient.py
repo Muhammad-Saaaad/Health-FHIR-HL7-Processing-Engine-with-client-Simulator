@@ -11,14 +11,16 @@ from .logging_config import get_logger
 
 logger = get_logger('Payer.api.patient', logfile=r'logs\payer_api.log')
 
-@router.post("/reg_patient",  status_code=status.HTTP_201_CREATED)
+@router.post("/reg_patient/{insurance_id}",  status_code=status.HTTP_201_CREATED)
 @limiter.limit("15/minute")  # Limit to 15 requests per minute per IP
-def register_patient(data: schema.PatientCreate, request: Request, response: Response,  db: Session = Depends(get_db)):
+def register_patient(data: schema.PatientCreate, insurance_id: str, request: Request, response: Response,  db: Session = Depends(get_db)):
     """
     Register a new patient in the Payer system and automatically create an insurance policy.
 
+    **Path Parameters:** Insurance ID to associate the patient with. Must exist in the system.
+
     **Request Body:**
-    - `mpi` (int, optional): Patient's medical record number.
+    - `nic` (str, optional): Patient's national identity number.
     - `name` (str, required): Patient's full name.
     - `phone_no` (str, optional): Patient's phone number. Must be unique across all patients.
     - `gender` (str, optional): Patient's gender (e.g., "Male", "Female").
@@ -46,8 +48,13 @@ def register_patient(data: schema.PatientCreate, request: Request, response: Res
     - `500 Internal Server Error`: Database or unexpected error during creation
     - `422 Unprocessable Entity`: Invalid data format or missing required fields
     """
-    logger.info(f"register_patient called: name={data.name} mpi={data.mpi} insurance_type={data.insurance_type}")
+    logger.info(f"register_patient called: name={data.name} nic={data.nic} insurance_type={data.insurance_type}")
     # user_id 0 means that it is inserted by the engine. 
+
+    if db.get(models.Insurance, insurance_id) is None:
+        logger.error(f"register_patient failed: insurance_id={insurance_id} not found")
+        raise HTTPException(status_code=404, detail="Insurance ID not found")
+
     if data.user_id != 0:
         is_user = db.query(models.SystemUser).filter(models.SystemUser.user_id == data.user_id).first()
 
@@ -77,7 +84,8 @@ def register_patient(data: schema.PatientCreate, request: Request, response: Res
 
     try:
         new_patient = models.Patient(
-            mpi = data.mpi if data.mpi else None,
+            insurance_id=insurance_id,
+            nic=data.nic if data.nic else None,
             u_id=data.user_id,
             name=data.name,
             phone_no=data.phone_no,
@@ -118,18 +126,18 @@ def register_patient(data: schema.PatientCreate, request: Request, response: Res
         logger.exception(f"register_patient failed: {str(e)}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-@router.get("/get_all_patients", response_model=list[schema.PatientDisplay], status_code=status.HTTP_200_OK)
+@router.get("/get_all_patients/{insurance_id}", response_model=list[schema.PatientDisplay], status_code=status.HTTP_200_OK)
 @limiter.limit("30/minute")  # Limit to 30 requests per minute per IP
-def get_all_patients(request: Request, response: Response, db: Session = Depends(get_db)):
+def get_all_patients(insurance_id: str, request: Request, response: Response, db: Session = Depends(get_db)):
     """
     Retrieve all patients registered in the Payer system.
 
-    **Query Parameters:** None
+    **Query Parameters:** insurance_id (str, required): Filter patients by associated insurance company ID.
 
     **Response (200 OK):**
     Returns `list[schema.PatientDisplay]`. Each item includes:
     - `p_id` (int): Patient internal ID
-    - `mpi` (int | null): Master patient index
+    - `nic` (str | null): Patient national identity number
     - `name` (str): Patient full name
     - `gender` (str | null)
     - `date_of_birth` (date | null)
@@ -145,7 +153,7 @@ def get_all_patients(request: Request, response: Response, db: Session = Depends
     """
     logger.info("get_all_patients called")
     try:
-        all_patients = db.query(models.Patient).all()
+        all_patients = db.query(models.Patient).filter(models.Patient.insurance_id == insurance_id).all()
         patients = []
         for p in all_patients:
             pocliy_number = db.query(models.InsurancePolicy).filter(models.InsurancePolicy.pid == p.pid, models.InsurancePolicy.status == "Active").first()
@@ -154,7 +162,7 @@ def get_all_patients(request: Request, response: Response, db: Session = Depends
             
             patients.append(schema.PatientDisplay(
                 p_id=p.pid, 
-                mpi=p.mpi,
+                nic=p.nic,
                 name=p.name,
                 gender=p.gender,
                 date_of_birth=p.date_of_birth,
@@ -182,7 +190,7 @@ def get_single_patient(p_id: int, request: Request, response: Response, db: Sess
         
         * `p_id` (int)
         
-        * `mpi` (int | null)
+        * `nic` (str | null)
         
         * `name` (str)
         
@@ -228,7 +236,7 @@ def get_single_patient(p_id: int, request: Request, response: Response, db: Sess
         
     output = {
         "p_id" : patient.pid,
-        "mpi": patient.mpi,
+        "nic": patient.nic,
         "name" : patient.name,
         "Age": patient.date_of_birth, # field serializer will convert date to age str.
         "phone_no": patient.phone_no,

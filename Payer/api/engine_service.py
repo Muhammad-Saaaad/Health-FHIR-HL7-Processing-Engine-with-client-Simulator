@@ -25,7 +25,7 @@ handler.setFormatter(formater)
 logger.addHandler(handler)
 
 # MSH|^~\\&|EHR||payer||20260203120000||ADT^A01|MSG00001|P|2.5
-# PID|1||23||saad^Muhammad||20041006|M|||||
+# PID|1||37201-7687308-3||saad^Muhammad||20041006|M|||||
 # IN1|||||||||||||||Silver|||||||||||||||||||||9||||||||||||||||
 
 @router.post("/get/registed_patient")
@@ -35,12 +35,12 @@ async def get_registed_patient(req: Request, db: Session = Depends(get_db)):
 
     This endpoint is called by the InterfaceEngine when it delivers an HL7 ADT message
     to the Payer system. It parses PID (patient demographics) and IN1 (insurance) segments
-    to match an existing pre-registered patient and update their MPI from the EHR.
+    to match an existing pre-registered patient and update their NIC from the EHR.
 
     **Request Body:** Raw HL7 v2.x message as plain text (Content-Type: text/plain)
 
     **PID fields extracted:**
-    - `PID-3`: MPI (used to update the patient)
+    - `PID-3`: NIC (used to update the patient)
     - `PID-5` / `PID-5.1` / `PID-5.2`: Name (used for logging/context)
     - `PID-7`: Date of birth (YYYYMMDD) — used to match existing patient
     - `PID-8`: Gender — used to match existing patient
@@ -51,11 +51,11 @@ async def get_registed_patient(req: Request, db: Session = Depends(get_db)):
 
     **Upsert Logic:**
     - Looks up an existing Patient by gender + date_of_birth + policy_id match.
-    - If found: updates their MPI and returns 200.
+    - If found: updates their NIC and returns 200.
     - If not found: returns 404 (patient must be pre-registered via the Payer `/reg_patient` endpoint first).
 
     **Response (200 OK):**
-    - `{"message": "Patient MPI updated successfully"}` if the patient was located and MPI updated
+    - `{"message": "Patient NIC updated successfully"}` if the patient was located and NIC updated
 
     **Error Responses:**
     - `400 Bad Request`: Malformed HL7, missing required PID/IN1 fields, or DB error
@@ -63,6 +63,15 @@ async def get_registed_patient(req: Request, db: Session = Depends(get_db)):
     """
     try:
         # HL7 is sent as plain text — read raw bytes and decode
+        insurance_id = req.headers.get("System-Id", "Unknown")
+        if insurance_id == "Unknown":
+            logger.warning("Received new patient HL7 message without System-Id header")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing System-Id header")
+        
+        if db.get(models.Insurance, insurance_id) is None:
+            logger.warning(f"Received new patient HL7 message with unknown System-Id: {insurance_id}")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unknown System-Id: {insurance_id}")
+        
         raw = await req.body()
         data = raw.decode("utf-8", errors="replace")
         logger.info(f"Received HL7 message for patient registration: {data}")
@@ -107,7 +116,7 @@ async def get_registed_patient(req: Request, db: Session = Depends(get_db)):
     if not all_values.get("PID-3"):
         logger.error(f"Missing required PID-3 field in HL7 message: {data}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing required PID-3 field")
-    mpi = int(all_values['PID-3'].strip())
+    nic = all_values['PID-3'].strip()
 
     if not policy_id:
         logger.warning(f"Missing policy ID in IN1 segment of HL7 message: {data}. Cannot match patient without policy ID.")
@@ -129,21 +138,20 @@ async def get_registed_patient(req: Request, db: Session = Depends(get_db)):
     )
 
     if existing_patient:
-        # Patient already registered in Payer — just update the MPI
-        logger.info(f"Found existing patient for HL7 data. Updating MPI to {mpi} for patient ID {existing_patient.id}")
-        existing_patient.mpi = mpi
+        # Patient already registered in Payer — just update the NIC
+        logger.info(f"Found existing patient for HL7 data. Updating NIC to {nic} for patient ID {existing_patient.pid}")
+        existing_patient.nic = nic
         db.commit()
         db.refresh(existing_patient)
-        # return {"message": "Patient MPI updated successfully"}
-        return JSONResponse(content={"message": "Patient MPI updated successfully"}, status_code=status.HTTP_200_OK)
+        return JSONResponse(content={"message": "Patient NIC updated successfully"}, status_code=status.HTTP_200_OK)
     else:
         # raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found")
         logger.info(f"Patient not found for HL7 data. Attempting to register new patient.")
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                "http://localhost:8003/reg_patient",
+                "http://localhost:8003/reg_patient/"+str(insurance_id).strip(),
                 json={
-                    "mpi": mpi,
+                    "nic": nic,
                     "name": name,
                     "phone_no": phone_no,
                     "gender": gender,
@@ -174,6 +182,15 @@ async def submit_claim_from_engine(req: Request, db: Session = Depends(get_db)):
     to the Payer system. The endpoint should process the claim and return a 200 OK if successful.
     """
     try:
+        insurance_id = req.headers.get("System-Id", "Unknown")
+        if insurance_id == "Unknown":
+            logger.warning("Received new patient HL7 message without System-Id header")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing System-Id header")
+        
+        if db.get(models.Insurance, insurance_id) is None:
+            logger.warning(f"Received new patient HL7 message with unknown System-Id: {insurance_id}")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unknown System-Id: {insurance_id}")
+        
         raw = await req.body()
         data = raw.decode("utf-8", errors="replace")
         logger.info(f"Received HL7 message for patient registration: {data}")
@@ -190,22 +207,22 @@ async def submit_claim_from_engine(req: Request, db: Session = Depends(get_db)):
 
         logger.info(f"Extracted values from HL7 message: {all_values}")
 
-        mpi = all_values.get('PID-3')
+        nic = all_values.get('PID-3')
         vid = all_values.get('PV1-19') or all_values.get('PV1-20')
-        if not mpi or not vid:
-            logger.error(f"Missing required MPI or VID in claim submission from engine: {data}")
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing required MPI or VID in claim submission")
+        if not nic or not vid:
+            logger.error(f"Missing required NIC or VID in claim submission from engine: {data}")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing required nic or VID in claim submission")
         
-        is_patient = db.query(models.Patient).filter(models.Patient.mpi == int(mpi.strip())).first()
+        is_patient = db.query(models.Patient).filter(models.Patient.nic == nic.strip(), models.Patient.insurance_id == insurance_id).first()
 
         if not is_patient:
-            logger.error(f"No patient found with MPI {mpi.strip()} for claim submission from engine: {data}")
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No patient found with MPI {mpi.strip()} for claim submission")
+            logger.error(f"No patient found with NIC {nic.strip()} in insurance {insurance_id} for claim submission from engine: {data}")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No patient found with NIC {nic.strip()} in insurance {insurance_id} for claim submission")
 
         policy = db.query(models.InsurancePolicy).filter(models.InsurancePolicy.pid == is_patient.pid).first()
         if not policy:
-            logger.error(f"No insurance policy found for patient with MPI {mpi.strip()} for claim submission from engine: {data}")
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No insurance policy found for patient with MPI {mpi.strip()} for claim submission")
+            logger.error(f"No insurance policy found for patient with NIC {nic.strip()} in insurance {insurance_id} for claim submission from engine: {data}")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No insurance policy found for patient with NIC {nic.strip()} in insurance {insurance_id} for claim submission")
 
         dt = datetime.strptime(all_values.get('FT1-4'), "%Y%m%d%H%M%S")
         date_time = dt.strftime("%Y-%m-%d %H:%M:%S")
@@ -227,17 +244,19 @@ async def submit_claim_from_engine(req: Request, db: Session = Depends(get_db)):
         )
         db.add(new_claim)
         db.commit()
-        logger.info(f"Successfully added claim to db for patient with MPI {mpi.strip()} from claim submission from engine: {data}")
+        logger.info(f"Successfully added claim to db for patient with NIC {nic.strip()} from claim submission from engine: {data}")
         return JSONResponse(content={"message": "Claim received successfully"}, status_code=status.HTTP_200_OK)
     except Exception as exp:
         logger.error(f"Error processing claim submission from engine: {str(exp)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
 
-async def claim_response_to_engine(data: str):
+async def claim_response_to_engine(data: str, system_id: str):
     try:
         logger.info(f"Sending claim response to engine: {data}")
+
+        headers = {"Content-Type": "text/plain", "System-Id": system_id}
         response = httpx.post("http://127.0.0.1:9000/send/claim_response", content=data,
-                            headers={"Content-Type": "text/plain"}, timeout=7)
+                            headers=headers, timeout=7)
         
         if response.status_code in (200, 201):
             logger.info(f"Successfully sent claim response to engine")

@@ -91,14 +91,15 @@ def get_policy(policy_id : int , request: Request, response: Response, db: Sessi
     logger.info(f"get_policy found policy_id={policy_id}")
     return policy
 
-@router.get("/all_patients_per_policy_category{policy_category}")
+@router.get("/all_patients_per_policy_category{policy_category}/{insurance_id}", status_code=200, tags=["Insurance_Policies"])
 @limiter.limit("20/minute")  # Limit to 20 requests per minute per IP
-def patients_per_policy_cat(policy_category : str, request: Request, response: Response, db: Session = Depends(get_db)):
+def patients_per_policy_cat(policy_category : str, insurance_id: str, request: Request, response: Response, db: Session = Depends(get_db)):
     """
     Retrieve all patients enrolled in a specific insurance policy category.
 
     **Path Parameters:**
     - `policy_category` (str, required): The policy category name to filter by (e.g., "Gold", "Silver", "Bronze").
+    - `insurance_id` (str, required): The ID of the insurance company to filter by.
 
     **Response (200 OK):**
     Returns a list of patient objects enrolled in that category. Each item includes:
@@ -118,7 +119,9 @@ def patients_per_policy_cat(policy_category : str, request: Request, response: R
     logger.info(f"patients_per_policy_cat called for category={policy_category}")
     try:
         data = db.query(models.Patient).join(models.InsurancePolicy).filter(
-            models.InsurancePolicy.category_name == policy_category).all()
+            models.InsurancePolicy.category_name == policy_category,
+            models.InsurancePolicy.insurance_id == insurance_id
+        ).all()
 
         output = []
         for d in data:

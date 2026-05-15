@@ -53,13 +53,13 @@ router = APIRouter(tags=["Test Requests"])
 #     db.refresh(db_request)
 #     return db_request
 
-@router.get("/requests/accepted/payment/paid", response_model=list[TestRequestOut], tags=["Test Requests"])
+@router.get("/requests/accepted/payment/paid/{lab_id}", response_model=list[TestRequestOut], tags=["Test Requests"])
 @limiter.limit("20/minute")  # Limit to 20 requests per minute per IP
-def get_accepted_requests(request: Request, response: Response, db: Session = Depends(get_db)):
+def get_accepted_requests(lab_id: str, request: Request, response: Response, db: Session = Depends(get_db)):
     """
-    Retrieve all lab test requests that have been accepted AND whose payment has been marked as "Paid".
+    Retrieve all lab test requests that have been accepted AND whose payment has been marked as "Paid" for a specific lab.
 
-    **Query Parameters:** None
+    **Query Parameters:** lab_id (str, required): ID of the laboratory to filter accepted requests.
 
     **Response (200 OK):**
     Returns a list of test request objects filtered to `status == "Accepted"` and joined with
@@ -82,7 +82,7 @@ def get_accepted_requests(request: Request, response: Response, db: Session = De
     - Returns an empty list if no such records exist.
     """
     accepted_requests = db.query(model.LabTestRequest).join(model.LabTestBilling) \
-        .filter(model.LabTestRequest.status == "Accepted", model.LabTestBilling.payment_status == "Paid").all()
+        .filter(model.LabTestRequest.status == "Accepted", model.LabTestBilling.payment_status == "Paid", model.LabTestRequest.lab_id == lab_id).all()
 
     return accepted_requests
 
