@@ -226,10 +226,10 @@ FT1|1|||20260203120000|||Service_LabTest|150.00||||||||||||||||
 """
 print(test1)
 
-for segment in test1.splitlines()[1:]:
-    _, paths = hl7_extract_paths(segment)
-    path_to_values = get_hl7_value_by_path(segment, paths) # paths and values for 1 segment
-    print(paths)
+# for segment in test1.splitlines()[1:]:
+#     _, paths = hl7_extract_paths(segment)
+#     path_to_values = get_hl7_value_by_path(segment, paths) # paths and values for 1 segment
+#     print(paths)
 
 # from datetime import datetime, timezone
 
@@ -237,3 +237,8 @@ for segment in test1.splitlines()[1:]:
 
 ## 
 
+d = None
+if d is None:
+    print("d is none")
+if not d:
+    print("d is not true")

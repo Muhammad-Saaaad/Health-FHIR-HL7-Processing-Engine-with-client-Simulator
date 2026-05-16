@@ -521,7 +521,13 @@ async def route_worker(route, worker_number: int = 1):
 async def _process_message(full_path: str, payload, trace_id: str, system_id: str):
     db = session_local()
     normalized_path = full_path if full_path.startswith("/") else "/" + full_path
-    endpoint = db.query(models.Endpoints).filter(models.Endpoints.url == normalized_path).first()
+    
+    server = db.query(models.Server).filter(models.Server.system_id == system_id).first()
+    if not server:
+        db.close()
+        logger.warning("trace=%s invalid_system_id=%s for endpoint_url=%s", trace_id, system_id, normalized_path)
+
+    endpoint = db.query(models.Endpoints).filter(models.Endpoints.url == normalized_path, models.Endpoints.server_id == server.server_id).first()
     if not endpoint:
         db.close()
         logger.warning("trace=%s invalid_endpoint_url=%s", trace_id, normalized_path)
@@ -529,21 +535,9 @@ async def _process_message(full_path: str, payload, trace_id: str, system_id: st
 
     endpoint_fields = db.query(models.EndpointFields).filter(models.EndpointFields.endpoint_id == endpoint.endpoint_id).all()
     routes = db.query(models.Route).filter(models.Route.src_endpoint_id == endpoint.endpoint_id).all()
-    server = db.query(models.Server).filter(models.Server.server_id == endpoint.server_id, models.Server.system_id == system_id).first()
-    if not server:
-        db.close()
-        logger.warning("trace=%s invalid_system_id=%s for endpoint_url=%s", trace_id, system_id, normalized_path)
     db.close()
 
     logger.info(f"server: {server}")
-
-    logger.info(
-        "trace=%s ingest_received path=%s protocol=%s routes_length=%s",
-        trace_id,
-        normalized_path,
-        server.protocol,
-        len(routes),
-    )
     
     if server.protocol == "FHIR":
         if not isinstance(payload, dict):
@@ -734,8 +728,8 @@ async def ingest(full_path: str, req: Request):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing System-Id header")
     try:
         db = session_local()
-        endpoint = db.query(models.Endpoints).filter(models.Endpoints.url == '/' + full_path).first()
-        server = db.get(models.Server, endpoint.server_id) if endpoint else None
+        server = db.query(models.Server).filter(models.Server.system_id == system_id).first()
+        endpoint = db.query(models.Endpoints).filter(models.Endpoints.url == '/' + full_path, models.Endpoints.server_id == server.id).first()
         db.close()
         if not endpoint:
             logger.warning("trace=%s invalid_endpoint_url=/%s", trace_id, full_path)
