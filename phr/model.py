@@ -83,7 +83,7 @@ class VisitingNotes(Base):
     nic = Column(String(20),ForeignKey('patient.nic'), nullable=False)
     doctor_id = Column(String(20), ForeignKey('doctor.doctor_id'), nullable=False)
 
-    visit_date = Column(DateTime, default=lambda: datetime.now().date())
+    visit_date = Column(DateTime, default=lambda: datetime.now())
     note_title = Column(Text, nullable=True)
     patient_complaint = Column(String(255), nullable=True)
     diagnosis = Column(String(255), nullable=True)
@@ -110,8 +110,8 @@ class LabReport(Base):
     test_bill = Column(Float, default=0, nullable=True)
     description = Column(String(255), nullable=True) # added this for lab result description.
     test_status = Column(String(10), default="Pending") # Completed, Pending, Cancelled
-    created_at = Column(DateTime, default=lambda: datetime.now().date())
-    updated_at = Column(DateTime, default=lambda: datetime.now().date())
+    created_at = Column(DateTime, default=lambda: datetime.now())
+    updated_at = Column(DateTime, default=lambda: datetime.now())
 
     visiting_notes = relationship("VisitingNotes", back_populates="report")
     mini_test = relationship("MiniLabResult", back_populates="test_report")

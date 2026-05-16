@@ -1,0 +1,1 @@
+[{"ehr_system_id": "EHR-1", "labs": [{"system_id": "LIS-1", "name": "IDC"}], "payers": [{"system_id": "PAYER-1", "name": "Jubliee"}]}]

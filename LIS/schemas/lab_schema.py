@@ -28,3 +28,50 @@ class TestRequestOut(BaseModel):
     locked_at: datetime | None
 
     model_config = {"from_attributes": True}
+
+# class ShowLabTestParams(BaseModel):
+    
+
+class LabTestBase(BaseModel):
+    test_id: int
+    test_code: str
+
+    test_name : str 
+    parameter :  str | None
+    unit : str | None
+    test_range : str | None
+
+class MiniLabResults(BaseModel):
+    mini_test_name: str
+    normal_range: str
+    unit: str
+    value: str
+
+
+class MiniLabResultOut(BaseModel):
+    mini_test_id: int
+    result_id: int
+    mini_test_name: str
+    normal_range: str
+    unit: str
+    result_value: str
+
+    model_config = {"from_attributes": True}
+class LabTestCreate(BaseModel):
+    user_id: int
+    nic: str
+    test_req_id: int
+
+    description: str | None = None
+    mini_test: list[MiniLabResults] | None = None
+
+
+class LabResultOut(BaseModel):
+    result_id: int
+    user_id: int
+    test_req_id: int
+    description: str | None
+    created_at: datetime
+    mini_test: list[MiniLabResultOut] = []
+
+    model_config = {"from_attributes": True}

@@ -95,7 +95,11 @@ async def add_patient(req: Request, db: Session = Depends(get_db)):
 
         _, path = hl7_extract_paths(segment=data.splitlines()[1])
         values = get_hl7_value_by_path(data, path)
-        
+
+        if db.get(model.Patient, values['PID-3']) is not None:
+            logger.info(f"Patient with NIC {values['PID-3']} already exists, skipping insert.")
+            return {"message": f"Patient {values['PID-3']} already exists"}
+
         dt = datetime.strptime(values['PID-7'], "%Y%m%d")
         date = dt.strftime("%Y-%m-%d")
 
@@ -187,7 +191,7 @@ async def take_lab_order(req: Request, db: Session = Depends(get_db)):
             lab_orders.append(model.LabTestRequest(
                 nic=nic,
                 lab_id=lab_id,
-                vid = path_to_values.get("OBR-2"),
+                vid = path_to_values.get("OBR-2"), # add test code here.
                 test_name= test_name, # OBR-4.2 is the component of OBR-4 which contains the test name, if not found then set it as unknown test.
             ))
         
@@ -200,7 +204,8 @@ async def take_lab_order(req: Request, db: Session = Depends(get_db)):
         
         if not lab_orders:
             logger.warning(f"No lab orders found in the message for NIC: {nic}")
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"message": "No lab orders found in the message"})
+            # raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"message": "No lab orders found in the message"})
+            return {"message": "No lab orders found in the message"}
 
         db.add_all(lab_orders)
         db.commit()

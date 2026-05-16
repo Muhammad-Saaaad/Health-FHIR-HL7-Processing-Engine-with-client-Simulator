@@ -38,7 +38,7 @@ class User(base):
     user_name = Column(String(50), nullable=True)
     email = Column(String(50), nullable=False)
     password = Column(String(100), nullable=False)
-    created_at = Column(DateTime, default=datetime.now())
+    created_at = Column(DateTime, default=datetime.now)
     roll = Column(Integer, default=1, nullable=False) # 1=user or 2=Admin
 
     test_result = relationship("LabResult", back_populates="user")
@@ -58,8 +58,8 @@ class Patient(base):
     lname = Column(String(50), nullable=True)
     dob = Column(DateTime, nullable=True)
     gender = Column(String(10), nullable=False)
-    created_at = Column(DateTime, default=datetime.now())
-    updated_at = Column(DateTime, default=datetime.now())
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now)
 
     __table_args__ = (
         UniqueConstraint('lab_id', 'nic', name='uq_lab_nic'),
@@ -78,9 +78,10 @@ class LabTestRequest(base):
     nic = Column(String(20), ForeignKey("patient.nic", name="fk_testreq_patient_nic"), nullable=False) # every test req will have a patient assign to it
     lab_id = Column(String(50), ForeignKey('lab.lab_id', name='fk_testreq_lab_id'), nullable=False) # lab(fk of lab)
 
+    # add test code here.
     test_name = Column(Text, nullable=False)
     status = Column(String(10), nullable=False, default='Pending') #Pending or Accepted or Declined or Completed
-    created_at = Column(DateTime, default=datetime.now())
+    created_at = Column(DateTime, default=datetime.now)
 
     locked_by = Column(Integer, ForeignKey('users.user_id', name='fk_testreq_locked_by_user_id'), nullable=True)
     locked_at = Column(DateTime, nullable=True)
@@ -100,8 +101,8 @@ class LabTestBilling(base):
 
     bill_amount = Column(Float, nullable=False)
     payment_status = Column(String(10), nullable=False) # pending, accepted, rejected
-    create_at = Column(DateTime, default=datetime.now(), nullable=False)
-    updated_at = Column(DateTime, default=datetime.now(), nullable=False)
+    create_at = Column(DateTime, default=datetime.now, nullable=False)
+    updated_at = Column(DateTime, default=datetime.now, nullable=False)
 
     patient = relationship("Patient", back_populates="test_bill")
     test_req = relationship("LabTestRequest", back_populates="test_bill")
@@ -114,7 +115,7 @@ class LabResult(base):
     test_req_id = Column(Integer, ForeignKey("test_request.test_req_id", name="fk_test_result_test_req_id"), nullable=False)
 
     description = Column(String(255), nullable=True)
-    created_at = Column(DateTime, default=datetime.now(), nullable=False)
+    created_at = Column(DateTime, default=datetime.now, nullable=False)
 
     mini_test = relationship("MiniLabResult", back_populates="test_result")
     user = relationship("User", back_populates="test_result")

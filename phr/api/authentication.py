@@ -28,7 +28,7 @@ def SignUP_patient(patient: auth_schema.SignUp, request: Request, response: Resp
         - `nic` (str)
         - `password` (str)
 
-        Potential errors:
+        Potential errors:   
         - `409 Conflict`: Patient with provided NIC does not exist.
         - `400 Bad Request`: Any unexpected database/server exception.
     """

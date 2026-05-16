@@ -42,7 +42,7 @@ async def add_patient(req: Request, db: Session = Depends(get_db)):
         
         json_data = await req.json()
 
-        print(f"Recieved FHIR Data: {json_data}")
+        # print(f"Recieved FHIR Data: {json_data}")
         logger.info(f"Recieved FHIR Data: {json_data}")
 
         resource_type = json_data['resourceType']
@@ -132,7 +132,7 @@ async def get_visit_note(req: Request, db: Session = Depends(get_db)):
         
         json_data = await req.json()
 
-        print(f"Recieved FHIR Data: {json_data}")
+        # print(f"Recieved FHIR Data: {json_data}")
         logger.info(f"Recieved FHIR Data: {json_data}")
 
         if json_data.get("resourceType") != "Bundle":
@@ -164,7 +164,8 @@ async def get_visit_note(req: Request, db: Session = Depends(get_db)):
                 doctor["name"] = doctor_name
 
                 telecoms = resource.get("telecom", [])
-                doctor['phone_no'] = telecoms[0].get("value", None) if telecoms else None
+                raw_phone = telecoms[0].get("value", None) if telecoms else None
+                doctor['phone_no'] = None if raw_phone in (None, "None", "", "none") else raw_phone
                 
                 extensions = resource.get("extension", [])
                 doctor['about'] = extensions[0].get("valueString", None) if extensions else None
@@ -177,10 +178,10 @@ async def get_visit_note(req: Request, db: Session = Depends(get_db)):
                 else:
                     doctor["specialization"] = None
                 
-                hospital_name = resource.get("organization", {}).get("display", None)
-                if hospital_name == None:
-                    logger.warning(f"Hospital Name not Found in message: {indiviual_entry}")
-                    return {"message": f"Hospital Name not Found in message: \n {indiviual_entry}"}
+                # hospital_name = resource.get("organization", {}).get("display", None)
+                # if hospital_name == None:
+                #     logger.warning(f"Hospital Name not Found in message: {indiviual_entry}")
+                #     return {"message": f"Hospital Name not Found in message: \n {indiviual_entry}"}
 
             elif resource.get("resourceType") == "Encounter":
                 identifiers = resource.get("identifier", [])
@@ -241,7 +242,7 @@ async def get_visit_note(req: Request, db: Session = Depends(get_db)):
                 participants = resource.get("participant", [])
                 participant = participants[0].get("actor", {"reference": None}).get("reference", None) if participants else None
                 
-                if not nic:
+                if not nic: # there can be a chance that the nic here is not available, but it is anywhere else thats why i skip it.
                     logger.warning(f"No patient reference found in invoice resource: \n {lab_test}")
                     pass
                 if not participant:
@@ -253,7 +254,11 @@ async def get_visit_note(req: Request, db: Session = Depends(get_db)):
                     logger.warning(f"No consultation bill found in invoice resource: \n {lab_test}")
                     visit_note['consultation_bill'] = 0
                 else:
-                    visit_note['consultation_bill'] = consultation_bill
+                    try:
+                        visit_note['consultation_bill'] = float(consultation_bill)
+                    except (ValueError, TypeError):
+                        logger.warning(f"Invalid consultation_bill value: {consultation_bill}")
+                        visit_note['consultation_bill'] = 0
                 
                 visit_note['invoice_status'] = resource.get("status", None)
 
@@ -295,13 +300,14 @@ async def get_visit_note(req: Request, db: Session = Depends(get_db)):
         patient = db.query(model.Patient).filter(model.Patient.nic == visit_note['nic']).first()
         if not patient:
             logger.warning(f"No patient found with NIC in database: {visit_note['nic']}")
-            return {"message": f"No patient found with NIC in database: {visit_note['nic']}"}
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No patient found with NIC in database: {visit_note['nic']}")
         
         is_doctor = db.query(model.Doctor).filter(model.Doctor.doctor_id == doctor['doctor_id']).first()
         # if doctor is not avaiable then add the doctor else update the doctor information.
         if not is_doctor:
             doctor_obj = model.Doctor(
                 doctor_id = doctor['doctor_id'],
+                hospital_id = src_system_id,
                 name = doctor['name'],
                 specialization = doctor['specialization'],
                 phone_no = doctor['phone_no'],
@@ -320,6 +326,17 @@ async def get_visit_note(req: Request, db: Session = Depends(get_db)):
         
         # if no relation exists than add the relation.
         if not is_patient_relation:
+            patient_relation_obj = model.PatientRelation(
+                patient_nic = visit_note['nic'],
+                doctor_id = doctor['doctor_id'],
+                hospital_id = src_system_id
+            )
+            db.add(patient_relation_obj)
+        elif is_patient_relation.doctor_id is not None: # if patient has encounterd with another doctor of the same hospital then add this doctor as well.
+            if is_patient_relation.doctor_id == doctor['doctor_id']:
+                logger.info(f"Patient with NIC {visit_note['nic']} already has a relation with doctor id {doctor['doctor_id']} in hospital id {src_system_id}")
+                pass
+
             patient_relation_obj = model.PatientRelation(
                 patient_nic = visit_note['nic'],
                 doctor_id = doctor['doctor_id'],

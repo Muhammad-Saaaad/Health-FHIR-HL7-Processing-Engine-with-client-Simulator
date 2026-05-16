@@ -1,11 +1,12 @@
 from datetime import datetime
 
 from fastapi import APIRouter, status, HTTPException, Depends, Request, Response
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from database import get_db
 import model
-from schemas.lab_schema import TestRequestOut, TestRequestStatusUpdate
+from schemas.lab_schema import TestRequestOut, TestRequestStatusUpdate, LabTestBase, LabTestCreate, LabResultOut
 from rate_limiting import limiter
 
 router = APIRouter(tags=["Test Requests"])
@@ -178,6 +179,172 @@ def update_request_status(status_update: TestRequestStatusUpdate, request: Reque
     db.commit()
     db.refresh(updated_request)
     return  updated_requests
+
+
+@router.get("/requests/take_test_parameters/{nic}/{test_req_id}/{test_name}", response_model=list[LabTestBase], tags=["Test Requests"])
+@limiter.limit("15/minute")  # Limit to 10 requests per minute per IP
+def get_test_parameters(nic: str ,test_req_id: int, test_name: str, request: Request, response: Response, db: Session = Depends(get_db)):
+    """
+        Retrieve test parameters for a specific test request, base on the specific patient gender, and age.
+
+        *Add test Result*
+
+        **Request Body (`ShowLabTestParams`):**
+        - `nic` (str, required): The NIC/CNIC of the patient for whom the test parameters are being requested.
+        - `test_req_id` (int, required): The ID of the test request for
+            which parameters are being requested.
+        - `test_name` (str, required): The name of the test for which parameters are being requested.
+
+        **Response (200 OK):**
+        Returns a list of test parameter objects (`LabTestBase`) that match the requested test name and are appropriate for the patient's age and gender
+        Each `LabTestBase` object contains:
+        - `test_id` (int): Unique identifier for the lab test.
+        - `test_code` (str): Code representing the lab test.
+        - `test_name` (str): Name of the lab test.
+        - `parameter` (str | None): Specific parameter of the test (e.g., "Hemoglobin", "Glucose").
+        - `unit` (str | None): Unit of measurement for the parameter (e.g,"g/dL", "mg/dL").
+        - `test_range` (str | None): Normal range for the parameter, which may vary based on age and gender (e.g., "13.5-17.5 g/dL" for adult   males, "12.0-15.5 g/dL" for adult females). 
+    """
+    test_request = db.query(model.LabTestRequest).filter(model.LabTestRequest.test_req_id == test_req_id, model.LabTestRequest.nic == nic, model.LabTestRequest.test_name == test_name).first()
+    if not test_request:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Test request with ID {test_req_id} not found for the given patient NIC and test name.")
+    
+    patient = db.query(model.Patient).filter(model.Patient.nic == nic).first()
+    if not patient:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Patient with NIC {nic} not found.")
+    
+    if not patient.dob:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Patient date of birth is not set.")
+
+    # Precise age calculation based on year, month and day
+    today = datetime.now().date()
+    dob = patient.dob.date() if isinstance(patient.dob, datetime) else patient.dob
+    age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+    gender = (patient.gender or "").strip().lower()
+
+    lab_tests = db.query(model.LabTest).filter(
+        func.trim(model.LabTest.test_name) == test_name.strip()
+    ).all()
+    if not lab_tests:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Lab test with name {test_name} not found.")
+
+    results: list[LabTestBase] = []
+    for lab_test in lab_tests:
+        lab_gender = (lab_test.gender or "").strip().lower()
+        if lab_gender and lab_gender not in ("any", "both", "all") and gender and lab_gender != gender:
+            continue
+
+        if age < 18:
+            test_range = lab_test.child_range
+        else:
+            test_range = lab_test.adult_range
+
+        results.append({
+            "test_id": lab_test.test_id,
+            "test_code": lab_test.test_code,
+            "test_name": lab_test.test_name,
+            "parameter": lab_test.parameter,
+            "unit": lab_test.unit,
+            "test_range": test_range,
+        })
+
+    return results
+
+
+@router.post("/results", status_code=status.HTTP_201_CREATED, tags=["Test Results"])
+@limiter.limit("15/minute")  # Limit to 15 requests per minute per IP
+def create_lab_result(payload: LabTestCreate, request: Request, response: Response, db: Session = Depends(get_db)):
+    """
+    Create a lab result and its associated mini test results.
+
+    *Add test Result*
+
+    **Request Body (`LabTestCreate`):**
+    - `user_id` (int, required): Technician ID creating the result.
+    - `nic` (str, required): Patient NIC/CNIC.
+    - `test_req_id` (int, required): Test request ID to attach the result.
+    - `description` (str, optional): Overall lab result description.
+    - `mini_test` (list, optional): Mini test result rows.
+        Each item in the list should contain:
+        - `mini_test_name` (str, required): Name of the mini test parameter (e.g., "Hemoglobin").
+        - `normal_range` (str, required): Normal range for the mini test (e.g., "13.5-17.5 g/dL").
+        - `unit` (str, required): Unit of measurement for the mini test (e.g., "g/dL").
+        - `value` (str, required): Result value for the mini test (e.g., "15.2").
+    """
+    test_request = db.get(model.LabTestRequest, payload.test_req_id)
+    if not test_request:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Test request with ID {payload.test_req_id} not found.")
+
+    if test_request.nic != payload.nic:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Test request NIC does not match the provided NIC.")
+
+    if not db.get(model.User, payload.user_id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"User with ID {payload.user_id} not found.")
+
+    try:
+        result = model.LabResult(
+            user_id=payload.user_id,
+            test_req_id=payload.test_req_id,
+            description=payload.description,
+        )
+        db.add(result)
+        db.flush()
+
+        mini_tests = []
+        if payload.mini_test:
+            for item in payload.mini_test:
+                mini_tests.append(model.MiniLabResult(
+                    result_id=result.result_id,
+                    mini_test_name=item.mini_test_name,
+                    normal_range=item.normal_range,
+                    unit=item.unit,
+                    result_value=item.value,
+                ))
+            db.add_all(mini_tests)
+
+        db.commit()
+        return {
+            "message": "Lab result created successfully",
+            "result_id": result.result_id,
+            "mini_test_count": len(mini_tests),
+        }
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
+
+
+@router.get("/results/{result_id}", response_model=LabResultOut, tags=["Test Results"])
+@limiter.limit("20/minute")  # Limit to 20 requests per minute per IP
+def get_lab_result(result_id: int, request: Request, response: Response, db: Session = Depends(get_db)):
+    """
+    Retrieve a lab result with its mini test results.
+    *show test Result*
+
+    **Path Parameters:**
+    - `result_id` (int, required): Lab result ID to fetch.
+
+    **Response (200 OK):**
+    Returns a lab result object containing:
+    - `result_id` (int): Unique identifier for the lab result.
+    - `user_id` (int): ID of the technician who created the result.
+    - `test_req_id` (int): ID of the associated test request.
+    - `description` (str | None): Overall description of the lab result.
+    - `created_at` (datetime): Timestamp when the lab result was created.
+    - `mini_test` (list[MiniLabResultOut]): List of mini test results associated with this lab result. Each item contains:
+
+        - `mini_test_id` (int): Unique identifier for the mini test result.
+        - `result_id` (int): ID of the parent lab result.
+        - `mini_test_name` (str): Name of the mini test parameter (e.g., "Hemoglobin").
+        - `normal_range` (str): Normal range for the mini test (e.g., "13.5-17.5 g/dL").
+        - `unit` (str): Unit of measurement for the mini test (e.g., "g/dL").
+        - `result_value` (str): Result value for the mini test (e.g., "15.2").
+
+    """
+    result = db.get(model.LabResult, result_id)
+    if not result:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Lab result with ID {result_id} not found.")
+
+    return result
 
 # @router.put("/requests/lock_test_request/visit_id/{visit_id}/user_id/{user_id}", response_model=list[TestRequestOut], tags=["Test Requests"])
 # @limiter.limit("15/minute")  # Limit to 15 requests per minute per IP
