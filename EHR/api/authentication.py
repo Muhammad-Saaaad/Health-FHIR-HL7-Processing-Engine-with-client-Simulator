@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 from logging.handlers import RotatingFileHandler
 
 from fastapi import APIRouter, status, Depends, HTTPException, Request, Response
@@ -497,7 +498,10 @@ async def get_connected_labs_insurances(hospital_id: str):
 
         response_data = dict()
 
-        with open(r"E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\EHR\ehr_connected_systems.json", mode="r") as f:
+        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        file_path = os.path.join(base_dir, "ehr_connected_systems.json")
+
+        with open(file_path, mode="r") as f:
             data = f.read()
             data = json.loads(data)
 

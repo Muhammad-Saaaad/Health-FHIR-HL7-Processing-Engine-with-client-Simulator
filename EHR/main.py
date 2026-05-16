@@ -70,7 +70,10 @@ async def get_connected_labs_insurances(request: Request):
         located in the labs_payers.py file.
     """
     data = await request.json()
-    with open(r"E:\project\Health-FHIR-HL7-Processing-Engine-with-client-Simulator\EHR\ehr_connected_systems.json", mode="w") as f:
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    file_path = os.path.join(base_dir, "ehr_connected_systems.json")
+
+    with open(file_path, mode="w") as f:
         f.write(json.dumps(data))
 
     return {"message": "Connected labs and insurances data received successfully"}
