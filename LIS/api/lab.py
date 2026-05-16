@@ -251,7 +251,7 @@ def get_test_parameters(nic: str ,test_req_id: int, test_name: str, request: Req
     return results
 
 
-@router.post("/results", status_code=status.HTTP_201_CREATED, tags=["Test Results"])
+@router.post("/create-results", status_code=status.HTTP_201_CREATED, tags=["Test Results"])
 @limiter.limit("15/minute")  # Limit to 15 requests per minute per IP
 def create_lab_result(payload: LabTestCreate, request: Request, response: Response, db: Session = Depends(get_db)):
     """
@@ -329,7 +329,7 @@ def get_lab_result(result_id: int, request: Request, response: Response, db: Ses
     - `user_id` (int): ID of the technician who created the result.
     - `test_req_id` (int): ID of the associated test request.
     - `description` (str | None): Overall description of the lab result.
-    - `created_at` (datetime): Timestamp when the lab result was created.
+    - `created_at` (datetime): Timestamp when the lab result wa s created.
     - `mini_test` (list[MiniLabResultOut]): List of mini test results associated with this lab result. Each item contains:
 
         - `mini_test_id` (int): Unique identifier for the mini test result.

@@ -535,6 +535,8 @@ async def _process_message(full_path: str, payload, trace_id: str, system_id: st
         logger.warning("trace=%s invalid_system_id=%s for endpoint_url=%s", trace_id, system_id, normalized_path)
     db.close()
 
+    logger.info(f"server: {server}")
+
     logger.info(
         "trace=%s ingest_received path=%s protocol=%s routes_length=%s",
         trace_id,

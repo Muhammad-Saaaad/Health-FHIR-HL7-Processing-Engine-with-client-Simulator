@@ -15,7 +15,6 @@ class PatientCreate(BaseModel):
 class PatientDisplay(BaseModel):
     p_id: int
     nic: str | None
-    insurance_id : str
     name: str
     gender: str | None
     date_of_birth: date | None

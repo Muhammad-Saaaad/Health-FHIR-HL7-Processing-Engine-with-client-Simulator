@@ -44,6 +44,9 @@ def get_hospitals(request: Request, response: Response, db: Session = Depends(ge
     """
     try:
         all_hospitals= db.query(model.Hospital).all()
+        for hospital in all_hospitals:
+            db.query(model.PatientRelation).filter(model.PatientRelation.hospital_id == hospital.hospital_id).all()
+        
         return all_hospitals
     except Exception as exp:
         logger.error(f"Error fetching hospitals: {str(exp)}")
