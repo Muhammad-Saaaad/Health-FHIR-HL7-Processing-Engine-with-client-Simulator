@@ -521,7 +521,7 @@ async def route_worker(route, worker_number: int = 1):
 async def _process_message(full_path: str, payload, trace_id: str, system_id: str):
     db = session_local()
     normalized_path = full_path if full_path.startswith("/") else "/" + full_path
-    
+
     server = db.query(models.Server).filter(models.Server.system_id == system_id).first()
     if not server:
         db.close()
@@ -729,7 +729,7 @@ async def ingest(full_path: str, req: Request):
     try:
         db = session_local()
         server = db.query(models.Server).filter(models.Server.system_id == system_id).first()
-        endpoint = db.query(models.Endpoints).filter(models.Endpoints.url == '/' + full_path, models.Endpoints.server_id == server.id).first()
+        endpoint = db.query(models.Endpoints).filter(models.Endpoints.url == '/' + full_path, models.Endpoints.server_id == server.server_id).first()
         db.close()
         if not endpoint:
             logger.warning("trace=%s invalid_endpoint_url=/%s", trace_id, full_path)
