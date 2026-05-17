@@ -396,45 +396,45 @@ async def get_lis_payer():
         use to display the labs and payers in the ehr while adding patient, and visiting notes.
     """
     while True:
+        db = None
         try:
             db = session_local()
             all_routes = db.query(models.Route).all()
             
-            data = list()
+            data_by_ehr = {}
             for route in all_routes:
                 src_server = route.src_server # takes the entire server data.
                 dest_server = route.dest_server
                 
-                if src_server.category == "EHR" and dest_server.status == "Active":
-                    lab = dict()
-                    payer = dict()
+                if not src_server or not dest_server:
+                    continue
 
-                    if dest_server.category == "LIS" and route.msg_type == "ORM^O01":
-                        lab['system_id'] = dest_server.system_id
-                        lab['name'] = dest_server.name
+                if src_server.category != "EHR" or dest_server.status != "Active":
+                    continue
 
-                    elif dest_server.category == "Payer" and route.msg_type == "ADT^A04":
-                        payer['system_id'] = dest_server.system_id
-                        payer['name'] = dest_server.name
-                    
-                    saved_in_data = False
-                    for ehr in data:
+                ehr_data = data_by_ehr.setdefault(src_server.system_id, {
+                    "ehr_system_id": src_server.system_id,
+                    "labs": [],
+                    "payers": []
+                })
 
-                        if ehr['ehr_system_id'] == src_server.system_id:
-                            if lab and lab not in ehr['labs']:
-                                ehr['labs'].append(lab)
-                            if payer and payer not in ehr['payers']:
-                                ehr['payers'].append(payer)
-                            saved_in_data = True
-                            break
-                            
-                    if not saved_in_data:
-                        data.append({
-                            "ehr_system_id": src_server.system_id,
-                            "labs": [lab] if lab else list(),
-                            "payers": [payer] if payer else list()
-                        })
-            db.close()
+                if dest_server.category == "LIS" and route.msg_type == "ORM^O01":
+                    lab = {
+                        "system_id": dest_server.system_id,
+                        "name": dest_server.name
+                    }
+                    if lab not in ehr_data["labs"]:
+                        ehr_data["labs"].append(lab)
+
+                elif dest_server.category == "Payer" and route.msg_type == "ADT^A04":
+                    payer = {
+                        "system_id": dest_server.system_id,
+                        "name": dest_server.name
+                    }
+                    if payer not in ehr_data["payers"]:
+                        ehr_data["payers"].append(payer)
+
+            data = list(data_by_ehr.values())
             async with httpx.AsyncClient() as client:
                 is_sent = await connected_systems_to_ehr(client, "127.0.0.1", 8001, data)
                 if is_sent:
@@ -443,9 +443,11 @@ async def get_lis_payer():
                     logger.error("Failed to send connected systems data to EHR")
 
         except Exception as exp:
-            db.close()
             logger.exception(str(exp))
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(exp)}")
+        finally:
+            if db:
+                db.close()
         
         await asyncio.sleep(30) # update the data after every 30 seconds
     
