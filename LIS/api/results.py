@@ -2,26 +2,27 @@ import asyncio
 import logging
 from logging.handlers import RotatingFileHandler
 from datetime import datetime
+from uuid import uuid4
 
 from fastapi import APIRouter, status, HTTPException, Depends, Request, Response
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
-from sqlalchemy import desc
+from sqlalchemy import desc, func
 
 from database import get_db
 import model
 from schemas.result_schema import TestResultOut, MiniTestOut, CompleteTestResultCreate
-# from schemas.lab_schema import TestRequestOut
+from schemas.lab_schema import LabTestBase  
 from rate_limiting import limiter
 from .engine_service import send_to_engine
 
 router = APIRouter(tags=["Results"])
 
-logger = logging.getLogger("patient_service")
+logger = logging.getLogger("results")
 logger.setLevel(logging.INFO)
 formatter = logging.Formatter("%(asctime)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s")
 
-handler = RotatingFileHandler(r"logs/patient_service.log", maxBytes=1000000, backupCount=1)
+handler = RotatingFileHandler(r"logs/results.log", maxBytes=1000000, backupCount=1)
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
@@ -36,6 +37,7 @@ def add_complete_result(r_in: CompleteTestResultCreate, request: Request, respon
     - `user_id` (int, required): ID of the lab technician submitting the result. Must be a valid user.
     - `lab_id` (str, required): ID of the lab submitting the result.
     - `test_req_id` (int, required): ID of the test request this result belongs to. Must exist and be accepted.
+    - `test_code` (int | str, required): Code representing the type of test being submitted.
     - `description` (str, optional): Overall description or summary of the test result.
     - `mini_tests` (list, required): List of individual sub-test results. Each item must include:
         - `test_name` (str): Name of the sub-test (e.g., "Hemoglobin", "WBC Count").
@@ -68,6 +70,7 @@ def add_complete_result(r_in: CompleteTestResultCreate, request: Request, respon
     **Rate Limit:**
     - 15 requests per minute per client IP.
     """
+    print("come here")
     lab = db.get(model.Lab, r_in.lab_id)
     if not lab:
         logger.error(f"Invalid lab ID provided: {r_in.lab_id}")
@@ -76,7 +79,7 @@ def add_complete_result(r_in: CompleteTestResultCreate, request: Request, respon
     if not db.get(model.User, r_in.user_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User (Technician) ID not found.")
         
-    req = db.get(model.LabTestRequest, r_in.test_req_id).first()
+    req = db.get(model.LabTestRequest, r_in.test_req_id)
     if not req:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Test Request not found.")
     
@@ -88,76 +91,92 @@ def add_complete_result(r_in: CompleteTestResultCreate, request: Request, respon
 
     #     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="payment not paid.")
 
+    labtest = db.query(model.LabTest).filter(model.LabTest.test_code == r_in.test_code).first()
+    if not labtest:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid test code provided.")
         
     if db.query(model.LabResult).filter(model.LabResult.test_req_id == r_in.test_req_id).first():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Result already submitted for this request.")
 
-    result = model.LabResult(
-        user_id= r_in.user_id,
-        test_req_id = r_in.test_req_id,
-        description = r_in.description,
-    )
-    db.add(result)
-    db.flush()
-
-    db_mini_tests = []
-    for mini_test_data in r_in.mini_tests:
-        db_mini_tests.append(
-            model.MiniLabResult(
-                result_id=result.result_id,
-                test_name = mini_test_data.test_name,
-                normal_range = mini_test_data.normal_range,
-                units = mini_test_data.units,
-                result_value = mini_test_data.result_value
-            )
+    try:
+        result = model.LabResult(
+            user_id= r_in.user_id,
+            test_req_id = r_in.test_req_id,
+            description = r_in.description,
         )
-    db.add_all(db_mini_tests)
+        db.add(result)
+        db.flush()
 
-    hl7_msg = """MSH|^~\\&|LIS|{lab_name}|EHR|{hospital_name}|{timestamp}||ORU^R01|{message_id}|P|2.3"""
-
-    # 4. Update TestRequest status to Completed
-    config_data= db.query(model.Config).filter(model.Config.sent_to_engine == False) \
-            .order_by(desc(model.Config.config_id)).first()
-    
-    if config_data and config_data.hold_flag: # if we have to hold the data
-        history_hospital = config_data.history.get(lab.name, {})
-
-        if history_hospital:
-            history_hospital["submit-lab-result"] = history_hospital.get("submit-lab-result", 0) + 1
-        else:
-            config_data.history[lab.name] = history_hospital
-            config_data.history[lab.name]["submit-lab-result"] = 1
-        
-        endpoint_already_added = False
-        for endpoint in config_data.data:
-            if endpoint.get("system_id") == lab.lab_id and endpoint.get("/submit-lab-result"): # if endpoint exists in config.
-                endpoint["/submit-lab-result"].append(hl7_msg)
-                endpoint_already_added = True
-                break
-        
-        if not endpoint_already_added:
-            config_data.data.append(
-                {   
-                    "system_id": lab.lab_id,
-                    "/submit-lab-result": [hl7_msg]
-                }
+        db_mini_tests = []
+        for mini_test_data in r_in.mini_tests:
+            db_mini_tests.append(
+                model.MiniLabResult(
+                    result_id=result.result_id,
+                    mini_test_name = mini_test_data.test_name,
+                    normal_range = mini_test_data.normal_range,
+                    unit = mini_test_data.units,
+                    result_value = mini_test_data.result_value
+                )
             )
+        db.add_all(db_mini_tests)
 
-        flag_modified(config_data, "history")
-        flag_modified(config_data, "data")
+        msg_id = str(uuid4())
+        date_str = datetime.now().strftime("%Y%m%d%H%M%S")
+
+        hl7_msg = f"""MSH|^~\\&|LIS||EHR||{date_str}||ORU^R01|{msg_id}|P|2.3\n"""
+        hl7_msg = f"PID|1||{req.nic}\n"
+        hl7_msg += f"""OBR|1|{req.vid}||{r_in.test_code}^{labtest.test_name}^{r_in.description}|||||||||||\n"""  
+
+        for idx, mini_test in enumerate(r_in.mini_tests):
+            hl7_msg += f"""OBX|{idx + 1}||{mini_test.test_name}||{mini_test.result_value}|{mini_test.units}|{mini_test.normal_range}|||F\n"""
+
+        # 4. Update TestRequest status to Completed
+        config_data= db.query(model.Config).filter(model.Config.sent_to_engine == False) \
+                .order_by(desc(model.Config.config_id)).first()
+        
+        if config_data and config_data.hold_flag: # if we have to hold the data
+            history_hospital = config_data.history.get(lab.name, {})
+
+            if history_hospital:
+                history_hospital["submit-lab-result"] = history_hospital.get("submit-lab-result", 0) + 1
+            else:
+                config_data.history[lab.name] = history_hospital
+                config_data.history[lab.name]["submit-lab-result"] = 1
+            
+            endpoint_already_added = False
+            for endpoint in config_data.data:
+                if endpoint.get("system_id") == lab.lab_id and endpoint.get("/submit-lab-result"): # if endpoint exists in config.
+                    endpoint["/submit-lab-result"].append(hl7_msg)
+                    endpoint_already_added = True
+                    break
+            
+            if not endpoint_already_added:
+                config_data.data.append(
+                    {   
+                        "system_id": lab.lab_id,
+                        "/submit-lab-result": [hl7_msg]
+                    }
+                )
+
+            flag_modified(config_data, "history")
+            flag_modified(config_data, "data")
+
+            req.status = "Completed"
+            db.add(req)
+            db.commit()
+            logger.info(f"Data added to config for lab {lab.name} due to hold flag. Current history: {config_data.history}")
+            return {"message": "data added to config due to hold flag"}
+        
+        asyncio.create_task(send_to_engine(hl7_msg, "http://127.0.0.1:9000/submit-lab-result", lab.lab_id)) # send the data to engine asynchronously.
 
         req.status = "Completed"
         db.add(req)
         db.commit()
-        logger.info(f"Data added to config for lab {lab.name} due to hold flag. Current history: {config_data.history}")
-        return {"message": "data added to config due to hold flag"}
-    
-    asyncio.create_task(send_to_engine(hl7_msg, "http://127.0.0.1:9000/submit-lab-result", lab.lab_id)) # send the data to engine asynchronously.
-
-    req.status = "Completed"
-    db.add(req)
-    db.commit()
-    return {"message": "result added"}
+        return {"message": "result added"}
+    except Exception as exp:
+        db.rollback()
+        logger.error(f"Error adding complete result: {str(exp)}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
 
 @router.get("/results/test_req_id/{test_req_id}", response_model=TestResultOut)
 @limiter.limit("10/minute")
@@ -207,6 +226,75 @@ def get_test_result(test_req_id: int, request:Request, response: Response, db: S
     result_out.mini_test_results = mini_tests_out
     return result_out
 
+
+@router.get("/requests/take_test_parameters/{nic}/{test_req_id}", response_model=list[LabTestBase])
+@limiter.limit("15/minute")  # Limit to 10 requests per minute per IP
+def get_test_parameters(nic: str ,test_req_id: int, test_name: str, request: Request, response: Response, db: Session = Depends(get_db)):
+    """
+        Retrieve test parameters for a specific test request, base on the specific patient gender, and age.
+
+        *Add test Result*
+
+        **Request Body (`ShowLabTestParams`):**
+        - `nic` (str, required): The NIC/CNIC of the patient for whom the test parameters are being requested.
+        - `test_req_id` (int, required): The ID of the test request for
+            which parameters are being requested.
+        - `test_name` (str, required): The name of the test for which parameters are being requested.
+
+        **Response (200 OK):**
+        Returns a list of test parameter objects (`LabTestBase`) that match the requested test name and are appropriate for the patient's age and gender
+        Each `LabTestBase` object contains:
+        - `test_id` (int): Unique identifier for the lab test.
+        - `test_code` (str): Code representing the lab test.
+        - `test_name` (str): Name of the lab test.
+        - `parameter` (str | None): Specific parameter of the test (e.g., "Hemoglobin", "Glucose").
+        - `unit` (str | None): Unit of measurement for the parameter (e.g,"g/dL", "mg/dL").
+        - `test_range` (str | None): Normal range for the parameter, which may vary based on age and gender (e.g., "13.5-17.5 g/dL" for adult   males, "12.0-15.5 g/dL" for adult females). 
+    """
+    test_request = db.query(model.LabTestRequest).filter(model.LabTestRequest.test_req_id == test_req_id, model.LabTestRequest.nic == nic, model.LabTestRequest.test_name == test_name).first()
+    if not test_request:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Test request with ID {test_req_id} not found for the given patient NIC and test name.")
+    
+    patient = db.query(model.Patient).filter(model.Patient.nic == nic).first()
+    if not patient:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Patient with NIC {nic} not found.")
+    
+    if not patient.dob:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Patient date of birth is not set.")
+
+    # Precise age calculation based on year, month and day
+    today = datetime.now().date()
+    dob = patient.dob.date() if isinstance(patient.dob, datetime) else patient.dob
+    age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+    gender = (patient.gender or "").strip().lower()
+
+    lab_tests = db.query(model.LabTest).filter(
+        func.trim(model.LabTest.test_name) == test_name.strip()
+    ).all()
+    if not lab_tests:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Lab test with name {test_name} not found.")
+
+    results: list[LabTestBase] = []
+    for lab_test in lab_tests:
+        lab_gender = (lab_test.gender or "").strip().lower()
+        if lab_gender and lab_gender not in ("any", "both", "all") and gender and lab_gender != gender:
+            continue
+
+        if age < 18:
+            test_range = lab_test.child_range
+        else:
+            test_range = lab_test.adult_range
+
+        results.append({
+            "test_id": lab_test.test_id,
+            "test_code": lab_test.test_code,
+            "test_name": lab_test.test_name,
+            "parameter": lab_test.parameter,
+            "unit": lab_test.unit,
+            "test_range": test_range,
+        })
+
+    return results
 
 
 # @router.put("/requests/lock_test/{test_req_id}/user_id/{user_id}", response_model=TestRequestOut)

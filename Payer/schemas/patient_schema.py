@@ -23,9 +23,13 @@ class PatientDisplay(BaseModel):
 
     @field_serializer("date_of_birth")
     def serialize_date_of_birth(self, dob: date | None) -> str | None:
-        if dob is None:
-            return None
-        return dob.strftime("%B %d, %Y")
+        try:
+            if dob is None:
+                return None
+            return dob.strftime("%B %d, %Y")
+        except Exception as e:
+            print(f"Error serializing date_of_birth: {str(e)}")
+            return dob
 
     model_config = {"from_attributes": True}
 

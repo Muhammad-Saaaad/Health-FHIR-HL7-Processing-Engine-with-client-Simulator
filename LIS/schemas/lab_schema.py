@@ -47,31 +47,3 @@ class MiniLabResults(BaseModel):
     unit: str
     value: str
 
-
-class MiniLabResultOut(BaseModel):
-    mini_test_id: int
-    result_id: int
-    mini_test_name: str
-    normal_range: str
-    unit: str
-    result_value: str
-
-    model_config = {"from_attributes": True}
-class LabTestCreate(BaseModel):
-    user_id: int
-    nic: str
-    test_req_id: int
-
-    description: str | None = None
-    mini_test: list[MiniLabResults] | None = None
-
-
-class LabResultOut(BaseModel):
-    result_id: int
-    user_id: int
-    test_req_id: int
-    description: str | None
-    created_at: datetime
-    mini_test: list[MiniLabResultOut] = []
-
-    model_config = {"from_attributes": True}
