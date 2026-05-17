@@ -86,10 +86,9 @@ async def add_complete_result(r_in: CompleteTestResultCreate, request: Request, 
     if req.status != "Accepted":
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="test req is not accepted.")
     
-    # if db.query(model.LabTestBilling) \
-    #     .filter(model.LabTestBilling.test_req_id == r_in.test_req_id).first().payment_status != "Paid":
-
-    #     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="payment not paid.")
+    test_req_billing = db.query(model.LabTestBilling).filter(model.LabTestBilling.test_req_id == r_in.test_req_id).first()
+    if not test_req_billing:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Billing information not found for the test request.")
 
     labtest = db.query(model.LabTest).filter(model.LabTest.test_code == r_in.test_code).first()
     if not labtest:
@@ -125,7 +124,8 @@ async def add_complete_result(r_in: CompleteTestResultCreate, request: Request, 
 
         hl7_msg = f"""MSH|^~\\&|LIS||EHR||{date_str}||ORU^R01|{msg_id}|P|2.3\n"""
         hl7_msg += f"PID|1||{req.nic}\n"
-        hl7_msg += f"""OBR|1|{req.vid}||{r_in.test_code}^{labtest.test_name}^{r_in.description}|||||||||||\n"""  
+        hl7_msg += f"FT1|1|||{date_str}|||Service_LabTest|{test_req_billing.bill_amount}||||||||||||||\n"
+        hl7_msg += f"""OBR|1|{req.vid}||{r_in.test_code}^{labtest.test_name}^{r_in.description}|||||||||||\n"""
 
         for idx, mini_test in enumerate(r_in.mini_tests):
             hl7_msg += f"""OBX|{idx + 1}||{mini_test.test_name}||{mini_test.result_value}|{mini_test.units}|{mini_test.normal_range}|||F\n"""

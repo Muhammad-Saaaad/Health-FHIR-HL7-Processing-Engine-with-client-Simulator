@@ -193,7 +193,7 @@ async def submit_claim_from_engine(req: Request, db: Session = Depends(get_db)):
         
         raw = await req.body()
         data = raw.decode("utf-8", errors="replace")
-        logger.info(f"Received HL7 message for patient registration: {data}")
+        logger.info(f"Received HL7 claim submission: {data}")
 
         # Parse all segments
         all_values = {}
@@ -205,7 +205,7 @@ async def submit_claim_from_engine(req: Request, db: Session = Depends(get_db)):
             segment_values = get_hl7_value_by_path(data, paths)
             all_values.update(segment_values)
 
-        logger.info(f"Extracted values from HL7 message: {all_values}")
+        logger.info(f"Extracted values from claim HL7 message: {all_values}")
 
         nic = all_values.get('PID-3')
         vid = all_values.get('PV1-19') or all_values.get('PV1-20')
@@ -251,20 +251,29 @@ async def submit_claim_from_engine(req: Request, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
 
 async def claim_response_to_engine(url: str, data: str, system_id: str):
+    response = None
     try:
         logger.info(f"Sending claim response to engine: {data}")
 
         headers = {"Content-Type": "text/plain", "System-Id": system_id}
-        response = httpx.post(url, content=data, headers=headers, timeout=7)
-        
+        async with httpx.AsyncClient(timeout=httpx.Timeout(60.0, connect=5.0)) as client:
+            response = await client.post(url, content=data, headers=headers)
+
         if response.status_code in (200, 201):
             logger.info(f"Successfully sent claim response to engine")
             return "successfull"
+
+        try:
+            detail = response.json().get("detail", f"Engine returned {response.status_code}")
+        except Exception:
+            detail = response.text or f"Engine returned {response.status_code}"
+        raise Exception(detail)
 
     except httpx.RequestError as req_err:
         logger.exception(f"HTTP request error while sending claim to engine: {str(req_err)}")
         raise Exception(f"HTTP request error: {str(req_err)}") from req_err
     except Exception as exp:
         # Re-raise so the calling endpoint knows delivery failed
-        logger.exception(f"Failed to send claim to engine: {str(exp)} with response: {response}")
+        response_repr = f"status={response.status_code}" if response is not None else "no response (request never completed)"
+        logger.exception(f"Failed to send claim to engine: {str(exp)} ({response_repr})")
         raise

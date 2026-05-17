@@ -39,13 +39,18 @@ async def send_to_engine(data: dict, url: str, system_id: str):
     """
     try:
         logger.info(f"Sending data to engine: {data}")
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(60.0, connect=5.0)) as client:
             headers = {"Content-Type": "application/json", "System-Id": system_id}
-            response = await client.post(url, json=data, headers=headers, timeout=7)
+            response = await client.post(url, json=data, headers=headers)
             if response.status_code == 200:
                 logger.info(f"Successfully sent data to engine with url {url}")
                 return "sucessfull"
-            raise Exception(response.json().get("detail", f"Engine returned {response.status_code}"))
+
+            try:
+                detail = response.json().get("detail", f"Engine returned {response.status_code}")
+            except Exception:
+                detail = response.text or f"Engine returned {response.status_code}"
+            raise Exception(detail)
 
     except Exception as exp:
         logger.error(f"Failed to send data to engine: {str(exp)}")
