@@ -29,7 +29,7 @@ logger.addHandler(handler)
 
 @router.post("/results/complete", status_code=status.HTTP_201_CREATED)
 @limiter.limit("15/minute")  # Limit to 15 requests per minute per IP
-def add_complete_result(r_in: CompleteTestResultCreate, request: Request, response: Response, db: Session = Depends(get_db)):
+async def add_complete_result(r_in: CompleteTestResultCreate, request: Request, response: Response, db: Session = Depends(get_db)):
     """
     Submit a complete lab result for an accepted test request.
 
@@ -124,7 +124,7 @@ def add_complete_result(r_in: CompleteTestResultCreate, request: Request, respon
         date_str = datetime.now().strftime("%Y%m%d%H%M%S")
 
         hl7_msg = f"""MSH|^~\\&|LIS||EHR||{date_str}||ORU^R01|{msg_id}|P|2.3\n"""
-        hl7_msg = f"PID|1||{req.nic}\n"
+        hl7_msg += f"PID|1||{req.nic}\n"
         hl7_msg += f"""OBR|1|{req.vid}||{r_in.test_code}^{labtest.test_name}^{r_in.description}|||||||||||\n"""  
 
         for idx, mini_test in enumerate(r_in.mini_tests):

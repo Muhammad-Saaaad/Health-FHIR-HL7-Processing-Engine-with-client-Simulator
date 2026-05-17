@@ -728,7 +728,11 @@ async def ingest(full_path: str, req: Request):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing System-Id header")
     try:
         db = session_local()
+        logger.info("system_id=%s", system_id)
         server = db.query(models.Server).filter(models.Server.system_id == system_id).first()
+        if server is None:
+            db.close()
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No server found for System-Id: {system_id}")
         endpoint = db.query(models.Endpoints).filter(models.Endpoints.url == '/' + full_path, models.Endpoints.server_id == server.server_id).first()
         db.close()
         if not endpoint:

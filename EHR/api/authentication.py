@@ -486,7 +486,7 @@ def alter_doctor_info(doc_id: int, doctor: schema.DoctorUpdate, request: Request
         logger.error(f"Error updating doctor with ID {doc_id}: {str(e)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
 
-@router.post("/get-labs-payers/{hospital_id}", status_code=status.HTTP_200_OK)
+@router.get("/get-labs-payers/{hospital_id}", status_code=status.HTTP_200_OK)
 async def get_connected_labs_insurances(hospital_id: str):
     """
     Receive connected labs and insurances data from the InterfaceEngine.
