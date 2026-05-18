@@ -245,6 +245,9 @@ if __name__ == "__main__":
         "resourceType": "Bundle",
         "type": "message",
         "id": unique_id,
+        "identifier": {
+            "value": "LIS-1"
+        },
         "entry": [
             { 
                 "resource": {
@@ -295,6 +298,9 @@ if __name__ == "__main__":
     patient_visit = {
         "resourceType": "Bundle",
         "type": "message",
+        "identifier": {
+            "value": "LIS-1"
+        },
         "id": "5e4d2222-11b8-4acc-9998-40a49e273c4e",
         "entry": [
             {
@@ -449,6 +455,59 @@ if __name__ == "__main__":
         },
         "outcome": "complete"
     }
+    
+    send_lab_results = {
+        "resourceType": "Bundle",
+        "type": "message",
+        "entry": [
+            {
+                "resourceType": "ChargeItem",
+                "id": "chargeitem-1",
+                "subject": {
+                    "reference": "Patient/37201-7687308-9"
+                },
+                "context": {
+                    "reference":  "Encounter/123"
+                },
+                "priceOverride": {
+                    "value": 1000.0,
+                }
+            },
+            {
+                "resource": {
+                    "resourceType": "DiagnosticReport",
+                    "code": {
+                        "coding": [
+                            {
+                                "code": "73761001",
+                                "display": "Headache (disorder)"
+                            }
+                        ],
+                        "text": "description of the test result."
+                    }
+                }
+            },
+            {
+                "resource": {
+                    "resourceType": "Observation",
+                    "code": {
+                        "text": "TSH (Thyroid Stimulating Hormone)"
+                    },
+                    "valueQuantity": {
+                        "value": 1.2,
+                        "unit": "mIU/L"
+                    },
+                    "referenceRange": [
+                        {
+                            "text": "0.4 – 4.2"
+                        }
+                    ]
+                }
+            }
+        ]  
+    }
+    
+    
     # ---------------- build_fhir_message test sample ----------------
     # Flat route output -> rebuilt FHIR Bundle with repeated Patient resources
     sample_output_data = {
@@ -501,8 +560,10 @@ if __name__ == "__main__":
     # print("\n--- build_fhir_message sample output ---")
     # print(json.dumps(rebuilt, indent=2))
 
-    is_valid, message = validate_unknown_fhir_resource(patient_registration)
-    print(is_valid, " --> \n" ,message)
+    print(fhir_extract_paths(send_lab_results))
+
+    # is_valid, message = validate_unknown_fhir_resource(send_lab_results)
+    # print(is_valid, " --> \n" ,message)
 
     # import uuid
 

@@ -176,7 +176,10 @@ async def add_patient(patient: schema.post_patient, request: Request, response: 
             phone_no = "Not available" if patient.phone_no is None else patient.phone_no,
             gender = patient.gender.capitalize(),
             date_of_birth = patient.date_of_birth,
-            address = "Not available" if patient.address is None else patient.address
+            address = "Not available" if patient.address is None else patient.address,
+            # Save the chosen Payer's system_id (e.g. "Payer-1") so the engine can route
+            # claim-related messages back to this patient's insurer later on.
+            insurance_system_id = patient.insurance_company,
         )
         db.add(new_patient)
         db.flush()
@@ -188,6 +191,9 @@ async def add_patient(patient: schema.post_patient, request: Request, response: 
         fhir_patient = {
             "resourceType": "Bundle",
             "id": unique_id,
+            "identifier": {
+                "value": patient.insurance_company
+            },
             "type": "message",
             "entry": [
                 {

@@ -76,11 +76,11 @@ async def submit_claim(claim_data: schema.ClaimSubmission, request: Request, res
         logger.warning(f"Claim submission attempted for MPI {claim_data.mpi} and VID {claim_data.vid} but a claim is already in process.")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Claim is already in process for this visit note.")
     
-    # lab_tests = db.query(model.LabReport).filter(model.LabReport.visit_id == claim_data.vid).all() 
-    # for test in lab_tests:
-    #     if test and test.test_status != "Arrived":
-    #         logger.warning(f"Claim submission attempted for MPI {claim_data.mpi} and VID {claim_data.vid} but a lab test is not completed.")
-    #         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="One or more lab tests are not completed for this visit note.")
+    lab_tests = db.query(model.LabReport).filter(model.LabReport.visit_id == claim_data.vid).all() 
+    for test in lab_tests:
+        if test and test.test_status != "Arrived":
+            logger.warning(f"Claim submission attempted for MPI {claim_data.mpi} and VID {claim_data.vid} but a lab test is not completed.")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="One or more lab tests are not completed for this visit note.")
 
     try:
         now_datetime = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -88,6 +88,11 @@ async def submit_claim(claim_data: schema.ClaimSubmission, request: Request, res
             "resourceType": "Claim",
             "id": str(uuid4()),
             "status": "active",
+            "identifier": [
+                {
+                    "value": is_patient.insurance_system_id
+                }
+            ],
             "type": {
                 "coding": [
                     {

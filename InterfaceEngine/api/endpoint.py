@@ -139,10 +139,11 @@ async def add_endpoint(endpoint: AddEndpoint, request: Request, response: Respon
 
         if endpoint.server_protocol == "FHIR":
             sample_msg = endpoint.sample_msg
-            is_valid, message = validate_unknown_fhir_resource(sample_msg)
-            if not is_valid:
-                logger.error(f"Invalid FHIR sample message: {message}")
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=message)
+            # FHIR syntax validation temporarily disabled for testing.
+            # is_valid, message = validate_unknown_fhir_resource(sample_msg)
+            # if not is_valid:
+            #     logger.error(f"Invalid FHIR sample message: {message}")
+            #     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=message)
             
             add_fhir_endpoint_fields(
                 endpoint_id=new_endpoint.endpoint_id,

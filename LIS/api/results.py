@@ -122,13 +122,20 @@ async def add_complete_result(r_in: CompleteTestResultCreate, request: Request, 
         msg_id = str(uuid4())
         date_str = datetime.now().strftime("%Y%m%d%H%M%S")
 
-        hl7_msg = f"""MSH|^~\\&|LIS||EHR||{date_str}||ORU^R01|{msg_id}|P|2.3\n"""
+        # MSH-3 = sending application = this lab's system_id (e.g. "LIS-1").
+        # MSH-5 = receiving application = the originating EHR's system_id we stored
+        # on the patient at registration time. If somehow missing, fall back to "EHR"
+        # which makes the engine fan out to all EHR-category destinations.
+        sending_system_id = lab.lab_id
+        receiving_system_id = (req.patient.dest_system_id if req.patient is not None else None) or "EHR"
+
+        hl7_msg = f"MSH|^~\\&|{sending_system_id}||{receiving_system_id}||{date_str}||ORU^R01|{msg_id}|P|2.3\n"
         hl7_msg += f"PID|1||{req.nic}\n"
         hl7_msg += f"FT1|1|||{date_str}|||Service_LabTest|{test_req_billing.bill_amount}||||||||||||||\n"
-        hl7_msg += f"""OBR|1|{req.vid}||{r_in.test_code}^{labtest.test_name}^{r_in.description}|||||||||||\n"""
+        hl7_msg += f"OBR|{req.vid}||{r_in.test_code}^{labtest.test_name}^{r_in.description}|||||||||||\n"
 
         for idx, mini_test in enumerate(r_in.mini_tests):
-            hl7_msg += f"""OBX|{idx + 1}||{mini_test.test_name}||{mini_test.result_value}|{mini_test.units}|{mini_test.normal_range}|||F\n"""
+            hl7_msg += f"""OBX|{idx + 1}||{mini_test.test_name}||{mini_test.result_value}|{mini_test.units}|{mini_test.normal_range}|||\n"""
 
         # 4. Update TestRequest status to Completed
         config_data= db.query(model.Config).filter(model.Config.sent_to_engine == False) \
@@ -255,7 +262,8 @@ def get_test_parameters(nic: str ,test_req_id: int, test_name: str, request: Req
     if not test_request:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Test request with ID {test_req_id} not found for the given patient NIC and test name.")
     
-    patient = db.query(model.Patient).filter(model.Patient.nic == nic).first()
+    # Patient PK is composite (nic, lab_id). Derive lab_id from the test_request found above.
+    patient = db.get(model.Patient, (nic, test_request.lab_id))
     if not patient:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Patient with NIC {nic} not found.")
     

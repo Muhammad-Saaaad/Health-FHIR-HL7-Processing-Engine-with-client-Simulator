@@ -126,6 +126,9 @@ async def add_visit_note(visit_note: schema.VisitNote ,request: Request, respons
         patient_visit = {
             "resourceType": "Bundle",
             "type": "message",
+            "identifier": {
+                "value": visit_note.lab_name if visit_note.lab_name else None # this is LIS-2 lab system id.
+            },
             "id": unique_id,
             "entry": [
                 {

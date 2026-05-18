@@ -66,6 +66,10 @@ class Patient(Base):
     gender = Column(String(10), nullable= False)
     date_of_birth = Column(Date, nullable= False)
     address = Column(String(255), nullable= True)
+    # The Payer's system_id (e.g. "Payer-1") the patient is registered with.
+    # Captured at registration; the engine uses it to route claim-related messages
+    # to the chosen insurer.
+    insurance_system_id = Column(String(50), nullable=True)
 
     __table_args__ = (
         # Named Primary Key Constraint
@@ -82,8 +86,8 @@ class Bill(Base): # Total Bill
 
     bill_id = Column(Integer, primary_key=True, index=True)
 
-    consultation_amount = Column(Float, nullable=False, server_default='0.0') # service amount, lab amount(1000+2000 = 3000))
-    lab_charges = Column(Float, nullable=True, server_default='0.0')
+    consultation_amount = Column(Float, nullable=False, server_default='0.0') # service amount
+    lab_charges = Column(Float, nullable=True, server_default='0.0') # lab amount(1000+2000 = 3000))
     bill_status = Column(String(10), default="Unpaid") # "Paid" or "Unpaid" or "In Process" or "Denied"
     bill_date = Column(DateTime, default=datetime.now())
 

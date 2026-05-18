@@ -104,14 +104,21 @@ async def add_patient(req: Request, db: Session = Depends(get_db)):
         _, path = hl7_extract_paths(segment=data.splitlines()[1])
         values = get_hl7_value_by_path(data, path)
 
-        if db.get(model.Patient, values['PID-3']) is not None:
-            logger.info(f"Patient with NIC {values['PID-3']} already exists, skipping insert.")
-            return {"message": f"Patient {values['PID-3']} already exists"}
+        # Composite PK: (nic, lab_id). Same NIC can exist in different labs, so we must
+        # qualify by lab_id to detect a true duplicate WITHIN this lab.
+        if db.get(model.Patient, (values['PID-3'], lab_id)) is not None:
+            logger.info(f"Patient with NIC {values['PID-3']} already exists in lab {lab_id}, skipping insert.")
+            return {"message": f"Patient {values['PID-3']} already exists in lab {lab_id}"}
 
         dt = datetime.strptime(values['PID-7'], "%Y%m%d")
         date = dt.strftime("%Y-%m-%d")
 
         gender = "male" if values['PID-8'] == "M" else "female"
+
+        # The InterfaceEngine forwards the original sender's system_id in the `Src-System-Id`
+        # header. Store it so when LIS sends results back, MSH-5 can be set to this value
+        # and the engine routes the reply to the correct EHR.
+        src_system_id = req.headers.get("Src-System-Id")
 
         patient = model.Patient(
             lab_id = lab_id,
@@ -119,7 +126,8 @@ async def add_patient(req: Request, db: Session = Depends(get_db)):
             fname = values['PID-5.1'] if 'PID-5.1' in values else ' '.join(values.get('PID-5', '').split(' ')[:-1]), # here the last -1 is for last name.
             lname = values['PID-5.2'] if 'PID-5.2' in values else values.get('PID-5', '').split(' ')[-1],
             dob = date,
-            gender = gender
+            gender = gender,
+            dest_system_id = src_system_id,
         )
 
         db.add(patient)
@@ -184,8 +192,8 @@ async def take_lab_order(req: Request, db: Session = Depends(get_db)):
                 logger.warning(f"Skipping segment {segment} due to missing OBR-2 (VID): {segment}")
                 continue
             
-            patient = db.get(model.Patient, nic)
-            if patient is None or patient.lab_id != lab_id:
+            patient = db.get(model.Patient, (nic, lab_id))
+            if patient is None:
                 nic_not_found = True
                 break
             

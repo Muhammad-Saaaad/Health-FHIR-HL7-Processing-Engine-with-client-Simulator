@@ -56,8 +56,74 @@ async def send_to_engine(data: dict, url: str, system_id: str):
         logger.error(f"Failed to send data to engine: {str(exp)}")
         raise
 
+def _bundle_resources_by_type(json_data: dict) -> dict[str, list[dict]]:
+    resources: dict[str, list[dict]] = {}
+
+    if json_data.get("resourceType") != "Bundle":
+        resources.setdefault(json_data.get("resourceType"), []).append(json_data)
+        return resources
+
+    for entry in json_data.get("entry", []):
+        resource = entry.get("resource", {})
+        resource_type = resource.get("resourceType")
+        if resource_type:
+            resources.setdefault(resource_type, []).append(resource)
+
+    return resources
+
+def _reference_id(reference: str | None) -> str | None:
+    if not reference:
+        return None
+    return str(reference).split("/")[-1].strip()
+
+def _truncate(value, length: int) -> str:
+    if value is None:
+        return ""
+    return str(value).strip()[:length]
+
+@router.post("/fhir/receive-test-result")
+async def receive_test_result_from_engine(req: Request, db: Session = Depends(get_db)):
+    """
+    Endpoint to receive FHIR DiagnosticReport data from InterfaceEngine, extract test results, and update the corresponding LabTest and TestRequest records in the EHR.
+
+    **Response (200 OK):**
+    Returns JSON object:
+    - `message` (str): Summary of the update operation for the patient NIC and visit ID.
+
+    **Error Responses:**
+    - `400 Bad Request`: Payload parsing, mapping, or database error.
+    - `404 Not Found`: No matching TestRequest exists for the provided data.
+    """
+    try:
+        json_data = await req.json()
+        system_id = req.headers.get("System-Id", "Unknown-System")
+
+        if db.get(model.Hospital, system_id) is None:
+            logger.warning(f"Received test result with unknown system_id: {system_id}")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unknown system_id: {system_id}")
+
+        logger.info(f"Recieved FHIR Data: {json_data}")
+
+        
+        
+
+        db.commit()
+        logger.info(f"Saved {saved_reports} lab report(s) and {saved_observations} observation(s) for MPI={is_patient.mpi}, VID={vid}")
+
+        asyncio.create_task(send_to_engine(data=fhir_msg, url="http://127.0.0.1:9000/receive-test-result", system_id=str(system_id)))
+        logger.info(f"Forwarded FHIR test result Bundle to engine for MPI={is_patient.mpi}, VID={vid}")
+
+        return {"message": f"Lab result saved for MPI={is_patient.mpi}, VID={vid}"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error processing FHIR data: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) 
+
 @router.post("/fhir/claim-response")
-async def submit_claim_from_engine(req: Request, db: Session = Depends(get_db)):
+async def take_claim_response_from_engine(req: Request, db: Session = Depends(get_db)):
     """
     Ingest a FHIR ClaimResponse payload from InterfaceEngine and update the matching EHR bill.
 
@@ -78,24 +144,16 @@ async def submit_claim_from_engine(req: Request, db: Session = Depends(get_db)):
 
         logger.info(f"Recieved FHIR Data: {json_data}")
 
-        resource_type = json_data['resourceType']
+        # resource_type = json_data['resourceType']
         db_data = {}
-        if resource_type != "Bundle":
+        for entry in json_data["entry"]: # this will always recieve resource as bundle.
 
-            paths = fhir_extract_paths(json_data)
+            resource_type = entry['resource']['resourceType']
+            paths = fhir_extract_paths(entry['resource'])
             for path in paths:
 
                 value = get_fhir_value_by_path(json_data, path)
                 db_data[path] = value
-        else: # if resource is Bundle
-            for entry in json_data["entry"]:
-
-                resource_type = entry['resource']['resourceType']
-                paths = fhir_extract_paths(entry['resource'])
-                for path in paths:
-
-                    value = get_fhir_value_by_path(json_data, path)
-                    db_data[path] = value
 
         nic = str(db_data.get("patient.reference").split("/")[-1]).strip() # NIC
         vid = str(db_data.get("request.reference").split("/")[-1]).strip() # vid

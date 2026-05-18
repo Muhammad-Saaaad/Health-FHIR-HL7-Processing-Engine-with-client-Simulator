@@ -8,6 +8,152 @@ This document is a deep walkthrough of [InterfaceEngine/main.py](InterfaceEngine
 
 All **HIGH** and **MED** severity issues that could be safely addressed have been patched. Here's what changed and why, in one place:
 
+### Multi-tenant patient uniqueness (LIS + Payer) ✨ NEW
+
+**Bug:** The same patient (same NIC) could not be registered in two different labs / insurers because of overly strict primary-key/unique constraints. Trying to register Patient A at "IDC Lab" after they were already at "City Lab" raised an integrity error and the engine logged "patient already exists".
+
+**Fix per system:**
+
+| System | Before | After |
+| --- | --- | --- |
+| **EHR** | `mpi` (auto-int) PK + `UniqueConstraint('hospital_id', 'nic')` | Unchanged (was already correct) |
+| **LIS** | `nic` alone was the PK — blocked same NIC at any other lab | Composite PK `(nic, lab_id)`. Same NIC at different lab is now allowed; duplicate NIC within the SAME lab is still rejected. |
+| **Payer** | `pid` (auto-int) PK + no constraint on `(insurance_id, nic)` — silently allowed duplicates | Added filtered UNIQUE index `uq_insurance_nic ON Patient(insurance_id, nic) WHERE nic IS NOT NULL`. Same NIC at different insurer allowed; same NIC twice at the same insurer rejected with `409 Conflict`. NULL `nic` is still permitted multiple times (insurance can register patients before NIC is known). |
+
+**LIS internal impact:**
+- `LabTestRequest(nic, lab_id) → Patient(nic, lab_id)` is now a **composite FK** (declared via `ForeignKeyConstraint` in `__table_args__`).
+- `LabTestBilling.nic` is no longer a FK on its own (test_billing has no `lab_id` column); the patient is reached via `test_req → patient`. The column stays for convenience.
+- All `db.get(model.Patient, nic)` callsites become `db.get(model.Patient, (nic, lab_id))` to satisfy the composite PK.
+- Queries that filtered `LabTestRequest.nic == nic` now also include `LabTestRequest.lab_id == lab_id` so the same NIC at a different lab doesn't bleed into responses.
+
+**Payer internal impact:**
+- `register_patient` adds a `(nic, insurance_id)` pre-check that returns `409 Conflict` with a clear message before any insert is attempted.
+- The existing `(phone_no, dob, name)` dedup check stays — both run.
+
+**Migrations (data-preserving):**
+- LIS: [`b7d2a1c4f9e3_patient_composite_pk_nic_lab.py`](LIS/migrations/versions/b7d2a1c4f9e3_patient_composite_pk_nic_lab.py) — drops old PK + redundant UNIQUE, adds composite PK, swaps FK on `test_request`, drops FK on `test_billing.nic`. Uses dynamic SQL to find SQL Server's auto-named PK.
+- Payer: [`c8e3b2d5a1f4_patient_unique_insurance_nic.py`](Payer/migrations/versions/c8e3b2d5a1f4_patient_unique_insurance_nic.py) — adds the filtered UNIQUE index.
+- Both run `alembic upgrade head`. Both are reversible via `alembic downgrade -1` (LIS downgrade will fail if you've actually created duplicate-NIC patients across labs — that's the data the new PK was meant to allow).
+
+**To apply:**
+```powershell
+cd LIS    ; alembic upgrade head
+cd ..\Payer ; alembic upgrade head
+```
+
+### Targeted delivery: now works for FHIR-single + HL7 + round-trip replies ✨ EXTENDED
+
+The category-scoped routing target is now extracted in three places (was previously only Bundle):
+
+| Source format | Where the engine looks for the target system_id |
+| --- | --- |
+| FHIR `Bundle` | `Bundle.identifier.value` (Bundle has a singular Identifier object) |
+| FHIR single resource (Claim, Patient, etc.) | `payload.identifier[0].value` (single resources have an `identifier[]` array) |
+| HL7 v2 | **MSH-5** (Receiving Application) — the 5th `\|`-separated field of the MSH segment. |
+
+> ⚠️ **Heads-up for single FHIR resources:** `identifier[0].value` is the SAME slot some senders currently use for the patient NIC/MRN (e.g. PHR `/add/patient` reads `db_data["identifier[0].value"]` as the NIC). If you adopt targeted-routing on a single resource, the sender must put the routing target (`Payer-1`) in `identifier[0]` and move NIC/MRN to `identifier[1]` (or another slot). Mapping rules and routing now read the same physical field on single resources.
+
+The filter logic that runs after extraction is identical to before: split on `-`, take the category, lowercase, narrow within that category only, fan out to other categories, `db_logger.error` on a partial miss, `404` only when nothing remains.
+
+**Single-resource example** — a Claim from EHR-1 targeting Payer-2:
+
+```jsonc
+{
+  "resourceType": "Claim",
+  "identifier": [
+    { "value": "Payer-2" },                                          // ← identifier[0] = routing target
+    { "type": {"coding": [{"code": "PLAC"}]}, "value": "CLAIM-12345" }  // ← claim ID at identifier[1]
+  ],
+  ...
+}
+```
+
+**HL7 example** — LIS replies with a result, targeting EHR-1:
+
+```
+MSH|^~\&|LIS-1||EHR-1||20260518120000||ORU^R01|MSG001|P|2.3
+PID|1||37201-6776544-2
+OBR|1234||CBC^Complete Blood Count^...
+```
+Field index 4 (after split-by-`|`) is `EHR-1` → standard HL7 **MSH-5** = receiving application = target.
+
+### Multi-tenant patient: source/destination system_id columns ✨ NEW
+
+To enable round-trip routing (EHR → engine → LIS → engine → EHR), each Patient table now records the system_id of the OTHER side it should communicate with:
+
+| Table | New column | What it stores | Source |
+| --- | --- | --- | --- |
+| `EHR.Patient` | `insurance_system_id` | The Payer the patient is registered with (e.g. `"Payer-1"`) | Captured from the `insurance_company` field of the registration form. |
+| `LIS.Patient` | `dest_system_id` | The originating EHR's system_id (e.g. `"EHR-1"`) | Captured from the `Src-System-Id` header that the engine forwards on every inbound message. |
+| `Payer.Patient` | `dest_system_id` | Same as LIS | Same: captured from `Src-System-Id`. Also forwarded as `X-Src-System-Id` from `engine_service` → `/reg_patient` for the fallback registration path. |
+
+**How replies use the column:**
+- LIS [results.py](LIS/api/results.py) builds the ORU^R01 with `MSH-3 = lab.lab_id` (sending) and `MSH-5 = req.patient.dest_system_id` (receiving). Engine reads MSH-5, narrows the EHR-category routes to the correct one.
+- Payer [claims.py](Payer/api/claims.py) builds the ACK^P03 with `MSH-3 = insurance.insurance_id` and `MSH-5 = user.dest_system_id`. Same engine behavior.
+
+If `dest_system_id` is NULL (pre-existing patients), the reply falls back to a literal `"EHR"` for MSH-5 — engine sees no category match and fans out to all EHR-category destinations (legacy behavior).
+
+**Migrations (data-preserving):**
+- EHR: [`d4f1a2b8c9e7_patient_insurance_system_id.py`](EHR/migrations/versions/d4f1a2b8c9e7_patient_insurance_system_id.py)
+- LIS: [`e5a3b6d2c8f1_patient_dest_system_id.py`](LIS/migrations/versions/e5a3b6d2c8f1_patient_dest_system_id.py)
+- Payer: [`f6b4c7a3d9e2_patient_dest_system_id.py`](Payer/migrations/versions/f6b4c7a3d9e2_patient_dest_system_id.py)
+
+All three are pure `ADD COLUMN ... NULL` — zero rows touched. Apply with `alembic upgrade head` in each project (or use the global commands documented earlier).
+
+### Targeted-delivery via Bundle `identifier.value` ✨ NEW FEATURE (category-scoped)
+
+A FHIR Bundle can narrow which destination server receives the message by setting a top-level `identifier.value`. The value has the format **`<category>-<suffix>`** (e.g. `Payer-1`, `LIS-2`). The category portion (everything before the first `-`) is **lowercased** and used to scope the filter; the **full value** is matched against the destination's `system_id`.
+
+```jsonc
+{
+  "resourceType": "Bundle",
+  "identifier": { "value": "Payer-1" },   // ← target = "payer" category, system_id = "Payer-1"
+  "type": "message",
+  "entry": [ ... ]
+}
+```
+
+**Routing rules** (applied right after FHIR validation in `_process_message`):
+
+The filter is *category-scoped*, not global. For each configured route of the source endpoint:
+- If `dest_server.category.lower() == target_category` → keep ONLY if `dest_server.system_id == identifier.value` (exact match).
+- If `dest_server.category.lower() != target_category` → **always keep** (different category, not targeted → full fanout there).
+
+**Worked example.** Source endpoint has 4 destinations: `Payer-1`, `Payer-2`, `LIS-1`, `LIS-2`. Bundle says `identifier.value = "Payer-1"` → target category = `"payer"`.
+
+| Destination | Category | Matches target category? | Action |
+| --- | --- | --- | --- |
+| `Payer-1` | payer | yes | system_id matches → **send** |
+| `Payer-2` | payer | yes | system_id doesn't match → **skip** |
+| `LIS-1`   | lis   | no  | not targeted → **send** |
+| `LIS-2`   | lis   | no  | not targeted → **send** |
+
+Result: message goes to Payer-1, LIS-1, LIS-2.
+
+**Edge-case behavior:**
+
+| Scenario | Behavior |
+| --- | --- |
+| Missing, `null`, or blank `identifier.value` | Skip the filter entirely → **fan out to all** configured routes (legacy behavior). |
+| Target hits an existing destination | Narrow as described above, deliver normally. |
+| Target's category exists but exact `system_id` doesn't (e.g. only `Payer-1`/`Payer-2` wired, target says `Payer-99`) | Log an `ERROR` to `db_logger` (visible in the engine's DB-log table) saying the targeted destination isn't available. **Other categories still receive** the message (LIS-1, LIS-2 in the example). |
+| All routes filter out (target category was the only category AND missed) | `404 Not Found` with detail listing all available destinations. |
+| Non-Bundle FHIR resources (Patient, Observation, etc.) | Filter is **not applied** — the existing `identifier[0].value` on those resources is used for patient/MRN mapping and would conflict. |
+| HL7 messages | Filter is **not applied** — FHIR-only feature. |
+
+**Implementation notes:**
+- The helper `_extract_target_system_id_from_bundle()` returns `None` for any of the "fan-out" cases.
+- The category split is **`identifier.value.split('-', 1)[0].lower()`** — robust to suffixes that themselves contain hyphens (e.g. `"Payer-1-foo"` → category `"payer"`, system_id stays `"Payer-1-foo"`).
+- The routes query uses `joinedload(Route.dest_server)` so we can read `dest_server.category` and `system_id` after the DB session closes, without an N+1 problem.
+- Works identically for **single ingest** (`POST /{full_path}`) and **batch ingest** (`POST /batch`) — the filter lives in `_process_message`, which both paths share. In a batch, item A can target `Payer-1` and item B can fan out, with no interference.
+
+### Newer round of fixes ✨
+
+- **Path normalization (`//fhir/add-patient` bug):** [main.py:_process_message](InterfaceEngine/main.py) now does `normalized_path = "/" + full_path.lstrip("/")`. Whether the caller sent `fhir/add-patient`, `/fhir/add-patient`, or `//fhir/add-patient`, the DB lookup always sees `/fhir/add-patient`.
+- **Batch ordering (`BATCH_PRESERVE_ORDER=true` by default):** `ingest_batch` now processes items in the **exact order they appear in the request body**, one at a time. Set the env var to `false` to opt back into parallel processing.
+  - **Caveat:** if any destination is Inactive and a message gets parked-for-retry (see [I-5](#i-5-high-inactive-destination-loop-blocks-the-worker-forever-)), that parked message will be redelivered later by `redelivery_watcher` — so it could land AFTER messages that were queued after it. Strict ordering only holds while all destinations stay Active throughout the batch. For absolute ordering you'd need a persistent per-destination queue.
+- **`get_lis_payer` only showing one payer:** the function in [api/server.py](InterfaceEngine/api/server.py) was filtering routes by exact `msg_type == "ORM^O01"` / `"ADT^A04"`. Any lab/payer connected via a different message type (e.g. `ADT^A01`, `ORU^R01`, or `ADT^A04^ADT_A04`) was silently dropped. Now any active EHR→LIS or EHR→Payer route counts. Also removed the `raise HTTPException(...)` that was incorrectly thrown from inside the background loop (would have killed the watcher), and added clean `CancelledError` handling.
+
 ### Batch endpoint (`POST /batch`) now reports partial success ✨ NEW
 
 - The batch endpoint shares `_process_message` with the single-ingest endpoint, so **every fix above applies to batch automatically** (worker crashes, missing-server bail, park-and-resume, no-workers-ready, etc).

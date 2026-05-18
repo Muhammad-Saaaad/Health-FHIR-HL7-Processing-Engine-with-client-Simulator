@@ -76,13 +76,29 @@ def register_patient(data: schema.PatientCreate, insurance_id: str, request: Req
             data.user_id = is_engine_user.user_id
     
     if db.query(models.Patient).filter(
-            models.Patient.phone_no == data.phone_no,                            
+            models.Patient.phone_no == data.phone_no,
             models.Patient.date_of_birth == data.date_of_birth,
             models.Patient.name == data.name).first():
         logger.warning(f"register_patient: duplicate patient attempted: name={data.name} phone_no={data.phone_no}")
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="This Patient already exists")
 
+    # Multi-tenant rule: same NIC may exist under DIFFERENT insurers, but not twice
+    # under the SAME insurer. Only check when nic is actually provided (it's optional).
+    if data.nic and db.query(models.Patient).filter(
+            models.Patient.nic == data.nic,
+            models.Patient.insurance_id == insurance_id).first():
+        logger.warning(f"register_patient: duplicate nic={data.nic} for insurance_id={insurance_id}")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Patient with NIC {data.nic} already exists for insurance {insurance_id}",
+        )
+
     try:
+        # Optional: when called by Payer's engine_service in response to an HL7 ADT from the
+        # InterfaceEngine, the engine_service forwards the originating EHR's system_id as
+        # X-Src-System-Id. We store it so future claim responses can be routed back.
+        src_system_id = request.headers.get("X-Src-System-Id")
+
         new_patient = models.Patient(
             insurance_id=insurance_id,
             nic=data.nic if data.nic else None,
@@ -91,6 +107,7 @@ def register_patient(data: schema.PatientCreate, insurance_id: str, request: Req
             phone_no=data.phone_no,
             gender=data.gender,
             date_of_birth=data.date_of_birth,
+            dest_system_id=src_system_id,
         )
         db.add(new_patient)
         db.flush()

@@ -354,6 +354,114 @@ recieve_response_claim = { // phr => endpoint => /receive-response-claim
     "outcome": "complete"
 }
 
+recieve_test_result = { // ehr => endpoint => /fhir/receive-test-result
+        "resourceType": "Bundle",
+        "type": "message",
+        "entry": [
+            {
+                "resource": {
+                    "resourceType": "ChargeItem",
+                    "id": "chargeitem-1",
+                    "subject": {
+                        "reference": "Patient/37201-7687308-9"
+                    },
+                    "context": {
+                        "reference":  "Encounter/123"
+                    },
+                    "priceOverride": {
+                        "value": 1000.0
+                    }
+                }
+            },
+            {
+                "resource": {
+                    "resourceType": "DiagnosticReport",
+                    "code": {
+                        "coding": [
+                            {
+                                "code": "73761001",
+                                "display": "Headache (disorder)"
+                            }
+                        ],
+                        "text": "description of the test result."
+                    }
+                }
+            },
+            {
+                "resource": {
+                    "resourceType": "Observation",
+                    "code": {
+                        "text": "TSH (Thyroid Stimulating Hormone)"
+                    },
+                    "valueQuantity": {
+                        "value": 1.2,
+                        "unit": "mIU/L"
+                    },
+                    "referenceRange": [
+                        {
+                            "text": "0.4 – 4.2"
+                        }
+                    ]
+                }
+            }
+        ]  
+    }
+
+recieve_test_result = { // phr => endpoint => /receive-test-result
+        "resourceType": "Bundle",
+        "type": "message",
+        "entry": [
+            {
+                "resource": {
+                    "resourceType": "ChargeItem",
+                    "id": "chargeitem-1",
+                    "subject": {
+                        "reference": "Patient/37201-7687308-9"
+                    },
+                    "context": {
+                        "reference":  "Encounter/123"
+                    },
+                    "priceOverride": {
+                        "value": 1000.0
+                    }
+                }
+            },
+            {
+                "resource": {
+                    "resourceType": "DiagnosticReport",
+                    "code": {
+                        "coding": [
+                            {
+                                "code": "73761001",
+                                "display": "Headache (disorder)"
+                            }
+                        ],
+                        "text": "description of the test result."
+                    }
+                }
+            },
+            {
+                "resource": {
+                    "resourceType": "Observation",
+                    "code": {
+                        "text": "TSH (Thyroid Stimulating Hormone)"
+                    },
+                    "valueQuantity": {
+                        "value": 1.2,
+                        "unit": "mIU/L"
+                    },
+                    "referenceRange": [
+                        {
+                            "text": "0.4 – 4.2"
+                        }
+                    ]
+                }
+            }
+        ]  
+    }
+
+
+
 add_patient = // LIS -> endpoint => /get/new-patient
 MSH|^~\\&|EHR||LIS||20260203120000||ADT^A01|MSG00001|P|2.5
 PID|1||37201-7687213-2||saad^Muhammad||20041006|M|||||
@@ -370,6 +478,13 @@ add_visit_note = // lis => endpoint -> /take_lab_order
 MSH|^~\\&|EHR||LIS||20260203120000||ORM^O01|MSG00002|P|2.5
 PID|1||37201-7687213-2|||||||||||
 OBR|01|VID-01||2093-3^Total cholesterol|||||||||||
+
+send_test_result = // LIS => endpoint => /send/test-result
+MSH|^~\\&|LIS||EHR||20250101120000||ORU^R01|1232|P|2.3
+PID|1||1231-2312-22
+FT1|1|||20250101120000|||Service_LabTest|2000||||||||||||||
+OBR|2|2_vid|test_code^test_name^description|||||||||||
+OBX|1||mini_test_name||result_value|units|normal_range|||
 
 
 // ---------------------------------------------------------------------------------------------------------------------------------------------

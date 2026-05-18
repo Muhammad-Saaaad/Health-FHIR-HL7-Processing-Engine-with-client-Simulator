@@ -236,9 +236,3 @@ print(test1)
 # print(datetime.now())
 
 ## 
-
-d = None
-if d is None:
-    print("d is none")
-if not d:
-    print("d is not true")

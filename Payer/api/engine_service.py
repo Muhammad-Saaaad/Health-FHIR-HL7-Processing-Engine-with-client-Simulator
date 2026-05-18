@@ -137,10 +137,17 @@ async def get_registed_patient(req: Request, db: Session = Depends(get_db)):
         .first()
     )
 
+    # InterfaceEngine forwards the original sender's system_id in `Src-System-Id`. Capture it
+    # so when the Payer sends a claim response back, MSH-5 can be set to this value and the
+    # engine routes the reply to the correct EHR.
+    src_system_id = req.headers.get("Src-System-Id")
+
     if existing_patient:
-        # Patient already registered in Payer — just update the NIC
+        # Patient already registered in Payer — update NIC and (re-)set the routing target.
         logger.info(f"Found existing patient for HL7 data. Updating NIC to {nic} for patient ID {existing_patient.pid}")
         existing_patient.nic = nic
+        if src_system_id:
+            existing_patient.dest_system_id = src_system_id
         db.commit()
         db.refresh(existing_patient)
         return JSONResponse(content={"message": "Patient NIC updated successfully"}, status_code=status.HTTP_200_OK)
@@ -148,6 +155,7 @@ async def get_registed_patient(req: Request, db: Session = Depends(get_db)):
         # raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found")
         logger.info(f"Patient not found for HL7 data. Attempting to register new patient.")
         async with httpx.AsyncClient() as client:
+            forward_headers = {"X-Src-System-Id": src_system_id} if src_system_id else {}
             response = await client.post(
                 "http://localhost:8003/reg_patient/"+str(insurance_id).strip(),
                 json={
@@ -158,7 +166,8 @@ async def get_registed_patient(req: Request, db: Session = Depends(get_db)):
                     "date_of_birth": date_of_birth,
                     "user_id": 0, # since we don't have a user_id here, we can set it to 0 or any default value. The reg_patient endpoint should handle this accordingly.
                     "insurance_type": plan_type
-                }
+                },
+                headers=forward_headers,
             )
             if response.status_code == 201:
                 logger.info(f"Successfully registered new patient via /reg_patient endpoint for HL7.")

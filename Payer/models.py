@@ -48,17 +48,31 @@ class SystemUser(Base):
     insurance = relationship("Insurance", back_populates="user")
 
 class Patient(Base):
-    __tablename__ = "Patient" # make sure at the backend that the nic should remain unique.
+    __tablename__ = "Patient"
+    # Multi-tenant: same NIC may legitimately appear under different insurers, but
+    # within a single insurer the NIC must be unique (when present — nic is nullable).
 
     pid = Column(Integer, primary_key=True, index=True)
     nic = Column(String(20), index=True, nullable=True)
     u_id = Column(Integer, ForeignKey("SystemUser.user_id"), nullable=False)
     insurance_id = Column(String(50), ForeignKey('insurance.insurance_id', name='fk_patient_insurance_id'), nullable=True) # insurance(fk of insurance)
-    
+
     name = Column(String(100), nullable=False)
     phone_no = Column(String(20), nullable=True)
     gender = Column(String(10), nullable=False)
     date_of_birth = Column(Date, nullable=False)
+    # The originating EHR's system_id (e.g. "EHR-1"). When the Payer sends data back
+    # (claim responses), this is used as MSH-5 so the engine routes the reply to the
+    # correct EHR.
+    dest_system_id = Column(String(50), nullable=True)
+
+    __table_args__ = (
+        # In SQL Server a regular UNIQUE constraint treats two NULLs as equal,
+        # which would block a second patient with no NIC. A filtered index
+        # ("WHERE nic IS NOT NULL") gives the desired "unique only when present" semantics.
+        # The constraint name MUST match what the migration adds.
+        UniqueConstraint('insurance_id', 'nic', name='uq_insurance_nic'),
+    )
 
     policies = relationship("InsurancePolicy", back_populates="patient")
     claims = relationship("PatientClaim", back_populates="patient")

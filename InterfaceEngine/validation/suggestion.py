@@ -223,11 +223,13 @@ def get_field_type(canonical_name: str) -> str:
         "invoice_patient_ref":                "subject_reference_format",
         "encounter_patient_ref":              "subject_reference_format",
         "lab_order_patient_ref":              "subject_reference_format",
+        "charge_item_patient_ref":            "subject_reference_format",
 
         "practitioner_role_practitioner_ref": "practitioner_reference_format",
         "invoice_participant_ref_id":         "practitioner_reference_format",
 
         "claim_response_encounter_ref":          "encounter_reference_format",
+        "charge_item_encounter_ref":             "encounter_reference_format",
         "claim_encounter_ref":                   "encounter_reference_format",
 
         # "":  "encounter_reference_format",

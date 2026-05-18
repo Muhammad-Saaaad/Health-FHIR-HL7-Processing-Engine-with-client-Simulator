@@ -418,7 +418,9 @@ async def get_lis_payer():
                     "payers": []
                 })
 
-                if dest_server.category == "LIS" and route.msg_type == "ORM^O01":
+                # Any active EHR→LIS route makes that lab "connected" (don't filter by msg_type:
+                # the EHR may use multiple message types — orders, results, etc. — for the same lab).
+                if dest_server.category == "LIS":
                     lab = {
                         "system_id": dest_server.system_id,
                         "name": dest_server.name
@@ -426,7 +428,7 @@ async def get_lis_payer():
                     if lab not in ehr_data["labs"]:
                         ehr_data["labs"].append(lab)
 
-                elif dest_server.category == "Payer" and route.msg_type == "ADT^A04":
+                elif dest_server.category == "Payer":
                     payer = {
                         "system_id": dest_server.system_id,
                         "name": dest_server.name
@@ -438,13 +440,21 @@ async def get_lis_payer():
             async with httpx.AsyncClient() as client:
                 is_sent = await connected_systems_to_ehr(client, "127.0.0.1", 8001, data)
                 if is_sent:
-                    logger.info("Successfully sent connected systems data to EHR")
+                    logger.info(
+                        "Sent connected systems to EHR: ehrs=%s labs=%s payers=%s",
+                        len(data),
+                        sum(len(e["labs"]) for e in data),
+                        sum(len(e["payers"]) for e in data),
+                    )
                 else:
                     logger.error("Failed to send connected systems data to EHR")
 
+        except asyncio.CancelledError:
+            raise
         except Exception as exp:
-            logger.exception(str(exp))
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(exp)}")
+            # Background task — log and keep looping. Raising HTTPException here was a bug
+            # (there's no HTTP context to handle it; it would kill the watcher).
+            logger.exception(f"get_lis_payer iteration failed: {str(exp)}")
         finally:
             if db:
                 db.close()

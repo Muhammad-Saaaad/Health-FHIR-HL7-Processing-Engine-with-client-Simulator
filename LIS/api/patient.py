@@ -57,10 +57,9 @@ def get_patient_detail(nic: str, lab_id: str, request: Request, response: Respon
         - `429 Too Many Requests`: Rate limit exceeded (`20/minute`).
         - `500 Internal Server Error`: Unexpected unhandled server/database error.
     """
-    patient = db.get(model.Patient, nic)
+    # Composite PK (nic, lab_id) — patient is scoped to a specific lab.
+    patient = db.get(model.Patient, (nic, lab_id))
     if not patient:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found")
-    if patient.lab_id != lab_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found for the specified lab")
     response = {
         "nic": patient.nic,
@@ -70,7 +69,10 @@ def get_patient_detail(nic: str, lab_id: str, request: Request, response: Respon
         "age": patient.dob
     }
 
-    lab_details = db.query(model.LabTestRequest).filter(model.LabTestRequest.nic == nic).all()
+    lab_details = db.query(model.LabTestRequest).filter(
+        model.LabTestRequest.nic == nic,
+        model.LabTestRequest.lab_id == lab_id,
+    ).all()
     reports = [
         {
             "report_id": lab_detail.test_req_id,
@@ -115,7 +117,8 @@ def get_pending_requests(lab_id: str, request: Request, response: Response, db: 
         if req.vid in seen_vids:
             continue
 
-        patient = db.get(model.Patient, req.nic)
+        # `lab_id` comes from the path param of this endpoint; same lab as req.lab_id.
+        patient = db.get(model.Patient, (req.nic, lab_id))
         if patient:
             seen_vids.add(req.vid)
             waiting_list_patient = WaitingPatientList(
@@ -168,12 +171,14 @@ def get_patient_process(nic: str, vid: str, lab_id: str, request: Request, respo
     lab_tests = db.query(model.LabTestRequest).filter(
         model.LabTestRequest.vid == vid,
         model.LabTestRequest.nic == nic,
+        model.LabTestRequest.lab_id == lab_id,
         model.LabTestRequest.status == "Pending"
     ).all()
     if not lab_tests:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Visit ID {vid} not found.")
-    
-    patient = db.get(model.Patient, nic) 
+
+    # Composite PK (nic, lab_id)
+    patient = db.get(model.Patient, (nic, lab_id))
     if not patient:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Patient with NIC {nic} not found.")
     
@@ -225,7 +230,8 @@ def get_accepted_requests(lab_id: str, request: Request, response: Response, db:
 
     for req in accepted_requests:
 
-        patient = db.get(model.Patient, req.nic)
+        # `lab_id` is the path param of this endpoint; same as req.lab_id.
+        patient = db.get(model.Patient, (req.nic, lab_id))
         if patient:
             waiting_list_patient = AcceptedPatientList(
                 test_req_id=req.test_req_id,

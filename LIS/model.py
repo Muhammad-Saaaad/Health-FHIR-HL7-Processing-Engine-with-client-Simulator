@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, Column, String, Integer, ForeignKey, DateTime, Float, Text, UniqueConstraint
+from sqlalchemy import JSON, Boolean, Column, String, Integer, ForeignKey, ForeignKeyConstraint, DateTime, Float, Text, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -51,8 +51,10 @@ class User(base):
 class Patient(base):
     __tablename__ = "patient"
 
+    # Composite PK so the SAME nic can be registered in MULTIPLE labs (multi-tenant).
+    # The combination (nic, lab_id) is unique.
     nic = Column(String(20), primary_key=True, index=True)
-    lab_id = Column(String(50), ForeignKey('lab.lab_id', name='fk_patient_lab_id'), nullable=False) # lab(fk of lab)
+    lab_id = Column(String(50), ForeignKey('lab.lab_id', name='fk_patient_lab_id'), primary_key=True)
 
     fname = Column(String(25), nullable=False)
     lname = Column(String(50), nullable=True)
@@ -60,13 +62,16 @@ class Patient(base):
     gender = Column(String(10), nullable=False)
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now)
+    # The originating EHR's system_id (e.g. "EHR-1"). When the LIS sends data back (lab
+    # results), this is used as MSH-5 so the engine routes the reply to the correct EHR.
+    dest_system_id = Column(String(50), nullable=True)
 
-    __table_args__ = (
-        UniqueConstraint('lab_id', 'nic', name='uq_lab_nic'),
-    )
-    
-    test_bill = relationship("LabTestBilling", back_populates="patient")
-    test_req = relationship("LabTestRequest", back_populates="patient")
+    # Note: no direct `test_bill` relationship — test_billing doesn't carry `lab_id`,
+    # so there is no FK from test_billing to the (nic, lab_id) composite PK on patient.
+    # To get a patient's bills, go through `patient.test_req[*].test_bill`.
+    # `overlaps="test_request"` silences the warning about lab_id appearing in both
+    # the Patient-FK and the Lab-FK on test_request.
+    test_req = relationship("LabTestRequest", back_populates="patient", overlaps="test_request")
     lab = relationship("Lab", back_populates="patient")
 
 
@@ -75,7 +80,8 @@ class LabTestRequest(base):
 
     test_req_id = Column(Integer, primary_key=True, index=True)
     vid = Column(String(20), nullable=True)
-    nic = Column(String(20), ForeignKey("patient.nic", name="fk_testreq_patient_nic"), nullable=False) # every test req will have a patient assign to it
+    # nic + lab_id together reference the patient via the composite FK below.
+    nic = Column(String(20), nullable=False, index=True)
     lab_id = Column(String(50), ForeignKey('lab.lab_id', name='fk_testreq_lab_id'), nullable=False) # lab(fk of lab)
 
     # add test code here.
@@ -86,16 +92,34 @@ class LabTestRequest(base):
     locked_by = Column(Integer, ForeignKey('users.user_id', name='fk_testreq_locked_by_user_id'), nullable=True)
     locked_at = Column(DateTime, nullable=True)
 
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ['nic', 'lab_id'],
+            ['patient.nic', 'patient.lab_id'],
+            name='fk_testreq_patient_nic_lab',
+        ),
+    )
+
     test_result = relationship("LabResult", back_populates="test_req")
     test_bill = relationship("LabTestBilling", back_populates="test_req")
-    patient = relationship("Patient", back_populates="test_req")
-    lab = relationship("Lab", back_populates="test_request")
+    # `overlaps=` hints below tell SQLAlchemy that the lab_id column is intentionally
+    # shared between two FK paths (patient composite FK + lab FK).
+    patient = relationship(
+        "Patient",
+        back_populates="test_req",
+        foreign_keys=[nic, lab_id],
+        overlaps="test_request",
+    )
+    lab = relationship("Lab", back_populates="test_request", foreign_keys=[lab_id], overlaps="patient,test_req")
 
 class LabTestBilling(base):
     __tablename__ = "test_billing"
 
     bill_id = Column(Integer, primary_key=True, index=True)
-    nic = Column(String(20), ForeignKey("patient.nic", name="fk_test_billing_patient_nic"), nullable=False)
+    # `nic` is kept as a denormalized column for convenience but is no longer a FK on its own
+    # (the patient PK is now composite (nic, lab_id) and this table doesn't carry lab_id).
+    # Patient is reachable via `test_req` -> Patient.
+    nic = Column(String(20), nullable=False, index=True)
     test_req_id = Column(Integer, ForeignKey("test_request.test_req_id", name="fk_test_billing_test_req_id"), nullable=False)
     vid = Column(String(20), nullable=False)
 
@@ -104,7 +128,7 @@ class LabTestBilling(base):
     create_at = Column(DateTime, default=datetime.now, nullable=False)
     updated_at = Column(DateTime, default=datetime.now, nullable=False)
 
-    patient = relationship("Patient", back_populates="test_bill")
+    # Note: no direct `patient` relationship here either — use `bill.test_req.patient`.
     test_req = relationship("LabTestRequest", back_populates="test_bill")
 
 class LabResult(base):

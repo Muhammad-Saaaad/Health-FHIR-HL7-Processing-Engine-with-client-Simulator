@@ -200,9 +200,16 @@ async def claim_status(user_id: int, claim_id : int, claim_status: str, request:
     
     user = db.get(models.Patient, test_req.pid)
     insurance = db.get(models.Insurance, user.insurance_id)
-    
+
+    # MSH-3 = sending application = this insurer's system_id (e.g. "Payer-1").
+    # MSH-5 = receiving application = the originating EHR's system_id we stored on the
+    # patient when they were registered via the engine. Fall back to "EHR" so the engine
+    # fans out to all EHR-category destinations if we don't have a specific one.
+    sending_system_id = insurance.insurance_id if insurance is not None else "PAYER"
+    receiving_system_id = (user.dest_system_id if user is not None else None) or "EHR"
+
     msg_id = str(uuid4())
-    hl7_msg = f"MSH|^~\\&|PAYER||EHR||20260502153000|{msg_id}|ACK^P03||P|2.5\n"
+    hl7_msg = f"MSH|^~\\&|{sending_system_id}||{receiving_system_id}||20260502153000|{msg_id}|ACK^P03||P|2.5\n"
     hl7_msg += f"PID|1||{user.nic}\n"
     hl7_msg += f"PV1|1||||||||||||||||||{claim.vid}\n"
     hl7_msg += f"MSA|1|AA|{claim_status}\n"
