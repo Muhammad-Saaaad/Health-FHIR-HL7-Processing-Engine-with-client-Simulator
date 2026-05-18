@@ -24,6 +24,30 @@ handler = RotatingFileHandler(r"logs/visit_note.log", maxBytes=5*1024*1024, back
 handler.setFormatter(formater)
 logger.addHandler(handler)
 
+def _serialize_vital(vital: model.Vitals) -> dict:
+    return {
+        "vital_id": vital.vital_id,
+        "type": vital.type,
+        "systolic": vital.systolic,
+        "diastolic": vital.diastolic,
+        "value": vital.value,
+        "unit": vital.unit,
+        "meal_time": vital.meal_time,
+        "recorded_at": vital.recorded_at.isoformat(),
+    }
+
+@router.get("/vitals", status_code=status.HTTP_200_OK)
+def get_vitals(db: Session = Depends(get_db)):
+    """
+    Retrieve all stored vital readings.
+    """
+    try:
+        vitals = db.query(model.Vitals).order_by(model.Vitals.recorded_at.desc()).all()
+        return [_serialize_vital(vital) for vital in vitals]
+    except Exception as exp:
+        logger.error(f"Error fetching vitals: {str(exp)}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
+
 @router.post("/visit-note-add", status_code=status.HTTP_201_CREATED)
 @limiter.limit("10/minute")
 async def add_visit_note(visit_note: schema.VisitNote ,request: Request, response: Response, db: Session = Depends(get_db)):

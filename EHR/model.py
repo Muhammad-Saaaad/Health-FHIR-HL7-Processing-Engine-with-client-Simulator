@@ -187,6 +187,18 @@ class MiniLabResult(Base):
 
     test_report = relationship("LabReport", back_populates="mini_test")
 
+class Vitals(Base):
+    __tablename__ = "vitals"
+
+    vital_id = Column(Integer, primary_key=True, index=True)
+    type = Column(String(20), nullable=False)
+    systolic = Column(String(20), nullable=True)
+    diastolic = Column(String(20), nullable=True)
+    value = Column(String(20), nullable=True)
+    unit = Column(String(20), nullable=False)
+    meal_time = Column(String(20), nullable=True)
+    recorded_at = Column(DateTime, nullable=False)
+
 # to apply migrations
 
 ## alembic init migrations

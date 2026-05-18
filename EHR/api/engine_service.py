@@ -81,6 +81,104 @@ def _truncate(value, length: int) -> str:
         return ""
     return str(value).strip()[:length]
 
+def _parse_fhir_datetime(value: str | None) -> datetime:
+    if not value:
+        return datetime.now()
+    try:
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except Exception:
+        return datetime.now()
+
+def _code_text(code: dict | None) -> str:
+    if not isinstance(code, dict):
+        return ""
+    if code.get("text"):
+        return str(code.get("text"))
+    coding = code.get("coding", [])
+    if isinstance(coding, list) and coding:
+        return str(coding[0].get("display") or coding[0].get("code") or "")
+    return ""
+
+def _component_value(observation: dict, name: str) -> str | None:
+    for component in observation.get("component", []):
+        component_name = _code_text(component.get("code", {})).lower()
+        if name.lower() in component_name:
+            return component.get("valueQuantity", {}).get("value")
+    return None
+
+def _component_unit(observation: dict) -> str:
+    for component in observation.get("component", []):
+        unit = component.get("valueQuantity", {}).get("unit")
+        if unit:
+            return str(unit)
+    return ""
+
+@router.post("/fhir/receive-vitals", status_code=status.HTTP_201_CREATED)
+async def receive_vitals_from_engine(req: Request, db: Session = Depends(get_db)):
+    """
+    Receive a compact FHIR Bundle of Observation vitals and store them in EHR.
+    """
+    try:
+        json_data = await req.json()
+        logger.info(f"Received vitals FHIR Data: {json_data}")
+
+        entries = json_data.get("entry", []) if json_data.get("resourceType") == "Bundle" else [{"resource": json_data}]
+        vitals = []
+
+        for entry in entries:
+            resource = entry.get("resource", {})
+            if resource.get("resourceType") != "Observation":
+                continue
+
+            vital_type = _code_text(resource.get("code", {}))
+            meal_time = None
+            notes = resource.get("note", [])
+            if isinstance(notes, list) and notes:
+                meal_time = notes[0].get("text")
+
+            if vital_type.lower() == "bp":
+                systolic = _component_value(resource, "systolic")
+                diastolic = _component_value(resource, "diastolic")
+                value = None
+                unit = _component_unit(resource)
+            else:
+                value_quantity = resource.get("valueQuantity", {})
+                systolic = None
+                diastolic = None
+                value = value_quantity.get("value")
+                unit = value_quantity.get("unit", "")
+
+            vitals.append(model.Vitals(
+                type=str(vital_type),
+                systolic=None if systolic is None else str(systolic),
+                diastolic=None if diastolic is None else str(diastolic),
+                value=None if value is None else str(value),
+                unit=str(unit),
+                meal_time=None if meal_time is None else str(meal_time),
+                recorded_at=_parse_fhir_datetime(resource.get("effectiveDateTime")),
+            ))
+
+        if not vitals:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No Observation vitals found in FHIR payload")
+
+        db.add_all(vitals)
+        db.commit()
+        for vital in vitals:
+            db.refresh(vital)
+
+        return {
+            "message": "Vitals received successfully",
+            "count": len(vitals),
+            "vital_ids": [vital.vital_id for vital in vitals],
+        }
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exp:
+        db.rollback()
+        logger.error(f"Error processing vitals FHIR data: {str(exp)}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
+
 @router.post("/fhir/receive-test-result")
 async def receive_test_result_from_engine(req: Request, db: Session = Depends(get_db)):
     """
@@ -102,15 +200,171 @@ async def receive_test_result_from_engine(req: Request, db: Session = Depends(ge
             logger.warning(f"Received test result with unknown system_id: {system_id}")
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unknown system_id: {system_id}")
 
-        logger.info(f"Recieved FHIR Data: {json_data}")
+        logger.info(f"Received FHIR Data: {json_data}")
 
-        
-        
+        patient_nic = ""
+        vid = ""
+        price = 0.0
+        lab_report_data = {}
+        mini_lab_results = []
+            
+        for index, indiviual_entry in enumerate(json_data['entry']):
+            resource = indiviual_entry.get("resource", None)
+            if not resource:
 
+                logger.warning(f"No resource found in entry index : {index} \n {indiviual_entry}")
+                continue
+
+            if resource.get("resourceType") == "ChargeItem":
+
+                nic = resource.get("subject.reference", "").split("/")
+                if len(nic) < 2:
+                    logger.warning(f"No patient reference found in entry index : {index} \n {indiviual_entry}")
+                    continue
+                patient_nic = nic[-1].strip()
+
+                vid = resource.get("subject.context", "").split("/")
+                if len(vid) < 2:
+                    logger.warning(f"No encounter reference found in entry index : {index} \n {indiviual_entry}")
+                    continue
+                vid = vid[-1].strip()
+                
+                priceOverride = resource.get("priceOverride", {})
+                price = priceOverride.get("value", 0.0)
+            
+            elif resource.get("resourceType") == "DiagnosticReport":
+                lab_data = resource.get("code.coding", "")
+                if isinstance(lab_data, list) and len(lab_data) > 0:
+                    lab_report_data['code'] = lab_data[0].get("code", "")
+                    lab_report_data['name'] = lab_data[0].get("display", "")
+
+                lab_report_data['description'] = resource.get("code.text", "")
+            
+            elif resource.get("resourceType") == "Observation":
+                mini_result = {}
+                mini_result['mini_test_name'] = resource.get("code.text", "")
+                mini_result['result_value'] = resource.get("valueQuantity.value", "")
+                mini_result['unit'] = resource.get("valueQuantity.unit", "")
+                mini_result['normal_range'] = resource.get("referenceRange[0].text", "")
+                mini_lab_results.append(mini_result)
+
+        if not patient_nic or not vid:
+            logger.error(f"Missing patient NIC or visit ID in received FHIR data: {json_data}")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing patient NIC or visit ID in FHIR data")
+        
+        is_patient = db.query(model.Patient).filter(model.Patient.nic == patient_nic).first()
+        if is_patient is None:
+            logger.error(f"No patient found for NIC={patient_nic} in received FHIR data")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No patient found for NIC={patient_nic}")
+        
+        is_note = db.query(model.VisitingNotes).filter(model.VisitingNotes.mpi == is_patient.mpi, model.VisitingNotes.note_id == vid).first()
+        if is_note is None:
+            logger.error(f"No visit note found for MPI={is_patient.mpi}, VID={vid} in received FHIR data")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No visit note found for MPI={is_patient.mpi}, VID={vid}")
+        
+        lab_report = db.query(model.LabReport).filter(model.LabReport.visit_id == is_note.note_id, model.LabReport.loinc_code == lab_report_data.get("code", "")).first()
+        if not lab_report:
+            logger.error(f"No lab report found for VID={vid} and LOINC code={lab_report_data.get('code', '')} in received FHIR data")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No lab report found for VID={vid} and LOINC code={lab_report_data.get('code', '')}")
+        
+        lab_report.description = lab_report_data.get("description", "")
+        lab_report.updated_at = datetime.now()
+        lab_report.test_status = "Arrived"
+        db.add(lab_report)
+
+        all_model_mini_results = []
+        for mini_result in mini_lab_results:
+            all_model_mini_results.append(model.MiniLabResult(
+                report_id=lab_report.report_id,
+                test_name=mini_result['mini_test_name'],
+                result_value=mini_result['result_value'],
+                unit=mini_result['unit'],
+                normal_range=mini_result['normal_range']
+            ))
+        
+        db.add_all(all_model_mini_results)
+
+        bill = db.query(model.Bill).filter(model.Bill.bill_id == is_note.bill_id).first()
+        bill.lab_charges += price
+        bill.bill_date = datetime.now()
         db.commit()
-        logger.info(f"Saved {saved_reports} lab report(s) and {saved_observations} observation(s) for MPI={is_patient.mpi}, VID={vid}")
 
-        asyncio.create_task(send_to_engine(data=fhir_msg, url="http://127.0.0.1:9000/receive-test-result", system_id=str(system_id)))
+        observation_entries = [
+            {
+                "resource": {
+                    "resourceType": "Observation",
+                    "code": {
+                        "text": mini_result.get("mini_test_name", "")
+                    },
+                    "valueQuantity": {
+                        "value": mini_result.get("result_value", ""),
+                        "unit": mini_result.get("unit", "")
+                    },
+                    "referenceRange": [
+                        {
+                            "text": mini_result.get("normal_range", "")
+                        }
+                    ]
+                }
+            }
+            for mini_result in mini_lab_results
+        ]
+
+        fhir_msg = {
+            "resourceType": "Bundle",
+            "type": "message",
+            "entry": [
+                {
+                    "resource": {
+                        "resourceType": "ChargeItem",
+                        "id": "chargeitem-1",
+                        "subject": {
+                            "reference": "Patient/"+ str(patient_nic)
+                        },
+                        "context": {
+                            "reference":  "Encounter/"+ str(vid)
+                        },
+                        "priceOverride": {
+                            "value": price
+                        }
+                    }
+                },
+                {
+                    "resource": {
+                        "resourceType": "DiagnosticReport",
+                        "code": {
+                            "coding": [
+                                {
+                                    "code": lab_report_data.get("code", ""),
+                                    "display": lab_report_data.get("name", "Unknown Test")
+                                }
+                            ],
+                            "text": lab_report_data.get("description", "Unknown description")
+                        }
+                    }
+                },
+                {
+                    "resource": {
+                        "resourceType": "Observation",
+                        "code": {
+                            "text": "TSH (Thyroid Stimulating Hormone)"
+                        },
+                        "valueQuantity": {
+                            "value": 1.2,
+                            "unit": "mIU/L"
+                        },
+                        "referenceRange": [
+                            {
+                                "text": "0.4 – 4.2"
+                            }
+                        ]
+                    }
+                }
+            ]  
+        }
+        fhir_msg["entry"] = fhir_msg["entry"][:2] + observation_entries
+
+        # asyncio.create_task(send_to_engine(data=fhir_msg, url="http://127.0.0.1:9000/receive-test-result", system_id=str(system_id)))
         logger.info(f"Forwarded FHIR test result Bundle to engine for MPI={is_patient.mpi}, VID={vid}")
 
         return {"message": f"Lab result saved for MPI={is_patient.mpi}, VID={vid}"}
