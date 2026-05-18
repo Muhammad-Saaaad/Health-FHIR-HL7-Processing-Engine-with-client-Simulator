@@ -66,6 +66,10 @@ Collision rules enforced throughout:
 
 FHIR_EXACT_CANONICAL: dict[str, str] = {
 
+    # -- Bundle routing/metadata ------------------------------------------------
+    "Bundle-identifier.value":                              "hospital_id",
+    "Bundle-type":                                          "bundle_type",
+
     # ── Patient ───────────────────────────────────────────────────────────────
     # "Patient-id":                                         "patient_fhir_id",
     "Patient-identifier[0].value":                        "NIC",
@@ -262,11 +266,14 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
     "Observation-code.text":                                  "observation_name", # matched
     "Observation-subject.reference":                          "observation_patient",
     "Observation-encounter.reference":                        "observation_encounter",
+    "Observation-extension[0].url":                           "observation_extension_url",
+    "Observation-extension[0].valueString":                   "hospital_id",
     "Observation-effectiveDateTime":                          "observation_datetime",
     "Observation-effectivePeriod.start":                      "observation_start",
     "Observation-effectivePeriod.end":                        "observation_end",
     "Observation-issued":                                     "observation_issued",
     "Observation-performer[0].reference":                     "responsible_observer",
+    "Observation-performer[0].display":                       "responsible_observer_name",
     "Observation-valueQuantity.value":                        "result_value", # matched
     "Observation-valueQuantity.unit":                         "result_unit", # matched
     "Observation-valueQuantity.system":                       "result_unit_system",
@@ -292,10 +299,16 @@ FHIR_EXACT_CANONICAL: dict[str, str] = {
     "Observation-referenceRange[0].high.unit":                "ref_range_high_unit",
     "Observation-referenceRange[0].text":                     "reference_range", # matched
     "Observation-hasMember[0].reference":                     "observation_member",
+    "Observation-component[0].code.text":                     "systolic_label",
     "Observation-component[0].code.coding[0].code":           "component_code",
     "Observation-component[0].code.coding[0].display":        "component_name",
-    "Observation-component[0].valueQuantity.value":           "component_value",
-    "Observation-component[0].valueQuantity.unit":            "component_unit",
+    "Observation-component[0].valueQuantity.value":           "systolic",
+    "Observation-component[0].valueQuantity.unit":            "systolic_unit",
+    "Observation-component[1].code.text":                     "diastolic_label",
+    "Observation-component[1].code.coding[0].code":           "diastolic_code",
+    "Observation-component[1].code.coding[0].display":        "diastolic_name",
+    "Observation-component[1].valueQuantity.value":           "diastolic",
+    "Observation-component[1].valueQuantity.unit":            "diastolic_unit",
 
     # ── DiagnosticReport (Lab Report) ─────────────────────────────────────────
     # "DiagnosticReport-id":                                    "report_fhir_id",
