@@ -129,6 +129,8 @@ async def get_visit_note(req: Request, db: Session = Depends(get_db)):
     try:
         src_system_id = req.headers.get("Src-System-Id", "Unknown-hospital-id")
         src_system_name = req.headers.get("Src-System-Name", "Unknown-hospital")
+        # adding dest_server_system id means phr system id.
+        phr_system_id = req.headers.get("System-Id", "Unknown_phr_system_id")
         
         json_data = await req.json()
 
@@ -469,3 +471,133 @@ async def submit_claim_from_engine(req: Request, db: Session = Depends(get_db)):
     except Exception as e:
         logger.error(f"Error processing FHIR data: {str(e)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+# @router.post("/fhir/receive-test-result")
+# async def receive_test_result_from_engine(req: Request, db: Session = Depends(get_db)):
+#     """
+#     Endpoint to receive FHIR DiagnosticReport data from InterfaceEngine, extract test results, and update the corresponding LabTest and TestRequest records in the EHR.
+
+#     **Response (200 OK):**
+#     Returns JSON object:
+#     - `message` (str): Summary of the update operation for the patient NIC and visit ID.
+
+#     **Error Responses:**
+#     - `400 Bad Request`: Payload parsing, mapping, or database error.
+#     - `404 Not Found`: No matching TestRequest exists for the provided data.
+#     """
+#     try:
+#         json_data = await req.json()
+#         system_id = req.headers.get("System-Id", "Unknown-System")
+
+#         if db.get(model.Hospital, system_id) is None:
+#             logger.warning(f"Received test result with unknown system_id: {system_id}")
+#             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unknown system_id: {system_id}")
+
+#         logger.info(f"Received FHIR Data: {json_data}")
+
+#         patient_nic = ""
+#         vid = ""
+#         price = 0.0
+#         lab_report_data = {}
+#         mini_lab_results = []
+            
+#         for index, indiviual_entry in enumerate(json_data['entry']):
+#             resource = indiviual_entry.get("resource", None)
+#             if not resource:
+
+#                 logger.warning(f"No resource found in entry index : {index} \n {indiviual_entry}")
+#                 continue
+
+#             if resource.get("resourceType") == "ChargeItem":
+#                 print(resource)
+#                 nic = resource.get("subject", "")
+#                 if nic != "":
+#                     nic = nic.get("reference", "").split("/")
+#                 if len(nic) < 2:
+#                     logger.warning(f"No patient reference found in entry index : {index} \n {indiviual_entry}")
+#                     continue
+#                 patient_nic = nic[-1].strip()
+
+#                 vid = resource.get("context", "")
+#                 if vid != "":
+#                     vid = vid.get("reference", "").split("/")
+#                 if len(vid) < 2:
+#                     logger.warning(f"No encounter reference found in entry index : {index} \n {indiviual_entry}")
+#                     continue
+#                 vid = vid[-1].strip()
+                
+#                 priceOverride = resource.get("priceOverride", {})
+#                 price = priceOverride.get("value", 0.0)
+            
+#             elif resource.get("resourceType") == "DiagnosticReport":
+#                 lab_data = resource.get("code", "")
+#                 if lab_data != "":
+#                     lab_data = lab_data.get("coding", "")
+#                 if isinstance(lab_data, list) and len(lab_data) > 0:
+#                     lab_report_data['code'] = lab_data[0].get("code", "")
+#                     lab_report_data['name'] = lab_data[0].get("display", "")
+
+#                 lab_report_data['description'] = resource.get("code.text", "")
+            
+#             elif resource.get("resourceType") == "Observation":
+#                 mini_result = {}
+#                 mini_result['mini_test_name'] = resource.get("code", "").get("text", "")
+#                 mini_result['result_value'] = resource.get("valueQuantity", "").get("value", "")
+#                 mini_result['unit'] = resource.get("valueQuantity", "").get("unit", "")
+#                 mini_result['normal_range'] = resource.get("referenceRange", "")[0].get("text")
+#                 mini_lab_results.append(mini_result)
+
+#         if not patient_nic or not vid:
+#             print("nic", nic)
+#             print("nic", vid)
+#             logger.error(f"Missing patient NIC or visit ID in received FHIR data: {json_data}")
+#             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing patient NIC or visit ID in FHIR data")
+        
+#         is_patient = db.query(model.Patient).filter(model.Patient.nic == patient_nic).first()
+#         if is_patient is None:
+#             logger.error(f"No patient found for NIC={patient_nic} in received FHIR data")
+#             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No patient found for NIC={patient_nic}")
+        
+#         is_note = db.query(model.VisitingNotes).filter(model.VisitingNotes.note_id == vid).first()
+#         if is_note is None:
+#             logger.error(f"No visit note found for MPI={is_patient.mpi}, VID={vid} in received FHIR data")
+#             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No visit note found for MPI={is_patient.mpi}, VID={vid}")
+        
+#         lab_report = db.query(model.LabReport).filter(model.LabReport.visit_id == vid, model.LabReport.loinc_code == lab_report_data.get("code", "")).first()
+#         if not lab_report:
+#             logger.error(f"No lab report found for VID={vid} and LOINC code={lab_report_data.get('code', '')} in received FHIR data")
+#             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No lab report found for VID={vid} and LOINC code={lab_report_data.get('code', '')}")
+        
+#         lab_report.description = lab_report_data.get("description", "")
+#         lab_report.updated_at = datetime.now()
+#         lab_report.test_status = "Arrived"
+#         db.add(lab_report)
+
+#         all_model_mini_results = []
+#         for mini_result in mini_lab_results:
+#             all_model_mini_results.append(model.MiniLabResult(
+#                 report_id=lab_report.report_id,
+#                 test_name=mini_result['mini_test_name'],
+#                 result_value=mini_result['result_value'],
+#                 unit=mini_result['unit'],
+#                 normal_range=mini_result['normal_range']
+#             ))
+        
+#         db.add_all(all_model_mini_results)
+
+#         bill = db.query(model.Bill).filter(model.Bill.bill_id == is_note.bill_id).first()
+#         bill.lab_charges += float(str(price).strip())
+#         bill.bill_date = datetime.now()
+#         db.commit()
+
+#         logger.info(f"Forwarded FHIR test result Bundle to engine for MPI={is_patient.mpi}, VID={vid}")
+
+#         return {"message": f"Lab result saved for MPI={is_patient.mpi}, VID={vid}"}
+
+#     except HTTPException:
+#         raise
+#     except Exception as e:
+#         db.rollback()
+#         logger.error(f"Error processing FHIR data: {str(e)}")
+#         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) 

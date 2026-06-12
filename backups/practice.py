@@ -96,16 +96,17 @@ def regex_replace_with_template(value: str, pattern_from: str, pattern_to: str) 
 # l = ["ali","usama","ahemd","ahemd","abc","dev"]
 # print(Counter(l))
 
-from datetime import datetime
+# from datetime import datetime
 
-date = datetime.now().date()
-date_formate_to_chnage = datetime.strptime(str(date), "%Y-%m-%d")
-print(date_formate_to_chnage)
-formated_date = date_formate_to_chnage.strftime("%B %d, %Y")
-print(formated_date)
+# date = datetime.now().time()
+# date_formate_to_chnage = datetime.strptime(str(date), "%H:%M:%S")
+# print(date_formate_to_chnage)
+# # formated_date = date_formate_to_chnage.strftime("%B %d, %Y")
+# print(formated_date)
 
-date_str = datetime.now().strftime("%Y%m%d%H%M%S")
-print(date_str)
+# date_str = datetime.now().strftime("%Y%m%d%H%M%S")
+# print(date_str)
+# print(date)
 
 # t1 = (4, 20)
 # t2 = (4, 30)
@@ -135,3 +136,21 @@ print(date_str)
 # MSA|AA|MSG00003|ClaimAccepted
 # """
 # print(json.dumps(response_claim.splitlines(), indent=2))
+
+# time = "19:31"
+from datetime import datetime
+# if datetime.now() >  datetime.strptime("2026-05-18 19:42:49.273740"):
+#     print("abc")
+
+time = "18:20"
+
+now = str(datetime.now().time())
+print(now)
+
+if now.split(":")[0] >= time.split(":")[0]:
+    if now.split(":")[1] >= time.split(":")[1]:
+        print("abc")
+
+# print(datetime.isoformat(datetime.now()))
+
+# print(datetime.now())

@@ -13,28 +13,5 @@
                 "name": "Jubliee"
             }
         ]
-    },
-    {
-        "ehr_system_id": "EHR-2",
-        "labs": [
-            {
-                "system_id": "LIS-1",
-                "name": "IDC"
-            },
-            {
-                "system_id": "LIS-2",
-                "name": "CITI Lab"
-            }
-        ],
-        "payers": [
-            {
-                "system_id": "PAYER-1",
-                "name": "Jubliee"
-            },
-            {
-                "system_id": "PAYER-2",
-                "name": "Star"
-            }
-        ]
     }
 ]

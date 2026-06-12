@@ -10,12 +10,9 @@ from uuid import uuid4
 
 from contextlib import asynccontextmanager
 import httpx
-from fastapi import FastAPI, status, HTTPException, Request, Depends
+from fastapi import FastAPI, status, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
-from sqlalchemy.orm import Session
-from sqlalchemy.orm.attributes import flag_modified
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi.errors import RateLimitExceeded
 from sqlalchemy.exc import SAWarning
@@ -23,10 +20,10 @@ from sqlalchemy.orm import joinedload
 import warnings
 
 from api import route, endpoint, server, logs, user
+from api.user import TIME
 import db_logger as db_logging
-from database import engine, session_local, get_db
+from database import engine, session_local
 import models
-from api.logs import _format_log_message
 from rate_limiting import limiter, rate_limit_exceeded_handler
 from validation.transformation import fill_duplicate_missing_values, regex_replace_with_template, increment_segment, set_null_if_not_available
 from validation.fhir_validation import validate_unknown_fhir_resource, get_fhir_value_by_path, fhir_extract_paths
@@ -122,7 +119,7 @@ async def lifeSpan(app: FastAPI):
     app.state.server_health_task = asyncio.create_task(server.server_health())
     app.state.connected_systems_task = asyncio.create_task(server.get_lis_payer())
     app.state.route_manager_task = asyncio.create_task(route_manager())
-    # app.state.send_to_server = asyncio.create_task(send_to_server())
+    app.state.send_to_server = asyncio.create_task(send_to_server())
     app.state.redelivery_watcher_task = asyncio.create_task(redelivery_watcher())
 
     yield
@@ -207,77 +204,73 @@ def _get_destination_semaphore(dest_server_id: int) -> asyncio.Semaphore:
         destination_semaphores[dest_server_id] = asyncio.Semaphore(_DESTINATION_CONCURRENCY)
     return destination_semaphores[dest_server_id]
 
-# class SendData(BaseModel):
-#     flag: int
-
-
-@app.get("/send-data/{flag}")
-async def send_to_server(flag: int, db: Session = Depends(get_db)):
+async def send_to_server():
     try:
-        single_config = db.query(models.Config).filter(models.Config.hold_flag == flag).first()
-        if not single_config:
-            raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Data not found")
-        
-        client = httpx.AsyncClient(timeout=httpx.Timeout(_HTTP_READ_TIMEOUT, connect=5.0))
+        while True:
+            with session_local() as db:
+                configs = db.query(models.Config).all()
+                for config in configs:
+                    for data in config.data:
+                        config_time = TIME.get(data.hold_flag)
+                        now = str(datetime.now().time())
 
-        for single_data in single_config.data:
-                
-            route_id = int(single_data.get("route_id", ""))
+                        print("start time compare")
+                    if now.split(":")[0] >= config_time.split(":")[0]:
+                        print("first time done")
+                        if now.split(":")[1] >= config_time.split(":")[1]: # if time is good
+                            print("2nd time compare OK")
 
-            route = db.get(models.Route, route_id)
+                            dest_endpoint_url = data.endpoint_destination
+                            dest_server = db.get(models.server, data.dest_server_id)
+                            src_server = db.get(models.server, data.src_server_id)
+                            for idx, msg in enumerate(data.data):
 
-            dest_endpoint_url = single_data.get("endpoint_destination", "")
-            dest_server_id = single_data.get("dest_server_id", "")
-            src_server_id = single_data.get("src_server_id", "")
+                                src_msg = data.src_msg[idx]
 
-            dest_server = db.get(models.Server, dest_server_id)
-            src_server = db.get(models.Server, src_server_id)
+                                request_headers = {}
+                                if dest_server.system_id is not None:
+                                    request_headers["System-Id"] = str(dest_server.system_id)
+                                    request_headers["Src-System-Id"] = str(src_server.system_id)
+                                    request_headers["Src-System-Name"] = str(src_server.name)
+                                if dest_server.protocol == "FHIR":
+                                    client = httpx.AsyncClient(timeout=httpx.Timeout(_HTTP_READ_TIMEOUT, connect=5.0))
+                                    response = await client.post(url=dest_endpoint_url, json=msg, headers=request_headers)
+                                else:
+                                # HL7 is plain text — do NOT json= encode it or it arrives as a
+                                # JSON string "MSH|..." instead of the raw HL7 text
+                                    request_headers["Content-Type"] = "text/plain"
+                                    response = await client.post(
+                                        url=dest_endpoint_url,
+                                        content=msg,
+                                        headers=request_headers
+                                    )
 
-            for idx, msg in enumerate(single_data.get("data", [])):
-                src_msg = single_data.get("src_msg")[idx]
+                                if response.status_code in (200, 201, 202, 203, 204):
+                                    db_logger.info(f"Data Sucessfully Send to : {dest_server.name}",
+                                                extra= {
+                                                        "src_message": json.dumps(src_msg),
+                                                        "dest_message": json.dumps(msg),
+                                                        "op_heading": f"Channel: {route.name}"
+                                                    }
+                                    )
+                                    logger.info(f"Successfully sent to url: {dest_endpoint_url}")
+                                else:
+                                    err = f"Destination {dest_endpoint_url} returned {response.status_code}: {response.text}"
+                                    logger.error(err)
+                                    db_logger.error(f"Data Failed to Send to : {dest_server.name}",
+                                                extra= {
+                                                        "src_message": json.dumps(src_msg),
+                                                        "dest_message": json.dumps(msg),
+                                                        "op_heading": f"Channel: {route.name}"
+                                                    }
+                                    )
+                            
+                            
 
-                request_headers = {}
-                if dest_server.system_id is not None:
-                    request_headers["System-Id"] = str(dest_server.system_id)
-                    request_headers["Src-System-Id"] = str(src_server.system_id)
-                    request_headers["Src-System-Name"] = str(src_server.name)
-                if dest_server.protocol == "FHIR":
-                    response = await client.post(url=dest_endpoint_url, json=msg, headers=request_headers)
-                else:
-                # HL7 is plain text — do NOT json= encode it or it arrives as a
-                # JSON string "MSH|..." instead of the raw HL7 text
-                    request_headers["Content-Type"] = "text/plain"
-                    response = await client.post(
-                        url=dest_endpoint_url,
-                        content=msg,
-                        headers=request_headers
-                    )
+                            
 
-                if response.status_code in (200, 201, 202, 203, 204):
-                    db_logger.info(f"Data Sucessfully Send to : {dest_server.name}",
-                                extra= {
-                                        "src_message": json.dumps(src_msg),
-                                        "dest_message": json.dumps(msg),
-                                        "op_heading": f"Channel: {route.name}"
-                                    }
-                    )
-                    logger.info(f"Successfully sent to url: {dest_endpoint_url}")
-                    db.query(models.Config).filter(models.Config.hold_flag == flag).delete()
-                    db.commit()
-                else:
-                    err = f"Destination {dest_endpoint_url} returned {response.status_code}: {response.text}"
-                    logger.error(err)
-                    db_logger.error(f"Data Failed to Send to : {dest_server.name}",
-                                extra= {
-                                        "src_message": json.dumps(src_msg),
-                                        "dest_message": json.dumps(msg),
-                                        "op_heading": f"Channel: {route.name}"
-                                    }
-                    )
-        return {"message": "Data Successfully sent."}
     except Exception as exp:
         logger.exception(exp)
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(exp))
 
 async def route_manager():
     """
@@ -694,12 +687,6 @@ async def route_worker(route, worker_number: int = 1):
 
                     elif src_server.category == "EHR" and dest_server.category == "PHR":
                         hold_flag=4
-
-                    elif src_server.category == "EHR" and dest_server.category == "Payer":
-                        hold_flag=5
-
-                    elif src_server.category == "Payer" and dest_server.category == "EHR":
-                        hold_flag=6
                     
 
                     is_config = db.query(models.Config).filter(models.Config.hold_type == hold_type).first()
@@ -728,8 +715,8 @@ async def route_worker(route, worker_number: int = 1):
                         for config_list in is_config.data:
                             
                             if config_list.get("route_id", "") == route.route_id:
-                                config_list["data"].append(msg)
-                                config_list["src_msg"].append(src_msg)
+                                config_list.get("data").append(msg)
+                                config_list.get("src_msg").append(src_msg)
                             
                             else:
                                 is_config.data.append({
@@ -738,9 +725,8 @@ async def route_worker(route, worker_number: int = 1):
                                     "src_server_id": src_server.server_id,
                                     "dest_server_id": dest_server.server_id,
                                     "src_msg": [src_msg],
-                                    "data": [msg]
+                                    "data": [msg] 
                                 })
-                            flag_modified(is_config, "data")
                         
                         db.add(is_config)
                     db.commit()
@@ -771,7 +757,6 @@ async def route_worker(route, worker_number: int = 1):
                     #                     }
                     #     )
                     #     logger.info(f"Successfully sent to url: {dest_endpoint_url}")
-                    #     result_future.set_result(True)
                     # else:
                     #     err = f"Destination {dest_endpoint_url} returned {response.status_code}: {response.text}"
                     #     logger.error(err)
