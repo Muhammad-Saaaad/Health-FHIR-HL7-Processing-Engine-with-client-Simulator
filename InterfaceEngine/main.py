@@ -5,6 +5,7 @@ import json
 import logging
 from logging.handlers import TimedRotatingFileHandler
 import os
+import ssl
 import time
 from uuid import uuid4
 
@@ -183,7 +184,9 @@ destination_semaphores = {}
 pending_redelivery: dict[int, list] = {}
 
 _BATCH_CONCURRENCY = int(os.getenv("BATCH_CONCURRENCY", "25"))
-_ROUTE_WORKER_CONCURRENCY = int(os.getenv("ROUTE_WORKER_CONCURRENCY", "15"))
+# Default 3 — matches DESTINATION_CONCURRENCY (the per-destination semaphore caps concurrent
+# POSTs at 3, so extra workers beyond that only help with the fast transformation step).
+_ROUTE_WORKER_CONCURRENCY = int(os.getenv("ROUTE_WORKER_CONCURRENCY", "3"))
 _DESTINATION_CONCURRENCY = int(os.getenv("DESTINATION_CONCURRENCY", "3"))
 _HTTP_READ_TIMEOUT = float(os.getenv("HTTP_READ_TIMEOUT", "30"))
 _INGEST_AWAIT_TIMEOUT = float(os.getenv("INGEST_AWAIT_TIMEOUT", str(_HTTP_READ_TIMEOUT + 10)))
@@ -193,6 +196,12 @@ _REDELIVERY_CHECK_INTERVAL = int(os.getenv("REDELIVERY_CHECK_INTERVAL", "15"))
 # When true (default), batch items are processed strictly in the order they appear in the
 # request body. Set BATCH_PRESERVE_ORDER=false to fan out in parallel (uses _BATCH_CONCURRENCY).
 _BATCH_PRESERVE_ORDER = os.getenv("BATCH_PRESERVE_ORDER", "true").lower() in ("true", "1", "yes")
+
+# Shared SSL context for ALL httpx clients in this process. Building an SSL context loads the
+# entire Windows certificate store (~0.75s here); every httpx.AsyncClient() without `verify=`
+# builds its own. With 15 workers x N routes that alone blocked startup for 60-90 seconds.
+# One context built once at import = startup in seconds.
+_SHARED_SSL_CONTEXT = ssl.create_default_context()
 
 def _payload_preview(data, max_len: int = 400) -> str:
     text = str(data)
@@ -218,7 +227,7 @@ async def send_to_server(flag: int, db: Session = Depends(get_db)):
         if not single_config:
             raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Data not found")
         
-        client = httpx.AsyncClient(timeout=httpx.Timeout(_HTTP_READ_TIMEOUT, connect=5.0))
+        client = httpx.AsyncClient(timeout=httpx.Timeout(_HTTP_READ_TIMEOUT, connect=5.0), verify=_SHARED_SSL_CONTEXT)
 
         for single_data in single_config.data:
                 
@@ -454,14 +463,14 @@ async def route_worker(route, worker_number: int = 1):
 
         dest_endpoint_url = f"http://{dest_server.ip}:{dest_server.port}{dest_endpoint.url}"
         dest_system_id = dest_server.system_id
-        client = httpx.AsyncClient(timeout=httpx.Timeout(_HTTP_READ_TIMEOUT, connect=5.0))
+        client = httpx.AsyncClient(timeout=httpx.Timeout(_HTTP_READ_TIMEOUT, connect=5.0), verify=_SHARED_SSL_CONTEXT)
         destination_semaphore = _get_destination_semaphore(route.dest_server_id)
 
         while True:
             # Each queue item is a (data, future) tuple.
             # The future lets ingest() know whether delivery succeeded or failed.
             src_path_to_value, simple_paths, result_future, src_msg = await route_queue[route.route_id].get()
-            logger.info(f"route_worker {worker_number} for route -> {route.name} received data: {src_path_to_value}")
+            logger.info(f"route_worker {worker_number} for `route -> {route.name} received data: {src_path_to_value}")
             normal_src_paths_counter = [] # this will contain data just the output_data dictionary, but with the src paths instead of dest paths, useful for multiple same segments/sources to extract data from.
             split_src_paths_counter = []
             concat_src_paths_counter = []
@@ -1150,155 +1159,155 @@ async def _process_message(full_path: str, payload, trace_id: str, system_id: st
         "parked_routes": parked_routes,
     }
 
-@app.post("/batch")
-async def ingest_batch(req: Request):
-    """
-    Bulk ingest endpoint. Each item is processed independently — one failing item does NOT
-    cancel the others. The response aggregates per-item outcomes:
+# @app.post("/batch")
+# async def ingest_batch(req: Request):
+#     """
+#     Bulk ingest endpoint. Each item is processed independently — one failing item does NOT
+#     cancel the others. The response aggregates per-item outcomes:
 
-    Status codes:
-    - `200 OK`             — all items delivered (some may be parked for retry on inactive destinations)
-    - `207 Multi-Status`   — at least one item failed AND at least one succeeded
-    - `502 Bad Gateway`    — every item failed
-    """
-    trace_id = req.headers.get("X-Trace-Id") or uuid4().hex[:12]
-    start_time = time.perf_counter()
-    logger.info("trace=%s batch_received", trace_id)
+#     Status codes:
+#     - `200 OK`             — all items delivered (some may be parked for retry on inactive destinations)
+#     - `207 Multi-Status`   — at least one item failed AND at least one succeeded
+#     - `502 Bad Gateway`    — every item failed
+#     """
+#     trace_id = req.headers.get("X-Trace-Id") or uuid4().hex[:12]
+#     start_time = time.perf_counter()
+#     logger.info("trace=%s batch_received", trace_id)
 
-    try:
-        payload = await req.json()
-    except Exception as exp:
-        logger.exception("trace=%s batch_json_parse_failed", trace_id)
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid JSON batch payload: {str(exp)}")
+#     try:
+#         payload = await req.json()
+#     except Exception as exp:
+#         logger.exception("trace=%s batch_json_parse_failed", trace_id)
+#         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid JSON batch payload: {str(exp)}")
 
-    if not isinstance(payload, list):
-        logger.warning("trace=%s batch_invalid_payload_type=%s", trace_id, type(payload).__name__)
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Batch payload must be a list")
+#     if not isinstance(payload, list):
+#         logger.warning("trace=%s batch_invalid_payload_type=%s", trace_id, type(payload).__name__)
+#         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Batch payload must be a list")
 
-    logger.info("trace=%s batch_item_count=%s", trace_id, len(payload))
+#     logger.info("trace=%s batch_item_count=%s", trace_id, len(payload))
 
-    semaphore = asyncio.Semaphore(_BATCH_CONCURRENCY)
+#     semaphore = asyncio.Semaphore(_BATCH_CONCURRENCY)
 
-    async def _run_one(path_key: str, item, idx: int, system_id: str):
-        item_trace_id = f"{trace_id}-{idx}"
-        async with semaphore:
-            try:
-                result = await _process_message(path_key, item, item_trace_id, system_id=system_id)
-                return {
-                    "index": idx,
-                    "path": path_key,
-                    "status": "ok",
-                    "delivered_routes": result.get("delivered_routes", []),
-                    "parked_routes": result.get("parked_routes", []),
-                }
-            except HTTPException as http_exp:
-                logger.warning(
-                    "trace=%s batch_item_failed path=%s http_status=%s detail=%s",
-                    item_trace_id, path_key, http_exp.status_code, http_exp.detail,
-                )
-                return {
-                    "index": idx,
-                    "path": path_key,
-                    "status": "failed",
-                    "http_status": http_exp.status_code,
-                    "detail": str(http_exp.detail),
-                }
-            except Exception as exp:
-                logger.exception("trace=%s batch_item_failed path=%s error=%s", item_trace_id, path_key, str(exp))
-                return {
-                    "index": idx,
-                    "path": path_key,
-                    "status": "failed",
-                    "http_status": status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    "detail": str(exp),
-                }
+#     async def _run_one(path_key: str, item, idx: int, system_id: str):
+#         item_trace_id = f"{trace_id}-{idx}"
+#         async with semaphore:
+#             try:
+#                 result = await _process_message(path_key, item, item_trace_id, system_id=system_id)
+#                 return {
+#                     "index": idx,
+#                     "path": path_key,
+#                     "status": "ok",
+#                     "delivered_routes": result.get("delivered_routes", []),
+#                     "parked_routes": result.get("parked_routes", []),
+#                 }
+#             except HTTPException as http_exp:
+#                 logger.warning(
+#                     "trace=%s batch_item_failed path=%s http_status=%s detail=%s",
+#                     item_trace_id, path_key, http_exp.status_code, http_exp.detail,
+#                 )
+#                 return {
+#                     "index": idx,
+#                     "path": path_key,
+#                     "status": "failed",
+#                     "http_status": http_exp.status_code,
+#                     "detail": str(http_exp.detail),
+#                 }
+#             except Exception as exp:
+#                 logger.exception("trace=%s batch_item_failed path=%s error=%s", item_trace_id, path_key, str(exp))
+#                 return {
+#                     "index": idx,
+#                     "path": path_key,
+#                     "status": "failed",
+#                     "http_status": status.HTTP_500_INTERNAL_SERVER_ERROR,
+#                     "detail": str(exp),
+#                 }
 
-    tasks = []
-    msg_idx = 0
-    for batch_idx, batch_item in enumerate(payload):
-        if not isinstance(batch_item, dict):
-            logger.warning("trace=%s batch_invalid_item index=%s item_type=%s", trace_id, batch_idx, type(batch_item).__name__)
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Each batch item must be an object")
+#     tasks = []
+#     msg_idx = 0
+#     for batch_idx, batch_item in enumerate(payload):
+#         if not isinstance(batch_item, dict):
+#             logger.warning("trace=%s batch_invalid_item index=%s item_type=%s", trace_id, batch_idx, type(batch_item).__name__)
+#             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Each batch item must be an object")
 
-        system_id = batch_item.get("system_id", None)
-        if system_id is None:
-            logger.warning("trace=%s batch_missing_system_id index=%s", trace_id, batch_idx)
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Each batch item must include a 'system_id' field")
+#         system_id = batch_item.get("system_id", None)
+#         if system_id is None:
+#             logger.warning("trace=%s batch_missing_system_id index=%s", trace_id, batch_idx)
+#             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Each batch item must include a 'system_id' field")
 
-        for path_key, messages in batch_item.items():
-            if path_key == "system_id":
-                continue
-            if isinstance(messages, list):
-                for msg in messages:
-                    tasks.append(_run_one(path_key, msg, msg_idx, system_id))
-                    msg_idx += 1
-            else:
-                tasks.append(_run_one(path_key, messages, msg_idx, system_id))
-                msg_idx += 1
+#         for path_key, messages in batch_item.items():
+#             if path_key == "system_id":
+#                 continue
+#             if isinstance(messages, list):
+#                 for msg in messages:
+#                     tasks.append(_run_one(path_key, msg, msg_idx, system_id))
+#                     msg_idx += 1
+#             else:
+#                 tasks.append(_run_one(path_key, messages, msg_idx, system_id))
+#                 msg_idx += 1
 
-    logger.info(
-        "trace=%s batch_message_count=%s preserve_order=%s",
-        trace_id, len(tasks), _BATCH_PRESERVE_ORDER,
-    )
-    if _BATCH_PRESERVE_ORDER:
-        # Process strictly in order so destinations receive messages in the same sequence
-        # they appear in the request body.
-        # NOTE: with the park-and-resume feature (I-5), a message that gets parked due to an
-        # Inactive destination will be redelivered later by redelivery_watcher — and may then
-        # arrive AFTER messages that were queued after it. Strict ordering only holds while
-        # all destinations stay Active throughout the batch.
-        results = []
-        for task_coro in tasks:
-            results.append(await task_coro)
-    else:
-        results = await asyncio.gather(*tasks)
+#     logger.info(
+#         "trace=%s batch_message_count=%s preserve_order=%s",
+#         trace_id, len(tasks), _BATCH_PRESERVE_ORDER,
+#     )
+#     if _BATCH_PRESERVE_ORDER:
+#         # Process strictly in order so destinations receive messages in the same sequence
+#         # they appear in the request body.
+#         # NOTE: with the park-and-resume feature (I-5), a message that gets parked due to an
+#         # Inactive destination will be redelivered later by redelivery_watcher — and may then
+#         # arrive AFTER messages that were queued after it. Strict ordering only holds while
+#         # all destinations stay Active throughout the batch.
+#         results = []
+#         for task_coro in tasks:
+#             results.append(await task_coro)
+#     else:
+#         results = await asyncio.gather(*tasks)
 
-    succeeded = [r for r in results if r["status"] == "ok"]
-    failed = [r for r in results if r["status"] == "failed"]
-    total_parked = sum(len(r.get("parked_routes", [])) for r in succeeded)
-    duration = time.perf_counter() - start_time
+#     succeeded = [r for r in results if r["status"] == "ok"]
+#     failed = [r for r in results if r["status"] == "failed"]
+#     total_parked = sum(len(r.get("parked_routes", [])) for r in succeeded)
+#     duration = time.perf_counter() - start_time
 
-    summary = {
-        "total": len(results),
-        "succeeded": len(succeeded),
-        "failed": len(failed),
-        "parked_for_retry": total_parked,
-        "duration_seconds": round(duration, 2),
-    }
+#     summary = {
+#         "total": len(results),
+#         "succeeded": len(succeeded),
+#         "failed": len(failed),
+#         "parked_for_retry": total_parked,
+#         "duration_seconds": round(duration, 2),
+#     }
 
-    # All items failed → 502
-    if failed and not succeeded:
-        logger.error("trace=%s batch_all_failed summary=%s first_error=%s", trace_id, summary, failed[0])
-        return JSONResponse(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            content={"summary": summary, "failures": failed[:50]},
-        )
+#     # All items failed → 502
+#     if failed and not succeeded:
+#         logger.error("trace=%s batch_all_failed summary=%s first_error=%s", trace_id, summary, failed[0])
+#         return JSONResponse(
+#             status_code=status.HTTP_502_BAD_GATEWAY,
+#             content={"summary": summary, "failures": failed[:50]},
+#         )
 
-    # Partial failure → 207 Multi-Status
-    if failed:
-        logger.warning("trace=%s batch_partial_failure summary=%s", trace_id, summary)
-        return JSONResponse(
-            status_code=207,
-            content={
-                "message": f"{len(succeeded)}/{len(results)} items delivered; {len(failed)} failed; {total_parked} parked for retry",
-                "summary": summary,
-                "failures": failed[:50],
-            },
-        )
+#     # Partial failure → 207 Multi-Status
+#     if failed:
+#         logger.warning("trace=%s batch_partial_failure summary=%s", trace_id, summary)
+#         return JSONResponse(
+#             status_code=207,
+#             content={
+#                 "message": f"{len(succeeded)}/{len(results)} items delivered; {len(failed)} failed; {total_parked} parked for retry",
+#                 "summary": summary,
+#                 "failures": failed[:50],
+#             },
+#         )
 
-    # All succeeded — note parked items if any
-    if total_parked > 0:
-        logger.info("trace=%s batch_success_with_parked summary=%s", trace_id, summary)
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content={
-                "message": f"Sent {len(succeeded)} items; {total_parked} parked for retry",
-                "summary": summary,
-            },
-        )
+#     # All succeeded — note parked items if any
+#     if total_parked > 0:
+#         logger.info("trace=%s batch_success_with_parked summary=%s", trace_id, summary)
+#         return JSONResponse(
+#             status_code=status.HTTP_200_OK,
+#             content={
+#                 "message": f"Sent {len(succeeded)} items; {total_parked} parked for retry",
+#                 "summary": summary,
+#             },
+#         )
 
-    logger.info("trace=%s batch_success summary=%s", trace_id, summary)
-    return {"message": "Successfully sent data to all destinations", "summary": summary}
+#     logger.info("trace=%s batch_success summary=%s", trace_id, summary)
+#     return {"message": "Successfully sent data to all destinations", "summary": summary}
 
 
 @app.post("/{full_path:path}", status_code=status.HTTP_200_OK)

@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from logging.handlers import RotatingFileHandler
+import ssl
 
 import httpx
 from fastapi import APIRouter, status, HTTPException, Depends, Request, Response
@@ -12,6 +13,11 @@ from database import get_db, session_local
 from rate_limiting import limiter
 
 router = APIRouter(tags=["Server"])
+
+# Shared SSL context: building one loads the whole Windows cert store (~0.75s, blocking the
+# event loop). server_health/get_lis_payer construct a client every 30s — without this they
+# froze the loop on every iteration.
+_SHARED_SSL_CONTEXT = ssl.create_default_context()
 
 logger = logging.getLogger("server_logger")
 logger.setLevel(logging.INFO)
@@ -86,7 +92,7 @@ async def add_server(server: AddUpdateServer, request: Request, response: Respon
         logger.warning(f"Attempt to add server with duplicate IP, port, and system_id: {server.ip}:{server.port}:{server.system_id}")
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Server with the same ip, port, and system_id already exists")
 
-    async with httpx.AsyncClient(timeout=httpx.Timeout(10.0)) as client:
+    async with httpx.AsyncClient(timeout=httpx.Timeout(10.0), verify=_SHARED_SSL_CONTEXT) as client:
         is_reachable, reason = await add_server_reachability_check(client, server.ip, server.port, server.system_id)
         if not is_reachable:
             logger.error(
@@ -327,7 +333,7 @@ async def server_health():
                 db = session_local()
                 servers = db.query(models.Server).all()
 
-                async with httpx.AsyncClient() as client:
+                async with httpx.AsyncClient(verify=_SHARED_SSL_CONTEXT) as client:
                     for server in servers:
                         is_alive= await server_health_check(client, server.ip, server.port, server.system_id)
                         new_status = 'Active' if is_alive else 'Inactive'
@@ -437,7 +443,7 @@ async def get_lis_payer():
                         ehr_data["payers"].append(payer)
 
             data = list(data_by_ehr.values())
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(verify=_SHARED_SSL_CONTEXT) as client:
                 is_sent = await connected_systems_to_ehr(client, "127.0.0.1", 8001, data)
                 if is_sent:
                     logger.info(
