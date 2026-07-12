@@ -8,6 +8,7 @@ from fastapi import APIRouter, status, HTTPException, Depends, Request, Response
 from sqlalchemy.orm import Session
 
 from schemas.server import AddUpdateServer, GetServer
+from schemas.toggel import UpdateStatus 
 import models
 from database import get_db, session_local
 from rate_limiting import limiter
@@ -489,3 +490,4 @@ async def connected_systems_to_ehr(client, ip: str, port: int, data: list):
     except:
         logger.error(f"Exception occurred while sending connected systems data to EHR for {ip}:{port}")
         return False
+

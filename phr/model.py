@@ -45,6 +45,7 @@ class Patient(Base):
     visiting_notes = relationship("VisitingNotes", back_populates="patient")
     profile = relationship("Profile", back_populates="patient")
     patient_relation = relationship("PatientRelation", back_populates="patient")
+    vitals=relationship("Vitals",back_populates="patient")
 
 class PatientRelation(Base):
     __tablename__ = 'patient_relation'
@@ -132,13 +133,15 @@ class Vitals(Base):
     __tablename__ = "vitals"
 
     vital_id = Column(Integer, primary_key=True, index=True)
+    nic=Column(String(20),ForeignKey("patient.nic",name='fk_pateints_nic'),nullable=False)
     type = Column(String(20), nullable=False)
     systolic = Column(String(20), nullable=True)
     diastolic = Column(String(20), nullable=True)
     value = Column(String(20), nullable=True)
     unit = Column(String(20), nullable=False)
     meal_time = Column(String(20), nullable=True)
-    recorded_at = Column(DateTime, nullable=False)
+    recorded_at = Column(DateTime, nullable=False, default=lambda: datetime.now())
+    patient=relationship("Patient",back_populates="vitals")
 
 # to apply migrations
 

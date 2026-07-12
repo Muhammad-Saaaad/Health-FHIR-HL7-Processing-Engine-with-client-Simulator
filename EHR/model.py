@@ -29,6 +29,13 @@ class Config(Base):          # we can extract the operation heading, url, hospit
     hold_flag = Column(Boolean, default=False)
     sent_to_engine = Column(Boolean, default=False) # this is for the engine to know that this config is already sent to engine or not. if sent then it will not send again to engine.
 
+class History(Base):
+    __tablename__="history"
+    history_id=Column(Integer, primary_key=True, index=True)
+    src_system_name=Column(String(50),nullable=False)
+    dest_system_name=Column(String(50),nullable=False)
+    data=Column(JSON,nullable=False,default=dict) 
+    
 class Users(Base):
     __tablename__ = 'users'
 

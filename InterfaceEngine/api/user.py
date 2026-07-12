@@ -4,6 +4,7 @@ from fastapi import APIRouter, Response, status, HTTPException, Depends, Request
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 
+from schemas.toggel import UpdateStatus
 import models
 from database import get_db
 from rate_limiting import limiter
@@ -154,3 +155,20 @@ def get_hold_msg(flag: int ,db: Session = Depends(get_db)):
 
 
 # post /send-data/{flag}
+
+toggle = True
+
+@router.post("/update-status")
+def update_status(data: UpdateStatus):
+    global toggle
+
+    print(f"Received status update request: {data.status}")
+
+    toggle = data.status
+
+    print("Updated Toggle:", toggle)
+
+    return {
+        "message": "Status updated successfully",
+        "status": toggle
+    }

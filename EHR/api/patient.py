@@ -68,6 +68,8 @@ def get_patient(hospital_id: str, request: Request, response: Response, db: Sess
     except Exception as e:
         logger.error(f"Error retrieving patients: {str(e)}")
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+
+
     
 @router.get("/patients/{patient_id}", status_code=status.HTTP_200_OK)
 @limiter.limit("20/minute")

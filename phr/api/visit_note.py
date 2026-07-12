@@ -10,7 +10,8 @@ from sqlalchemy.orm import Session
 from database import get_db
 import model
 from rate_limiting import limiter
-from schemas.visit_note_schema import VisitNoteBase, VisitNoteDetail
+from schemas.visit_note_schema import VisitNoteBase, VisitNoteDetail 
+from schemas.vitals_schema import Vitals
 
 router = APIRouter(tags=["Visit Notes"])
 
@@ -96,47 +97,32 @@ def _vital_observation(vital: model.Vitals, patient_nic: str, doctor_id: str, ho
     return observation
 
 @router.post("/add-vitals", status_code=status.HTTP_201_CREATED)
-async def add_vitals(request: Request, db: Session = Depends(get_db)):
+async def add_vitals(vitals:Vitals, db: Session = Depends(get_db)):
     """
         Store a list of patient vital readings.
     """
     try:
-        payload = await request.json()
-        vitals_data = payload.get("vitals", payload) if isinstance(payload, dict) else payload
+        is_valid_patient = db.query(model.Patient).filter(
+            model.Patient.nic == vitals.nic).first()
+        
+        if not is_valid_patient:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="nic not valid")
 
-        if not isinstance(vitals_data, list):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Request body must be a list of vitals")
-
-        vitals = []
-        for vital_data in vitals_data:
-            if not isinstance(vital_data, dict):
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Each vital must be an object")
-
-            missing_fields = [field for field in ("type", "unit", "recorded_at") if vital_data.get(field) is None]
-            if missing_fields:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Missing required vital field(s): {', '.join(missing_fields)}"
-                )
-
-            vitals.append(model.Vitals(
-                type=str(vital_data["type"]),
-                systolic=None if vital_data.get("systolic") is None else str(vital_data.get("systolic")),
-                diastolic=None if vital_data.get("diastolic") is None else str(vital_data.get("diastolic")),
-                value=None if vital_data.get("value") is None else str(vital_data.get("value")),
-                unit=str(vital_data["unit"]),
-                meal_time=None if vital_data.get("meal_time") is None else str(vital_data.get("meal_time")),
-                recorded_at=_parse_recorded_at(vital_data["recorded_at"]),
-            ))
-
-        db.add_all(vitals)
+        vital =model.Vitals(
+                type=vitals.type,
+                nic=vitals.nic,
+                systolic=vitals.systolic,
+                diastolic=vitals.diastolic,
+                value=vitals.value,
+                unit=vitals.unit,
+                meal_time=vitals.meal_time
+            )
+        db.add(vital)
         db.commit()
-        for vital in vitals:
-            db.refresh(vital)
 
         return {
             "message": "Vitals added successfully",
-            "vitals": [_serialize_vital(vital) for vital in vitals],
+           
         }
     except HTTPException:
         db.rollback()
@@ -146,18 +132,23 @@ async def add_vitals(request: Request, db: Session = Depends(get_db)):
         logger.error(f"Error adding vitals: {str(exp)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
 
-@router.get("/vitals", status_code=status.HTTP_200_OK)
-def get_vitals(db: Session = Depends(get_db)):
+@router.get("/get-all-vitals/", status_code=status.HTTP_200_OK,)
+def get_all_vitals( db: Session = Depends(get_db)):
     """
-        Retrieve all stored vital readings.
+    Retrieve all vitals.
+
+   
     """
     try:
-        vitals = db.query(model.Vitals).order_by(model.Vitals.recorded_at.desc()).all()
-        return [_serialize_vital(vital) for vital in vitals]
-    except Exception as exp:
-        logger.error(f"Error fetching vitals: {str(exp)}")
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
-
+        logger.info("Fetching all vitals")
+        vital = db.query(model.Vitals).all()
+        logger.info(f"Retrieved {len(vital)} vital from database")
+        return vital
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error retrieving all vital: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
 @router.post("/vitals/send-to-engine", status_code=status.HTTP_200_OK)
 async def send_vitals_to_engine(request: Request, db: Session = Depends(get_db)):
     """

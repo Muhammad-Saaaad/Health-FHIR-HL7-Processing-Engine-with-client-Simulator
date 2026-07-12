@@ -8,7 +8,7 @@ import os
 import ssl
 import time
 from uuid import uuid4
-
+from api import user
 from contextlib import asynccontextmanager
 import httpx
 from fastapi import FastAPI, status, HTTPException, Request, Depends
@@ -683,7 +683,8 @@ async def route_worker(route, worker_number: int = 1):
                                 "parked_count": parked_count,
                             })
                         continue
-
+                print(f"Toggle value: {user.toggle}")
+                if user.toggle:
                     request_headers = {}
                     if dest_system_id is not None:
                         request_headers["System-Id"] = str(dest_system_id)
@@ -756,42 +757,50 @@ async def route_worker(route, worker_number: int = 1):
                     logger.info(f"Data Holded Sucessfully for type: {hold_type} data= {msg}")
                     db.close()
 
-                    result_future.set_result(True)
-                    # async with destination_semaphore:
-                    #     logger.info(f"Sending data to url: {dest_endpoint_url}")
-                    #     if dest_server.protocol == "FHIR":
-                    #         response = await client.post(url=dest_endpoint_url, json=msg, headers=request_headers)
-                    #     else:
-                    #     # HL7 is plain text — do NOT json= encode it or it arrives as a
-                    #     # JSON string "MSH|..." instead of the raw HL7 text
-                    #         request_headers["Content-Type"] = "text/plain"
-                    #         response = await client.post(
-                    #             url=dest_endpoint_url,
-                    #             content=msg,
-                    #             headers=request_headers
-                    #         )
+                else:
+                    request_headers = {}
+                    if dest_system_id is not None:
+                        request_headers["System-Id"] = str(dest_system_id)
+                        request_headers["Src-System-Id"] = str(src_server.system_id)
+                        request_headers["Src-System-Name"] = str(src_server.name)
 
-                    # if response.status_code in (200, 201, 202, 203, 204):
-                    #     db_logger.info(f"Data Sucessfully Send to : {dest_server.name}",
-                    #                 extra= {
-                    #                         "src_message": json.dumps(src_msg),
-                    #                         "dest_message": json.dumps(msg),
-                    #                         "op_heading": f"Channel: {route.name}"
-                    #                     }
-                    #     )
-                    #     logger.info(f"Successfully sent to url: {dest_endpoint_url}")
-                    #     result_future.set_result(True)
-                    # else:
-                    #     err = f"Destination {dest_endpoint_url} returned {response.status_code}: {response.text}"
-                    #     logger.error(err)
-                    #     db_logger.error(f"Data Failed to Send to : {dest_server.name}",
-                    #                 extra= {
-                    #                         "src_message": json.dumps(src_msg),
-                    #                         "dest_message": json.dumps(msg),
-                    #                         "op_heading": f"Channel: {route.name}"
-                    #                     }
-                    #     )
-                    #     result_future.set_exception(Exception(err))
+                    db = session_local()
+                    async with destination_semaphore:
+                        logger.info(f"Sending data to url: {dest_endpoint_url}")
+                        if dest_server.protocol == "FHIR":
+                            response = await client.post(url=dest_endpoint_url, json=msg, headers=request_headers)
+                        else:
+                        # HL7 is plain text — do NOT json= encode it or it arrives as a
+                        # JSON string "MSH|..." instead of the raw HL7 text
+                            request_headers["Content-Type"] = "text/plain"
+                            response = await client.post(
+                                url=dest_endpoint_url,
+                                content=msg,
+                                headers=request_headers
+                            )
+
+                    if response.status_code in (200, 201, 202, 203, 204):
+                        db_logger.info(f"Data Sucessfully Send to : {dest_server.name}",
+                                    extra= {
+                                            "src_message": json.dumps(src_msg),
+                                            "dest_message": json.dumps(msg),
+                                            "op_heading": f"Channel: {route.name}"
+                                        }
+                        )
+                        logger.info(f"Successfully sent to url: {dest_endpoint_url}")
+                        result_future.set_result(True)
+                    else:
+                        err = f"Destination {dest_endpoint_url} returned {response.status_code}: {response.text}"
+                        logger.error(err)
+                        db_logger.error(f"Data Failed to Send to : {dest_server.name}",
+                                    extra= {
+                                            "src_message": json.dumps(src_msg),
+                                            "dest_message": json.dumps(msg),
+                                            "op_heading": f"Channel: {route.name}"
+                                        }
+                        )
+                        result_future.set_exception(Exception(err))
+                result_future.set_result(True)
 
             except Exception as exp:
                 db.close()
