@@ -53,6 +53,7 @@ class Users(Base):
     phone_no = Column(String(20), nullable=True)
 
     visiting_notes = relationship("VisitingNotes", back_populates="user")
+    vitals = relationship("Vitals", back_populates="user")
     hospital = relationship("Hospital", back_populates="users")
     
     # Constraint: Same email cannot exist with same hospital_id
@@ -86,6 +87,7 @@ class Patient(Base):
     )
 
     visiting_notes = relationship("VisitingNotes", back_populates="patient")
+    vitals = relationship("Vitals", back_populates="patient")
     hospital = relationship("Hospital", back_populates="patient")
 
 class Bill(Base): # Total Bill
@@ -198,6 +200,9 @@ class Vitals(Base):
     __tablename__ = "vitals"
 
     vital_id = Column(Integer, primary_key=True, index=True)
+    mpi = Column(Integer,ForeignKey('patient.mpi', name='fk_vitals_mpi'), nullable=False)
+    users_id = Column(Integer, ForeignKey('users.users_id', name='fk_vitals_users_id'), nullable=False)
+
     type = Column(String(20), nullable=False)
     systolic = Column(String(20), nullable=True)
     diastolic = Column(String(20), nullable=True)
@@ -205,6 +210,9 @@ class Vitals(Base):
     unit = Column(String(20), nullable=False)
     meal_time = Column(String(20), nullable=True)
     recorded_at = Column(DateTime, nullable=False)
+
+    patient = relationship("Patient", back_populates="vitals")
+    user = relationship("Users", back_populates="vitals")
 
 # to apply migrations
 

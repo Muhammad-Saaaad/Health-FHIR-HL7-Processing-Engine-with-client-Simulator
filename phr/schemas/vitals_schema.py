@@ -10,4 +10,7 @@ class Vitals(BaseModel):
     value: str | None = None    
     unit: str
     meal_time: str | None = None
-    
+
+class SendVitals(BaseModel):
+    patient_nic : str
+    doctor_id : int

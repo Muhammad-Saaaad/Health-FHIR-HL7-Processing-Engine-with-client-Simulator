@@ -463,14 +463,68 @@ recieve_test_result = { // phr => endpoint => /receive-test-result
 send_vitals = { // phr => endpoint => /fhir/send-vitals
     "resourceType": "Bundle",
     "type": "message",
-    "identifier": {
-        "value": "EHR-1"
-    },
     "entry": [
         {
             "resource": {
                 "resourceType": "Observation",
-                "status": "final",
+                "code": {
+                    "text": "BP"
+                },
+                "subject": {
+                    "reference": "Patient/37201-7687308-9"
+                },
+                "performer": [
+                    {
+                        "reference": "Practitioner/1"
+                    }
+                ],
+                "effectiveDateTime": "2026-04-28T10:30:00",
+                "extension": [
+                    {
+                        "valueString": "EHR-1"
+                    }
+                ],
+                "component": [
+                    {
+                        "code": {
+                            "text": "Systolic"
+                        },
+                        "valueQuantity": {
+                            "value": "120",
+                            "unit": "mmHg"
+                        }
+                    },
+                        {
+                        "code": {
+                            "text": "Diastolic"
+                        },
+                        "valueQuantity": {
+                            "value": "80",
+                            "unit": "mmHg"
+                        }
+                    }
+                ],
+                "valueQuantity": {
+                    "value": "95",
+                    "unit": "mg/dL"
+                },
+                "note": [
+                    {
+                        "text": "Before Meal"
+                    }
+                ]
+            }
+        }
+    ]
+}
+
+recieve_vitals = { // ehr => endpoint => /fhir/recieve-vitals
+    "resourceType": "Bundle",
+    "type": "message",
+    "entry": [
+        {
+            "resource": {
+                "resourceType": "Observation",
                 "code": {
                     "text": "BP"
                 },
@@ -485,7 +539,6 @@ send_vitals = { // phr => endpoint => /fhir/send-vitals
                 "effectiveDateTime": "2026-04-28T10:30:00",
                 "extension": [
                     {
-                        "url": "hospital-id",
                         "valueString": "EHR-1"
                     }
                 ],
@@ -508,30 +561,6 @@ send_vitals = { // phr => endpoint => /fhir/send-vitals
                             "unit": "mmHg"
                         }
                     }
-                ]
-            }
-        },
-        {
-            "resource": {
-                "resourceType": "Observation",
-                "status": "final",
-                "code": {
-                    "text": "Sugar"
-                },
-                "subject": {
-                    "reference": "Patient/37201-7687308-9"
-                },
-                "performer": [
-                    {
-                        "reference": "Practitioner/DOC-1"
-                    }
-                ],
-                "effectiveDateTime": "2026-04-28T08:00:00",
-                "extension": [
-                    {
-                        "url": "hospital-id",
-                        "valueString": "EHR-1"
-                    }
                 ],
                 "valueQuantity": {
                     "value": "95",
@@ -546,6 +575,7 @@ send_vitals = { // phr => endpoint => /fhir/send-vitals
         }
     ]
 }
+
 
 
 

@@ -1,6 +1,7 @@
 import logging
 from logging.handlers import RotatingFileHandler
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 from fhir_validation import fhir_extract_paths, get_fhir_value_by_path
@@ -23,6 +24,22 @@ if not logger.handlers:
     rotating_file_handler.setFormatter(formater)
     logger.addHandler(rotating_file_handler)
 
+
+async def send_to_engine(data: dict, url: str, system_id: str):
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(60.0, connect=5.0)) as client:
+            headers = {"Content-Type": "application/json", "System-Id": system_id}
+            response = await client.post(url, json=data, headers=headers)
+            if response.status_code in (200, 201, 202, 203, 204):
+                return
+
+            try:
+                detail = response.json().get("detail", f"Engine returned {response.status_code}")
+            except Exception:
+                detail = response.text or f"Engine returned {response.status_code}"
+            logger.error(f"Engine rejected vitals payload: {detail}")
+    except Exception as exp:
+        logger.error(f"Failed to send vitals to engine: {str(exp)}")
 
 @router.post("/add/patient", status_code=status.HTTP_200_OK)
 async def add_patient(req: Request, db: Session = Depends(get_db)):

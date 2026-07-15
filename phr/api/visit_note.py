@@ -3,15 +3,15 @@ from logging.handlers import RotatingFileHandler
 import asyncio
 from datetime import datetime
 
-import httpx
 from fastapi import APIRouter, status, HTTPException, Depends, Response, Request
 from sqlalchemy.orm import Session
 
 from database import get_db
+from api.engine_service import send_to_engine
 import model
 from rate_limiting import limiter
 from schemas.visit_note_schema import VisitNoteBase, VisitNoteDetail 
-from schemas.vitals_schema import Vitals
+from schemas.vitals_schema import Vitals, SendVitals
 
 router = APIRouter(tags=["Visit Notes"])
 
@@ -31,45 +31,15 @@ def _parse_recorded_at(value: str) -> datetime:
     except Exception:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="recorded_at must be a valid ISO datetime")
 
-def _serialize_vital(vital: model.Vitals) -> dict:
-    return {
-        "vital_id": vital.vital_id,
-        "type": vital.type,
-        "systolic": vital.systolic,
-        "diastolic": vital.diastolic,
-        "value": vital.value,
-        "unit": vital.unit,
-        "meal_time": vital.meal_time,
-        "recorded_at": vital.recorded_at.isoformat(),
-    }
-
-async def _send_to_engine(data: dict, url: str, system_id: str):
-    try:
-        async with httpx.AsyncClient(timeout=httpx.Timeout(60.0, connect=5.0)) as client:
-            headers = {"Content-Type": "application/json", "System-Id": system_id}
-            response = await client.post(url, json=data, headers=headers)
-            if response.status_code in (200, 201, 202, 203, 204):
-                return
-
-            try:
-                detail = response.json().get("detail", f"Engine returned {response.status_code}")
-            except Exception:
-                detail = response.text or f"Engine returned {response.status_code}"
-            logger.error(f"Engine rejected vitals payload: {detail}")
-    except Exception as exp:
-        logger.error(f"Failed to send vitals to engine: {str(exp)}")
-
 def _vital_observation(vital: model.Vitals, patient_nic: str, doctor_id: str, hospital_id: str) -> dict:
     observation = {
         "resourceType": "Observation",
-        "status": "final",
         "code": {"text": vital.type},
-        "subject": {"reference": f"Patient/{patient_nic}"},
+        "subject": {"reference": f"patient/{patient_nic}"},
         "performer": [{"reference": f"Practitioner/{doctor_id}"}],
         "effectiveDateTime": vital.recorded_at.isoformat(),
         "extension": [
             {
-                "url": "hospital-id",
                 "valueString": hospital_id,
             }
         ],
@@ -86,18 +56,39 @@ def _vital_observation(vital: model.Vitals, patient_nic: str, doctor_id: str, ho
                 "valueQuantity": {"value": vital.diastolic, "unit": vital.unit},
             },
         ]
+        observation["valueQuantity"]= {
+            "value": "nan",
+            "unit": "nan"
+        }
+        observation["note"]= [
+            {
+                "text": "nan"
+            }
+        ]
     else:
+        observation["component"] = [
+            {
+                "code": {"text": "nan"},
+                "valueQuantity": {"value": "nan", "unit": ""},
+            },
+            {
+                "code": {"text": "nan"},
+                "valueQuantity": {"value": "nan", "unit": "nan"},
+            },
+        ]
         observation["valueQuantity"] = {
             "value": vital.value,
             "unit": vital.unit,
         }
         if vital.meal_time:
             observation["note"] = [{"text": vital.meal_time}]
+        else:
+            observation["note"] = [{"text": ""}]
 
     return observation
 
 @router.post("/add-vitals", status_code=status.HTTP_201_CREATED)
-async def add_vitals(vitals:Vitals, db: Session = Depends(get_db)):
+async def add_vitals(vitals: Vitals, db: Session = Depends(get_db)):
     """
         Store a list of patient vital readings.
     """
@@ -133,10 +124,9 @@ async def add_vitals(vitals:Vitals, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
 
 @router.get("/get-all-vitals/", status_code=status.HTTP_200_OK,)
-def get_all_vitals( db: Session = Depends(get_db)):
+def get_all_vitals(db: Session = Depends(get_db)):
     """
     Retrieve all vitals.
-
    
     """
     try:
@@ -149,47 +139,73 @@ def get_all_vitals( db: Session = Depends(get_db)):
     except Exception as e:
         logger.error(f"Error retrieving all vital: {str(e)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
+
+@router.get("/get-speicific-vitals/{nic}", status_code=status.HTTP_200_OK,)
+def get_all_vitals(nic: str, db: Session = Depends(get_db)):
+    """
+    Retrieve all vitals.
+   
+    """
+    try:
+        if not db.query(model.Patient).filter(model.Patient.nic == nic).first():
+            logger.warning(f"Patient nic: {nic} not found!")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Not vitals for nic: {nic}!")
+        
+        vital = db.query(model.Vitals).filter(model.Vitals.nic == nic).all()
+        logger.info(f"Retrieved {len(vital)} vital from database")
+        return vital
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error retrieving all vital: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{str(e)}")
+    
+
 @router.post("/vitals/send-to-engine", status_code=status.HTTP_200_OK)
-async def send_vitals_to_engine(request: Request, db: Session = Depends(get_db)):
+async def send_vitals_to_engine(vitals: SendVitals, db: Session = Depends(get_db)):
     """
         Send stored vital readings to the InterfaceEngine as a compact FHIR Bundle.
     """
     try:
-        payload = await request.json()
-        patient_nic = str(payload.get("patient_nic", "")).strip()
-        doctor_id = str(payload.get("doctor_id", "")).strip()
-        hospital_id = str(payload.get("hospital_id", "")).strip()
+        patient_nic = vitals.patient_nic
+        doctor_id = vitals.doctor_id
 
-        if not patient_nic or not doctor_id or not hospital_id:
+        if not patient_nic or not doctor_id :
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="patient_nic, doctor_id, and hospital_id are required"
+                detail="patient_nic, and doctor_id are required"
             )
 
-        vitals = db.query(model.Vitals).order_by(model.Vitals.recorded_at.desc()).all()
+        if not db.query(model.Patient).filter(model.Patient.nic == patient_nic).first():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Patient with nic '{patient_nic}' not found"
+            )
+
+        is_doctor = db.query(model.Doctor).filter(model.Doctor.doctor_id == doctor_id).first()
+        if not is_doctor:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Doctor with id '{doctor_id}' not found"
+            )
+
+        vitals = db.query(model.Vitals).filter(model.Vitals.nic == patient_nic).order_by(model.Vitals.recorded_at.desc()).all()
         fhir_msg = {
             "resourceType": "Bundle",
             "type": "message",
-            "identifier": {
-                "value": hospital_id,
-            },
             "entry": [
                 {
-                    "resource": _vital_observation(vital, patient_nic, doctor_id, hospital_id)
+                    "resource": _vital_observation(vital, patient_nic, doctor_id, is_doctor.hospital_id)
                 }
                 for vital in vitals
             ],
         }
 
-        asyncio.create_task(_send_to_engine(
-            data=fhir_msg,
-            url="http://127.0.0.1:9000/fhir/send-vitals",
-            system_id=hospital_id,
-        ))
+        asyncio.create_task(send_to_engine(data=fhir_msg, url="http://127.0.0.1:9000/fhir/send-vitals", system_id="PHR-1"))
 
         return {
             "message": "Vitals sent to engine",
-            "fhir_msg": fhir_msg,
+            "fhir_msg": fhir_msg
         }
     except HTTPException:
         raise

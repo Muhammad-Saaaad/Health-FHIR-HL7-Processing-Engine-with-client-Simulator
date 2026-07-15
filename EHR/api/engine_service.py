@@ -113,10 +113,27 @@ def _component_unit(observation: dict) -> str:
             return str(unit)
     return ""
 
-@router.post("/fhir/receive-vitals", status_code=status.HTTP_201_CREATED)
+@router.post("/fhir/recieve-vitals", status_code=status.HTTP_201_CREATED)
 async def receive_vitals_from_engine(req: Request, db: Session = Depends(get_db)):
     """
-    Receive a compact FHIR Bundle of Observation vitals and store them in EHR.
+    Receive FHIR Observation vitals (single resource or a Bundle with one or more entries) and store them in EHR.
+
+    Each Observation carries:
+    - `code.text`: vital type (e.g. "BP", "Temperature", "Sugar") — matched case-insensitively.
+    - `subject.reference`: "Patient/{nic}" — resolved to the EHR patient (mpi).
+    - `performer[0].reference`: "Practitioner/{id}" — resolved to the EHR doctor (users_id).
+    - `extension[0].valueString`: hospital system id (e.g. "EHR-1") used to scope the patient lookup.
+
+    Parsing rules by vital type:
+    - BP: systolic/diastolic are read only from the `component` entries, matched by their
+      `code.text`; the Observation-level `valueQuantity` is ignored.
+    - Sugar: value/unit come from `valueQuantity`, and `note[0].text` holds the
+      before/after-meal context.
+    - Any other type (e.g. Temperature): value/unit come from `valueQuantity`.
+
+    **Error Responses:**
+    - `400 Bad Request`: No usable Observation vitals in the payload, or parsing/database error.
+    - `404 Not Found`: Referenced patient or doctor does not exist in the EHR.
     """
     try:
         json_data = await req.json()
@@ -124,24 +141,62 @@ async def receive_vitals_from_engine(req: Request, db: Session = Depends(get_db)
 
         entries = json_data.get("entry", []) if json_data.get("resourceType") == "Bundle" else [{"resource": json_data}]
         vitals = []
+        patient_cache = {}
+        doctor_cache = {}
 
-        for entry in entries:
+        for index, entry in enumerate(entries):
             resource = entry.get("resource", {})
             if resource.get("resourceType") != "Observation":
                 continue
 
+            nic = _reference_id(resource.get("subject", {}).get("reference"))
+            if not nic:
+                logger.warning(f"Skipping Observation at entry index {index}: no patient reference found")
+                continue
+
+            performers = resource.get("performer", [])
+            doctor_ref = _reference_id(performers[0].get("reference")) if performers else None
+            if not doctor_ref:
+                logger.warning(f"Skipping Observation at entry index {index}: no practitioner reference found")
+                continue
+
+            extensions = resource.get("extension", [])
+            hospital_id = extensions[0].get("valueString") if extensions else None
+
+            patient_key = (nic, hospital_id)
+            if patient_key not in patient_cache:
+                patient_query = db.query(model.Patient).filter(model.Patient.nic == nic)
+                if hospital_id:
+                    patient_query = patient_query.filter(model.Patient.hospital_id == hospital_id)
+                patient_cache[patient_key] = patient_query.first()
+            patient = patient_cache[patient_key]
+            if patient is None:
+                logger.error(f"No patient found for NIC={nic} (hospital_id={hospital_id}) in vitals payload")
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No patient found for NIC={nic}")
+
+            if doctor_ref not in doctor_cache:
+                doctor_cache[doctor_ref] = db.get(model.Users, int(doctor_ref)) if doctor_ref.isdigit() else None
+            doctor = doctor_cache[doctor_ref]
+            if doctor is None:
+                logger.error(f"No doctor found for reference={doctor_ref} in vitals payload")
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No doctor found for reference={doctor_ref}")
+
             vital_type = _code_text(resource.get("code", {}))
+            type_lower = vital_type.strip().lower()
+
             meal_time = None
             notes = resource.get("note", [])
             if isinstance(notes, list) and notes:
                 meal_time = notes[0].get("text")
 
-            if vital_type.lower() == "bp":
+            if type_lower == "bp":
                 systolic = _component_value(resource, "systolic")
                 diastolic = _component_value(resource, "diastolic")
                 value = None
                 unit = _component_unit(resource)
             else:
+                # Sugar, temperature, and any other single-value vital; for sugar the
+                # note text above carries the before/after-meal context.
                 value_quantity = resource.get("valueQuantity", {})
                 systolic = None
                 diastolic = None
@@ -149,6 +204,8 @@ async def receive_vitals_from_engine(req: Request, db: Session = Depends(get_db)
                 unit = value_quantity.get("unit", "")
 
             vitals.append(model.Vitals(
+                mpi=patient.mpi,
+                users_id=doctor.users_id,
                 type=str(vital_type),
                 systolic=None if systolic is None else str(systolic),
                 diastolic=None if diastolic is None else str(diastolic),
