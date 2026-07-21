@@ -1,5 +1,6 @@
 import os
 
+from api import logs
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi.middleware import SlowAPIMiddleware
@@ -37,6 +38,7 @@ app.include_router(lab.router)
 app.include_router(results.router)
 app.include_router(engine_service.router)
 app.include_router(config.router)
+app.include_router(logs.router)  # Logs API ko bhi include kiya gaya hai
 
 @app.get("/health/{system_id}")
 def check_health(system_id: str):

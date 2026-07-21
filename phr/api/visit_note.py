@@ -1,8 +1,12 @@
+##from ast import List
 import logging
 from logging.handlers import RotatingFileHandler
 import asyncio
+from typing import List
 from datetime import datetime
 
+from pydantic import BaseModel
+from pydantic import BaseModel
 from fastapi import APIRouter, status, HTTPException, Depends, Response, Request
 from sqlalchemy.orm import Session
 
@@ -182,7 +186,8 @@ async def send_vitals_to_engine(vitals: SendVitals, db: Session = Depends(get_db
                 detail=f"Patient with nic '{patient_nic}' not found"
             )
 
-        is_doctor = db.query(model.Doctor).filter(model.Doctor.doctor_id == doctor_id).first()
+       # Is_doctor wali query ko is tarah badlein:
+        is_doctor = db.query(model.Doctor).filter(model.Doctor.doctor_id == str(doctor_id)).first()
         if not is_doctor:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -306,3 +311,27 @@ def get_visit_note_details(request: Request, response: Response, note_id: str, d
     except Exception as exp:
         logger.error(f"Error fetching visit note details for note ID {note_id}: {str(exp)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exp))
+
+
+class DoctorDropdownResponse(BaseModel):
+    doctor_id: int  
+    doctor_name: str
+
+@router.get("/patients/doctors", response_model=List[DoctorDropdownResponse])
+async def get_patient_doctors(patient_nic: str, db: Session = Depends(get_db)):
+    patient_exists = db.query(model.Patient).filter(model.Patient.nic == patient_nic).first()
+    if not patient_exists:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Patient with NIC '{patient_nic}' not found"
+        )
+    
+    doctors = (
+        db.query(model.Doctor.doctor_id, model.Doctor.name.label("doctor_name"))
+        .join(model.VisitingNotes, model.VisitingNotes.doctor_id == model.Doctor.doctor_id)
+        .filter(model.VisitingNotes.nic == patient_nic)
+        .distinct()
+        .all()
+    )
+    
+    return [{"doctor_id": int(doc.doctor_id), "doctor_name": doc.doctor_name} for doc in doctors]

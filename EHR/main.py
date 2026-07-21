@@ -1,6 +1,8 @@
 import os
 import json
 
+
+from api import vitals
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi.middleware import SlowAPIMiddleware
@@ -17,7 +19,9 @@ from api import (
     visit_note,
     claim,
     engine_service,
-    config
+    config,
+    logs,
+    vitals
 )
 from rate_limiting import limiter, rate_limit_exceeded_handler
 
@@ -45,6 +49,8 @@ app.include_router(visit_note.router)
 app.include_router(claim.router)
 app.include_router(engine_service.router)
 app.include_router(config.router)
+app.include_router(vitals.router)  # Vitals API ko include kiya gaya hai
+app.include_router(logs.router)  # Logs API ko bhi include kiya gaya hai
 
 @app.get("/health/{system_id}")
 def check_health(system_id: str):

@@ -1,9 +1,10 @@
+from typing import List
 import json
 
 from fastapi import APIRouter, status, HTTPException, Depends, Response, Request
 from sqlalchemy.orm import Session
 
-from schemas.logs_schema import LogEntry, LogMsg
+from schemas.logs_schema import LogEntry, LogMsg, LogResponse
 import models
 from database import get_db
 
@@ -69,3 +70,8 @@ async def show_log_msg(log_id: int, db: Session = Depends(get_db)):
         return log
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+
+@router.get("/engine/logs", response_model=List[LogResponse])
+def get_all_engine_logs(db: Session = Depends(get_db)):
+    """Engine ke saare logs fetch karne ki API"""
+    return db.query(models.Logs).all()

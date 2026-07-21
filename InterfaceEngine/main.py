@@ -267,7 +267,9 @@ async def send_to_server(flag: int, db: Session = Depends(get_db)):
                                 extra= {
                                         "src_message": json.dumps(src_msg),
                                         "dest_message": json.dumps(msg),
-                                        "op_heading": f"Channel: {route.name}"
+                                        "op_heading": f"Channel: {route.name}",
+                                        "dest_system_name": dest_server.name,
+                                        "src_systemid": src_server.system_id
                                     }
                     )
                     logger.info(f"Successfully sent to url: {dest_endpoint_url}")
@@ -280,7 +282,9 @@ async def send_to_server(flag: int, db: Session = Depends(get_db)):
                                 extra= {
                                         "src_message": json.dumps(src_msg),
                                         "dest_message": json.dumps(msg),
-                                        "op_heading": f"Channel: {route.name}"
+                                        "op_heading": f"Channel: {route.name}",
+                                        "dest_system_name": dest_server.name,
+                                        "src_systemid": src_server.system_id
                                     }
                     )
         return {"message": "Data Successfully sent."}
@@ -784,7 +788,9 @@ async def route_worker(route, worker_number: int = 1):
                                     extra= {
                                             "src_message": json.dumps(src_msg),
                                             "dest_message": json.dumps(msg),
-                                            "op_heading": f"Channel: {route.name}"
+                                            "op_heading": f"Channel: {route.name}",
+                                            "dest_system_name": dest_server.name,
+                                            "src_systemid": src_server.system_id
                                         }
                         )
                         logger.info(f"Successfully sent to url: {dest_endpoint_url}")
@@ -796,7 +802,9 @@ async def route_worker(route, worker_number: int = 1):
                                     extra= {
                                             "src_message": json.dumps(src_msg),
                                             "dest_message": json.dumps(msg),
-                                            "op_heading": f"Channel: {route.name}"
+                                            "op_heading": f"Channel: {route.name}",
+                                            "dest_system_name": dest_server.name,
+                                            "src_systemid": src_server.system_id
                                         }
                         )
                         result_future.set_exception(Exception(err))

@@ -108,6 +108,8 @@ class Logs(Base):
     operation_message = Column(Text, nullable=True)
     src_message = Column(Text, nullable=True)
     dest_message = Column(Text, nullable=True)
+    dest_system_name = Column(String(50), nullable=True)  # e.g., IDC,IMR 
+    src_systemid = Column(String(50), nullable=True)  # e.g., EHR-1, LIS-1, PHR-1, Payer-1
 
 class Config(Base):          # we can extract the operation heading, url, hospital name via endpooint, where we can define that which hospital belong to which endpoint. 
     __tablename__ = "config"

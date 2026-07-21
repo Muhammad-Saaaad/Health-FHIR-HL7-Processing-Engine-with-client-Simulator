@@ -48,6 +48,8 @@ class DBHandler(logging.Handler):
             src_message  = getattr(record, "src_message",  None)
             dest_message = getattr(record, "dest_message", None)
             op_heading   = getattr(record, "op_heading",   record.name)
+            scr_systemid = getattr(record, "src_systemid", None)
+            dest_system_name = getattr(record, "dest_system_name", None)
 
             _log_queue.put({
                 "datetime": datetime.now(),
@@ -56,6 +58,8 @@ class DBHandler(logging.Handler):
                 "operation_message": self.format(record),
                 "src_message": src_message,
                 "dest_message": dest_message,
+                "src_systemid": scr_systemid,
+                "dest_system_name": dest_system_name
             })
         except Exception as e:
             print(f"Failed to log to DB: {e}")
